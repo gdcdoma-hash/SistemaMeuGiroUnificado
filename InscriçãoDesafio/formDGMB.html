@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <style>
+    body { font-family: sans-serif; background-color: #0f172a; color: white; margin: 0; padding: 10px; display: flex; justify-content: center; }
+    #app { width: 100%; max-width: 500px; }
+    .card { background-color: #1e293b; padding: 25px; border-radius: 20px; width: 100%; box-sizing: border-box; margin-bottom: 20px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); }
+    .hidden { display: none !important; }
+    h1 { font-size: 22px; text-align: center; color: #3b82f6; text-transform: uppercase; margin-bottom: 20px; }
+    .txt-dourado { color: #fbbf24; } 
+    h2 { font-size: 18px; text-align: center; color: #60a5fa; text-transform: uppercase; margin-top: 0; }
+    .meta-destaque { font-size: 22px; color: #fbbf24; text-align: center; margin-bottom: 5px; font-weight: 900; }
+    .frase-ia { font-style: italic; color: #94a3b8; text-align: center; font-size: 14px; margin-bottom: 15px; padding: 15px; line-height: 1.4; display: block; font-weight: 300; background: rgba(0,0,0,0.2); border-radius: 10px; }
+    label { display: block; margin-top: 15px; font-weight: bold; font-size: 14px; color: #94a3b8; }
+    input, select { width: 100%; padding: 12px; margin: 5px 0; border-radius: 8px; border: none; background-color: white !important; color: black !important; font-size: 16px; box-sizing: border-box; }
+    .btn-main { background: #3b82f6; color: white; border: none; padding: 16px; border-radius: 12px; width: 100%; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    .btn-main:disabled { background: #475569; opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary { background: #475569; color: white; border: none; padding: 12px; border-radius: 12px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    .btn-cep { background: #f59e0b; color: #000; font-weight: 800; border: none; padding: 10px; border-radius: 8px; width: 100%; margin: 10px 0; }
+    .msg-feedback { font-size: 11px; font-weight: bold; display: block; margin-top: -2px; margin-bottom: 5px; min-height: 15px; }
+    .error { color: #f87171; }
+    .success { color: #22c55e; }
+    .info-prazo { background: #0f172a; padding: 8px; border-radius: 8px; text-align: center; color: #f59e0b; font-size: 13px; font-weight: bold; margin-top: 5px; border: 1px solid #334155; }
+    .upload-row { display: flex; align-items: center; justify-content: space-between; background: #334155; padding: 12px; border-radius: 10px; margin-bottom: 10px; }
+    .btn-up { background: #6366f1; color: white; padding: 6px 12px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; }
+    .status-tempo { text-align: center; font-size: 14px; margin: 10px 0; padding: 8px; border-radius: 10px; background: rgba(15, 23, 42, 0.5); font-weight: bold; }
+    .area-pix { background: #0f172a; padding: 15px; border-radius: 12px; text-align: center; margin: 15px 0; border: 1px dashed #3b82f6; }
+
+
+    /* -------- NOVO CSS DO CARD INICIAL -------- */
+
+.flyer-desafio{
+  width:100%;
+  border-radius:10px;
+  margin:12px 0;
+}
+
+.texto-intro{
+  font-size:14px;
+  line-height:1.5;
+  margin-top:10px;
+}
+
+.texto-incentivo{
+  font-size:14px;
+  line-height:1.5;
+  margin:12px 0;
+}
+
+.titulo-desafio{
+  margin-top:16px;
+  font-size:18px;
+}
+.texto-ajuda{
+  font-size:14px;
+  line-height:1.5;
+  margin:10px 0 14px 0;
+  color:#cfd6e4;
+}
+
+.texto-ajuda-pequeno{
+  font-size:12px;
+  margin-top:12px;
+  color:#9aa6bf;
+  text-align:center;
+}
+
+.avatar-container{
+  display:flex;
+  justify-content:center;
+  margin-bottom:12px;
+}
+
+.avatar-login{
+  width:72px;
+  height:72px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  background:#ffffff;   /* círculo branco sólido */
+}
+
+.icon-avatar{
+  width:32px;
+  height:32px;
+  stroke:#1e2b3c;      /* cor escura para o ícone aparecer no branco */
+  stroke-width:1.8;
+  fill:none;
+}
+  </style>
+</head>
+<body>
+
+<div id="app">
+
+<div class="card" id="card-inicio">
+
+  <h1>🚲 Bem-vindo ao <br><span class="txt-dourado">Desafio Giro Motos Bikes</span></h1>
+
+  <p class="texto-intro">
+  Um desafio criado para quem acredita que cada pedalada conta.
+  Aqui o objetivo não é apenas somar quilômetros, mas viver a experiência
+  de superação, disciplina e evolução sobre duas rodas.
+  </p>
+
+  <h2 class="titulo-desafio">🔥 Desafio Atual</h2>
+
+  <img src="https://i.imgur.com/hDifvLa.png" class="flyer-desafio">
+
+  <p class="texto-incentivo">
+  Participar de um desafio é mais do que pedalar.  
+  É transformar rotina em conquista, encontrar motivação diária
+  e provar para si mesmo que sempre é possível ir mais longe.
+  </p>
+
+  <button class="btn-main" onclick="abrirLogin()">
+    Quero me inscrever agora ou fazer login
+  </button>
+
+</div>
+
+
+<div class="card hidden" id="step-login">
+
+  <div class="avatar-container">
+  <div class="avatar-login">
+
+    <svg viewBox="0 0 24 24" class="icon-avatar">
+      <circle cx="12" cy="8" r="4"></circle>
+      <path d="M4 20c0-4 4-6 8-6s8 2 8 6"></path>
+    </svg>
+
+  </div>
+</div>
+
+  <h1>Localizar meu cadastro</h1>
+
+  <p class="texto-ajuda">
+  Para acessar sua área no desafio, informe seu CPF abaixo.  
+  Usamos o CPF apenas para localizar seu cadastro no sistema.
+  </p>
+
+  <label>CPF</label>
+
+  <input id="login-cpf"
+  placeholder="000.000.000-00"
+  inputmode="numeric"
+  maxlength="14"
+  oninput="limparErro('login-msg')">
+
+  <span id="login-msg" class="msg-feedback"></span>
+
+  <button class="btn-main" id="btn-entrar" onclick="entrar()">
+    Verificar meu cadastro
+  </button>
+
+  <p class="texto-ajuda-pequeno">
+  🔒 Seus dados são utilizados apenas para identificação dentro do desafio.
+  </p>
+
+</div>
+
+  <div class="card hidden" id="step-pessoal">
+    <h2>👤 Dados Pessoais</h2>
+    <label>Nome Completo *</label>
+    <input id="nome" oninput="limparErro('err-nome')">
+    <span id="err-nome" class="msg-feedback"></span>
+    <label>Data de Nascimento *</label>
+    <input id="nascimento" placeholder="dd/mm/aaaa" oninput="limparErro('err-nascimento')">
+    <span id="err-nascimento" class="msg-feedback"></span>
+    <label>CEP *</label>
+    <input id="cep" placeholder="00000-000" maxlength="9" oninput="limparErro('err-cep')">
+    <button class="btn-cep" id="btn-buscar-cep" onclick="buscarEndereco()">BUSCAR ENDEREÇO</button>
+    <span id="err-cep" class="msg-feedback"></span>
+    <label>Cidade - UF</label>
+    <input id="cidadeuf" readonly style="background:#334155 !important; color:#cbd5e1 !important">
+    <span id="err-cidadeuf" class="msg-feedback"></span>
+    <label>WhatsApp *</label>
+    <input id="whatsapp" placeholder="(99) 99999-9999" oninput="limparErro('err-whatsapp')">
+    <span id="err-whatsapp" class="msg-feedback"></span>
+    <button class="btn-main" id="btn-salvar-p" onclick="salvarPessoal()">Continuar</button>
+    <button class="btn-secondary" onclick="sair()">Sair</button>
+  </div>
+
+  <div class="card hidden" id="step-desafio">
+    <h2>🏁 Escolha o Desafio</h2>
+    <label>Desafio *</label>
+    <select id="sel-desafio" onchange="atualizarInfoDesafio(); limparErro('err-sel-desafio')"></select>
+    <div id="info-prazo" class="info-prazo hidden"></div>
+    <span id="err-sel-desafio" class="msg-feedback"></span>
+    <label>Nome no Avatar *</label>
+    <input id="avatar" placeholder="Ex: JOAO SILVA" oninput="limparErro('err-avatar')">
+    <span id="err-avatar" class="msg-feedback"></span>
+    <label>Distância/Meta *</label>
+    <select id="sel-distancia" onchange="limparErro('err-sel-distancia')"></select>
+    <span id="err-sel-distancia" class="msg-feedback"></span>
+    <div style="display:flex; align-items:center; gap:10px; margin-top:20px;">
+        <input type="checkbox" id="check-reg" style="width:20px; height:20px;" onchange="limparErro('err-check-reg')">
+        <span>Aceito o Regulamento</span>
+    </div>
+    <span id="err-check-reg" class="msg-feedback"></span>
+    <button class="btn-main" id="btn-confirmar-d" onclick="finalizarInscricao()">Confirmar Inscrição</button>
+  </div>
+
+  <div class="card hidden" id="step-sucesso"></div>
+</div>
+
+<script>
+let user = { cpf: "", nome: "", id_dgmb: "", abaDesafio: "", sistemaStatus: "Aberto" };
+let listaDesafiosGlobais = [];
+const CHAVE_PIX = "00020126580014BR.GOV.BCB.PIX0136c25bf298-feaf-46e7-8c9a-2e7c90937342520400005303986540540.005802BR5915M L DO N ARAUJO6009SAO PAULO61080540900062250521Tf0HCjOh65RSS5o1zp2z763046153";
+
+const mask = (id, f) => { const el = document.getElementById(id); if(el) el.addEventListener('input', e => e.target.value = f(e.target.value)); };
+mask('login-cpf', v => v.replace(/\D/g,'').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4').substring(0,14));
+mask('cep', v => v.replace(/\D/g,'').replace(/(\d{5})(\d{3})/,'$1-$2').substring(0,9));
+mask('whatsapp', v => v.replace(/\D/g,'').replace(/(\d{2})(\d{5})(\d{4})/,'($1) $2-$3').substring(0,15));
+mask('nascimento', v => v.replace(/\D/g,'').replace(/(\d{2})(\d{2})(\d{4})/,'$1/$2/$3').substring(0,10));
+
+function limparErro(id) { const e = document.getElementById(id); e.innerText = ""; e.className = "msg-feedback"; }
+function mostrarErro(id, msg) { const e = document.getElementById(id); e.innerText = msg; e.className = "msg-feedback error"; }
+
+function getSaudacao() {
+  const h = new Date().getHours();
+  return (h >= 5 && h < 12) ? "Bom Dia" : (h >= 12 && h < 18) ? "Boa Tarde" : "Boa Noite";
+}
+
+function copiarPix() {
+  navigator.clipboard.writeText(CHAVE_PIX).then(() => { 
+    const feedback = document.getElementById('pix-feedback');
+    feedback.innerText = "Chave copiada!";
+    feedback.className = "msg-feedback success";
+    setTimeout(() => { feedback.innerText = ""; }, 3000);
+  });
+}
+
+function entrar() {
+  const btn = document.getElementById('btn-entrar');
+  const cpfRaw = document.getElementById('login-cpf').value.replace(/\D/g,'');
+  if(cpfRaw.length < 11) { mostrarErro('login-msg', "CPF incompleto"); return; }
+  btn.disabled = true; btn.innerText = "Verificando...";
+  google.script.run.withSuccessHandler(res => {
+    btn.disabled = false; btn.innerText = "Verificar Cadastro";
+    if(res.status === 'SISTEMA_FECHADO') { mostrarErro('login-msg', "Inscrições encerradas temporariamente!"); }
+    else if(res.status === 'INVALIDO') { mostrarErro('login-msg', "CPF Inválido"); }
+    else if(res.status === 'NOVO_USUARIO') { user.cpf = res.cpf; document.getElementById('step-login').classList.add('hidden'); document.getElementById('step-pessoal').classList.remove('hidden'); }
+    else { 
+      user.cpf = res.cpf; user.nome = res.nome; user.id_dgmb = res.id_dgmb; user.sistemaStatus = res.sistemaStatus;
+      if(res.status === 'INSCRICAO_REALIZADA') mostrarSucesso(res); else carregarEtapaInscricao(); 
+    }
+  }).verificarCPF(cpfRaw);
+}
+
+function carregarEtapaInscricao() {
+  document.querySelectorAll('.card').forEach(c => c.classList.add('hidden'));
+  document.getElementById('step-desafio').classList.remove('hidden');
+  google.script.run.withSuccessHandler(list => {
+    listaDesafiosGlobais = list;
+    document.getElementById('sel-desafio').innerHTML = '<option value="">Selecione...</option>' + list.map(i => `<option value="${i.aba}">${i.nome}</option>`).join('');
+    document.getElementById('sel-distancia').innerHTML = '<option value="">Selecione...</option>' + Array.from({length: 120}, (_, i) => `<option value="${(i+1)*25}">${(i+1)*25} KM</option>`).join('');
+  }).listarDesafiosAtivos();
+}
+
+function atualizarInfoDesafio() {
+  const aba = document.getElementById('sel-desafio').value;
+  const d = listaDesafiosGlobais.find(i => i.aba === aba);
+  const div = document.getElementById('info-prazo');
+  if(!d || !d.prazo) { div.classList.add('hidden'); return; }
+  const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+  const partes = d.prazo.split('/');
+  const mNome = meses[meses.map(m => m.toLowerCase()).indexOf(partes[0].trim().toLowerCase())];
+  const uDia = new Date(2000+parseInt(partes[1]), meses.indexOf(mNome)+1, 0).getDate();
+  div.innerText = `🗓 Período: 1 a ${uDia} de ${mNome}/20${partes[1]}`;
+  div.classList.remove('hidden');
+}
+
+function buscarEndereco() {
+  const cepVal = document.getElementById('cep').value.replace(/\D/g,'');
+  if(cepVal.length < 8) { mostrarErro('err-cep', "CEP incorreto"); return; }
+  google.script.run.withSuccessHandler(res => { 
+    if(res) { document.getElementById('cidadeuf').value = res.localidade + " - " + res.uf; limparErro('err-cidadeuf'); }
+    else { mostrarErro('err-cep', "CEP não localizado"); }
+  }).buscarCEP(cepVal);
+}
+
+function salvarPessoal() {
+  const d = { nome: document.getElementById('nome').value.trim(), nascimento: document.getElementById('nascimento').value, cep: document.getElementById('cep').value, cidadeuf: document.getElementById('cidadeuf').value, whatsapp: document.getElementById('whatsapp').value };
+  let v = true;
+  if(d.nome.length < 5) { mostrarErro('err-nome', "Digite seu nome completo"); v = false; }
+  if(d.nascimento.length < 10) { mostrarErro('err-nascimento', "Data inválida"); v = false; }
+  if(d.cep.length < 9) { mostrarErro('err-cep', "CEP obrigatório"); v = false; }
+  if(!d.cidadeuf) { mostrarErro('err-cidadeuf', "Busque o CEP primeiro"); v = false; }
+  if(d.whatsapp.length < 14) { mostrarErro('err-whatsapp', "WhatsApp obrigatório"); v = false; }
+  if(!v) return;
+  document.getElementById('btn-salvar-p').disabled = true;
+  google.script.run.withSuccessHandler(res => { 
+    if(res.status==='ERRO') { alert("As inscrições foram encerradas."); location.reload(); return; }
+    user.nome = d.nome; user.id_dgmb = res.id_dgmb; carregarEtapaInscricao(); 
+  }).gravarDadosPessoais({ ...d, cpf: user.cpf });
+}
+
+function finalizarInscricao() {
+  const d = { aba: document.getElementById('sel-desafio').value, avatar: document.getElementById('avatar').value.trim(), meta: document.getElementById('sel-distancia').value, reg: document.getElementById('check-reg').checked };
+  let v = true;
+  if(!d.aba) { mostrarErro('err-sel-desafio', "Escolha um desafio"); v = false; }
+  if(d.avatar.length < 2) { mostrarErro('err-avatar', "Avatar obrigatório"); v = false; }
+  if(!d.meta) { mostrarErro('err-sel-distancia', "Escolha uma meta"); v = false; }
+  if(!d.reg) { mostrarErro('err-check-reg', "Você deve aceitar o regulamento"); v = false; }
+  if(!v) return;
+  document.getElementById('btn-confirmar-d').disabled = true;
+  google.script.run.withSuccessHandler(res => { 
+    if(res.status==='ERRO') { alert("As inscrições foram encerradas."); location.reload(); return; }
+    mostrarSucesso(res); 
+  }).gravarInscricaoDesafio({ abaDesafio: d.aba, avatar: d.avatar, distancia: d.meta, obs: "", id_dgmb: user.id_dgmb, cpf: user.cpf });
+}
+
+function mostrarSucesso(d) {
+  user.abaDesafio = d.abaDesafio;
+  const container = document.getElementById('step-sucesso');
+  container.classList.remove('hidden');
+  document.querySelectorAll('.card').forEach(c => { if(c.id !== 'step-sucesso') c.classList.add('hidden'); });
+  const pOk = (d.pagtoStatus === 'Enviado');
+  const fOk = (d.fotoStatus === 'Enviado');
+  const showNova = (d.totalAtivos > 1 && d.sistemaStatus !== "Fechado");
+
+  container.innerHTML = `
+    <h1 style="color:${pOk?'#22c55e':'#fbbf24'}">${pOk?'INSCRIÇÃO REALIZADA':'INSCRIÇÃO PRÉ-REALIZADA'}</h1>
+    <h2 style="text-align:center; color:white; text-transform: none;">Olá, ${getSaudacao()}, <span style="color:#22c55e">${d.nome.toUpperCase()}</span>!</h2>
+    <p style="text-align:center; margin-top:15px; font-size:16px;">Você já está inscrito no<br><b style="color:#60a5fa; font-size:20px;">"${d.nomeExibicao}"</b></p>
+    <div class="meta-destaque">A sua META é ${d.meta} KM</div>
+    <div class="status-tempo" style="color:#fbbf24">${calcularContagemRegressiva(d.periodo)}</div>
+    <span class="frase-ia">"${d.fraseIA}"</span>
+
+    ${!pOk ? `
+      <div class="area-pix" id="area-pix">
+        <p style="font-size:13px; margin:0 0 10px 0; color:#cbd5e1;">Para confirmar sua inscrição, faça o PIX:</p>
+        <button class="btn-secondary" onclick="copiarPix()" style="margin-bottom:5px; background:#3b82f6;">COPIAR CHAVE PIX</button>
+        <span id="pix-feedback" class="msg-feedback" style="margin-bottom:10px;"></span>
+        <p style="font-size:14px;"><a href="https://nubank.com.br/cobranca/WcjCUMPVgn1zp2z7" target="_blank" style="color:#fbbf24; font-weight:bold; text-decoration:none;">🔗 Pagar via Nubank</a></p>
+      </div>
+    ` : ''}
+
+    <div class="upload-row"><span>📷 Foto Avatar</span><div id="box-f"><span class="${fOk?'success':'error'}">${fOk?'Enviado ✅':'Pendente'}</span>${!fOk?'<button class="btn-up" onclick="document.getElementById(\'in-foto\').click()">Enviar</button>':''}</div></div>
+    <div class="upload-row"><span>🧾 Recibo Pagto</span><div id="box-p"><span class="${pOk?'success':'error'}">${pOk?'Enviado ✅':'Pendente'}</span>${!pOk?'<button class="btn-up" onclick="document.getElementById(\'in-pagto\').click()">Enviar</button>':''}</div></div>
+    
+    ${showNova ? '<button class="btn-main" style="background:#22c55e; margin-bottom:10px;" onclick="carregarEtapaInscricao()">Nova Inscrição</button>' : ''}
+    <button class="btn-main" style="background:#ef4444;" onclick="sair()">Sair</button>
+    
+    <input type="file" id="in-foto" class="hidden" accept="image/*" onchange="handleUpload(this, 'avatar')">
+    <input type="file" id="in-pagto" class="hidden" accept="image/*,application/pdf" onchange="handleUpload(this, 'comprovante')">
+  `;
+}
+
+function calcularContagemRegressiva(p) {
+  try {
+    const hj = new Date(); hj.setHours(0,0,0,0);
+    const m = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+    const pts = p.toLowerCase().split('/');
+    const dI = new Date(2000+parseInt(pts[1]), m.indexOf(pts[0].trim()), 1);
+    const dF = new Date(2000+parseInt(pts[1]), m.indexOf(pts[0].trim())+1, 0);
+    if (hj < dI) return `⏳ Começa em ${Math.ceil((dI-hj)/86400000)} dias!`;
+    if (hj <= dF) return `🔥 Faltam ${Math.ceil((dF-hj)/86400000)} dias para o fim!`;
+    return `🏁 Encerrado!`;
+  } catch(e) { return ""; }
+}
+
+function handleUpload(input, tipo) {
+  const box = document.getElementById(tipo === 'avatar' ? 'box-f' : 'box-p');
+  if(!input.files[0]) return;
+  box.innerHTML = "Enviando...";
+  const reader = new FileReader();
+  reader.onload = e => {
+    google.script.run.withSuccessHandler(() => { 
+      box.innerHTML = '<span class="success">Enviado ✅</span>';
+      if(tipo === 'comprovante') { 
+        document.querySelector('#step-sucesso h1').innerText = "INSCRIÇÃO REALIZADA";
+        document.querySelector('#step-sucesso h1').style.color = "#22c55e";
+        if(document.getElementById('area-pix')) document.getElementById('area-pix').classList.add('hidden');
+      }
+    }).processarUpload({ base64: e.target.result, mimeType: input.files[0].type, nomeArquivo: user.id_dgmb+"_"+tipo, tipo: tipo, id_dgmb: user.id_dgmb, abaDesafio: user.abaDesafio });
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function sair() { google.script.run.withSuccessHandler(url => window.top.location.href = url).getScriptUrl(); }
+</script>
+
+
+<div id="painel-ajuda-btn" class="hidden" onclick="abrirAjuda()">🆘 AJUDA</div>
+
+<div id="painel-ajuda" class="hidden">
+<div id="painel-ajuda-conteudo">
+
+<h2 style="text-align:center;color:#0f172a;">🚴 DESAFIO GIRO MOTOS BIKES</h2>
+
+<div class="box-ajuda">
+
+<h3>🎉 Bem-vindo(a) ao desafio!</h3>
+
+<p>
+Sua inscrição foi confirmada e agora faltam dois passos rápidos para garantir sua participação completa:
+</p>
+
+</div>
+
+
+<div class="box-ajuda">
+
+<h3>🚨 PASSO 1 – Entrar no Clube Oficial no Strava</h3>
+
+<p>Clique no link abaixo e solicite entrada:</p>
+
+<a class="link-ajuda" href="https://www.strava.com/clubs/gmbslp" target="_blank">
+🔗 ACESSAR CLUBE DO STRAVA
+</a>
+
+<p class="dica">
+💡 Se não aparecer “Solicitar entrada”, é porque você já faz parte do clube.
+</p>
+
+</div>
+
+
+
+<div class="box-ajuda">
+
+<h3>🚨 PASSO 2 – Entrar no Desafio Strava de 800 km</h3>
+
+<p>
+Mesmo que seu desafio pessoal seja menor ou maior, é obrigatório entrar no desafio de 800 km.
+</p>
+
+<a class="link-ajuda" href="https://www.strava.com/challenges/March-Ride-800K-2026" target="_blank">
+🔗 ENTRAR NO DESAFIO 800 KM
+</a>
+
+<p class="dica">
+💡 Se já estiver no clube, apenas garanta que concluiu este segundo passo.
+</p>
+
+</div>
+
+
+
+<div class="box-ajuda">
+
+<h3>📲 Grupo Oficial do Desafio</h3>
+
+<p>Entre no grupo do desafio:</p>
+
+<a class="link-ajuda" href="https://chat.whatsapp.com/E6eZruQutln2RVx9plLCiz" target="_blank">
+🔗 ENTRAR NO GRUPO DO WHATSAPP
+</a>
+
+<p class="dica">
+⚠ Nunca compartilhar este link. O grupo é restrito para quem participa ou participou do desafio.
+</p>
+
+</div>
+
+
+
+<div class="box-ajuda">
+
+<h3>📌 ORIENTAÇÕES IMPORTANTES</h3>
+
+<div class="sub-box azul">
+
+<b>📤 Envio de atividades</b>
+
+<p>
+Não enviar no privado do administrador, apenas quando solicitado ou quando houver um caso a ser resolvido.
+</p>
+
+<p>
+Não é obrigado enviar atividade no grupo do desafio, mas não é proibido. Fique à vontade.
+</p>
+
+</div>
+
+
+<div class="sub-box verde">
+
+<b>🏁 Conclusão do desafio</b>
+
+<p>
+Após conclusão enviar foto + print do desafio strava de 800km, não demore fazer isso, faça imediatamente ao concluir.
+</p>
+
+</div>
+
+
+<div class="sub-box laranja">
+
+<b>⚠ Desistência</b>
+
+<p>
+Caso desista, informar o administrador.
+</p>
+
+</div>
+<div class="sub-box laranja">
+
+<b>🖼 Avatar de Aceite e Conclusão</b>
+
+<p>
+Os avatares do desafio não são entregues imediatamente, mas todos os inscritos receberão.
+Sempre avisaremos no grupo quando houver atualização ou quando os avatares forem disponibilizados.
+</p>
+
+</div>
+
+<div class="sub-box roxo">
+
+<b>📜 Regulamento</b>
+
+<p>
+Conheçam o nosso regulamento, estamos buscando melhorar cada dia mais.
+</p>
+
+<a class="link-ajuda" href="https://sites.google.com/view/dgmbslp/in%C3%ADcio/regulamentodgmb?authuser=03" target="_blank">
+🔗 VER REGULAMENTO DO DESAFIO
+</a>
+
+</div>
+
+</div>
+
+
+
+<button class="btn-fechar-ajuda" onclick="fecharAjuda()">
+FECHAR
+</button>
+
+</div>
+</div>
+
+
+
+<style>
+
+#painel-ajuda-btn{
+position:fixed;
+bottom:20px;
+right:20px;
+background:#22c55e;
+color:white;
+padding:10px 16px;
+border-radius:20px;
+font-weight:bold;
+cursor:pointer;
+z-index:9999;
+font-size:14px;
+box-shadow:0 4px 10px rgba(0,0,0,0.3);
+}
+
+
+#painel-ajuda{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:#ffffff;
+color:#1e293b;
+z-index:10000;
+overflow-y:auto;
+}
+
+
+#painel-ajuda-conteudo{
+max-width:700px;
+margin:auto;
+padding:25px 20px 80px 20px;
+}
+
+
+.box-ajuda{
+background:#f8fafc;
+padding:18px;
+margin-top:18px;
+border-radius:10px;
+box-shadow:0 2px 6px rgba(0,0,0,0.08);
+}
+
+
+.box-ajuda h3{
+margin-top:0;
+color:#0f172a;
+}
+
+
+.sub-box{
+margin-top:15px;
+padding:14px;
+border-radius:8px;
+background:white;
+}
+
+
+.azul{border-left:5px solid #3b82f6;}
+.verde{border-left:5px solid #22c55e;}
+.laranja{border-left:5px solid #f97316;}
+.roxo{border-left:5px solid #6366f1;}
+
+
+.link-ajuda{
+display:block;
+margin:10px 0;
+padding:12px;
+background:#2563eb;
+color:white;
+text-align:center;
+border-radius:6px;
+text-decoration:none;
+font-weight:bold;
+}
+
+
+.dica{
+font-size:13px;
+margin-top:8px;
+color:#475569;
+}
+
+
+.btn-fechar-ajuda{
+display:block;
+margin:40px auto 30px auto;
+background:#ef4444;
+color:white;
+border:none;
+padding:14px 40px;
+font-size:16px;
+font-weight:bold;
+border-radius:8px;
+cursor:pointer;
+box-shadow:0 4px 10px rgba(0,0,0,0.2);
+}
+
+
+.hidden{
+display:none;
+}
+
+</style>
+
+
+
+<script>
+
+function abrirAjuda(){
+document.getElementById("painel-ajuda").classList.remove("hidden");
+}
+
+function fecharAjuda(){
+document.getElementById("painel-ajuda").classList.add("hidden");
+}
+
+
+setInterval(function(){
+
+var telaSucesso = document.getElementById('step-sucesso');
+var botaoAjuda = document.getElementById('painel-ajuda-btn');
+var painel = document.getElementById('painel-ajuda');
+
+if(!telaSucesso) return;
+
+if(!telaSucesso.classList.contains('hidden')){
+
+if(botaoAjuda.classList.contains('hidden')){
+botaoAjuda.classList.remove('hidden');
+}
+
+if(!localStorage.getItem("ajuda_giro_aberta")){
+
+painel.classList.remove('hidden');
+localStorage.setItem("ajuda_giro_aberta","sim");
+
+}
+
+}
+
+},500);
+
+
+function abrirLogin(){
+
+  document.getElementById("card-inicio").classList.add("hidden");
+  document.getElementById("step-login").classList.remove("hidden");
+
+}
+</script>
+</body>
+</html>

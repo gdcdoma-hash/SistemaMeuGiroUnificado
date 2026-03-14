@@ -1,0 +1,299 @@
+<script>
+let currentUser = null;
+let currentPainel = null;
+
+function showScreen(name) {
+  const screens = document.querySelectorAll('.screen');
+  screens.forEach(function(screen) {
+    screen.classList.remove('active');
+  });
+
+  const target = document.getElementById('screen-' + name);
+  if (target) {
+    target.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+function onlyDigits(value) {
+  return String(value || '').replace(/\D/g, '');
+}
+
+function applyCpfMask(value) {
+  const digits = onlyDigits(value).slice(0, 11);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return digits.replace(/(\d{3})(\d+)/, '$1.$2');
+  if (digits.length <= 9) return digits.replace(/(\d{3})(\d{3})(\d+)/, '$1.$2.$3');
+  return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, '$1.$2.$3-$4');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const cpfInput = document.getElementById('cpf');
+  if (cpfInput) {
+    cpfInput.addEventListener('input', function(e) {
+      e.target.value = applyCpfMask(e.target.value);
+    });
+  }
+});
+
+function login() {
+  const cpfInput = document.getElementById('cpf');
+  const msg = document.getElementById('login-msg');
+  const btn = document.getElementById('btn-login');
+
+  if (!cpfInput || !msg || !btn) return;
+
+  const cpf = cpfInput.value || '';
+
+  msg.innerText = 'Verificando...';
+  btn.disabled = true;
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      btn.disabled = false;
+
+      if (!res || !res.ok) {
+        msg.innerText = (res && res.msg) ? res.msg : 'Não foi possível entrar.';
+        return;
+      }
+
+      currentUser = {
+        id_dgmb: res.data && res.data.id_dgmb ? String(res.data.id_dgmb).trim() : '',
+        nome: res.data && res.data.nome ? res.data.nome : '',
+        cidade_uf: res.data && res.data.cidade_uf ? res.data.cidade_uf : ''
+      };
+
+      msg.innerText = '';
+
+      showScreen('painel');
+      carregarPainel();
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      msg.innerText = 'Erro de comunicação com o servidor.';
+      console.error(err);
+    })
+    .loginCPF(cpf);
+}
+function carregarPainel() {
+  if (!currentUser || !currentUser.id_dgmb) return;
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res || !res.ok) {
+        alert((res && res.msg) ? res.msg : 'Erro ao carregar painel.');
+        return;
+      }
+
+      currentPainel = res.data || {};
+      renderPainel(currentPainel);
+    })
+    .withFailureHandler(function(err) {
+      alert('Erro ao carregar painel.');
+      console.error(err);
+    })
+    .getPainelUsuario(currentUser.id_dgmb);
+}
+
+function renderPainel(p) {
+  document.getElementById('painel-nome').innerText = p.nome || '';
+  document.getElementById('painel-cidade').innerText = p.cidade_uf || '';
+
+  var idHidden = document.getElementById('painel-id-dgmb');
+  if (idHidden) {
+    idHidden.value = (p.id_dgmb || (currentUser && currentUser.id_dgmb) || '').trim();
+  }
+
+  document.getElementById('meta-km').innerText = formatNumber(p.meta);
+  document.getElementById('realizado-km').innerText = formatNumber(p.realizado);
+  document.getElementById('restante-km').innerText = formatNumber(p.restante);
+
+  document.getElementById('progress-text').innerText =
+    formatNumber(p.realizado) + ' km de ' + formatNumber(p.meta) + ' km';
+
+  document.getElementById('progress-percent').innerText =
+    formatNumber(p.percentual) + '%';
+
+  const bar = document.getElementById('progress-bar');
+  if (bar) {
+    bar.style.width = Math.max(0, Math.min(100, Number(p.percentual || 0))) + '%';
+  }
+
+  document.getElementById('ritmo-dia').innerText =
+    'Hoje é dia ' + formatNumber(p.diaAtual) + ' do desafio.';
+
+  document.getElementById('ritmo-ideal').innerText =
+    'Para concluir no ritmo ideal você deveria ter cerca de ' + formatNumber(p.kmIdealAtual) + ' km.';
+
+  document.getElementById('ritmo-atual').innerText =
+    'Você tem ' + formatNumber(p.realizado) + ' km.';
+
+  document.getElementById('ritmo-restante').innerText =
+    'Ainda faltam ' + formatNumber(p.diasRestantes) + ' dias.';
+
+  document.getElementById('ritmo-meta').innerText =
+    'Se pedalar cerca de ' + formatNumber(p.kmPorDiaRestante) + ' km por dia restante, você conclui o desafio.';
+
+  document.getElementById('frase-box').innerText =
+    p.frase || 'Cada quilômetro conta. Continue no seu ritmo.';
+
+  renderAtividades(p.atividades || []);
+  document.getElementById('total-pedalado').innerText = formatNumber(p.totalPedalado || p.realizado || 0);
+}
+function renderAtividades(lista) {
+  const box = document.getElementById('atividades-lista');
+  if (!box) return;
+
+  box.innerHTML = '';
+
+  if (!lista || !lista.length) {
+    box.innerHTML = '<p>Nenhuma atividade registrada ainda.</p>';
+    return;
+  }
+
+  lista.forEach(function(item) {
+    const div = document.createElement('div');
+    div.className = 'atividade';
+    div.innerText = 'Dia ' + formatDateBR(item.data) + ' - ' + formatNumber(item.km) + ' km';
+    box.appendChild(div);
+  });
+}
+
+function salvarAtividade(forcarDuplicidade) {
+  const idHidden = document.getElementById('painel-id-dgmb');
+  const idDgmb = idHidden && idHidden.value
+    ? String(idHidden.value).trim()
+    : (currentUser && currentUser.id_dgmb ? String(currentUser.id_dgmb).trim() : '');
+
+  const data = document.getElementById('data-atividade').value;
+  const km = document.getElementById('km-atividade').value;
+  const msg = document.getElementById('registro-msg');
+  const btn = document.getElementById('btn-salvar');
+
+  msg.innerText = '';
+
+  if (!idDgmb) {
+    msg.innerText = 'Sessão inválida. Entre novamente.';
+    return;
+  }
+
+  if (!data || !km) {
+    msg.innerText = 'Informe o dia e os KM.';
+    return;
+  }
+
+  btn.disabled = true;
+  msg.innerText = 'Salvando...';
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      btn.disabled = false;
+
+      if (!res || !res.ok) {
+        if (res && res.code === 'DUPLICIDADE' && !forcarDuplicidade) {
+          const confirmar = confirm('Você já registrou uma atividade com esse valor hoje. Deseja continuar?');
+          if (confirmar) {
+            salvarAtividade(true);
+          } else {
+            msg.innerText = 'Registro cancelado.';
+          }
+          return;
+        }
+
+        msg.innerText = (res && res.msg) ? res.msg : 'Não foi possível salvar.';
+        return;
+      }
+
+      msg.innerText = 'Atividade registrada com sucesso.';
+      document.getElementById('data-atividade').value = '';
+      document.getElementById('km-atividade').value = '';
+      carregarPainel();
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      msg.innerText = 'Erro ao salvar atividade.';
+      console.error(err);
+    })
+    .registrarAtividade(idDgmb, data, km, !!forcarDuplicidade);
+}
+
+function novaFrase() {
+  if (!currentUser || !currentUser.id_dgmb) return;
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res && res.ok && res.data && res.data.frase) {
+        document.getElementById('frase-box').innerText = res.data.frase;
+      }
+    })
+    .withFailureHandler(function(err) {
+      console.error(err);
+    })
+    .getNovaFrase(currentUser.id_dgmb);
+}
+
+function carregarRanking() {
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res || !res.ok) {
+        alert((res && res.msg) ? res.msg : 'Erro ao carregar ranking.');
+        return;
+      }
+
+      renderRanking(res.data || []);
+      showScreen('ranking');
+    })
+    .withFailureHandler(function(err) {
+      alert('Erro ao carregar ranking.');
+      console.error(err);
+    })
+    .getRanking();
+}
+
+function renderRanking(lista) {
+  const box = document.getElementById('ranking-lista');
+  if (!box) return;
+
+  box.innerHTML = '';
+
+  if (!lista || !lista.length) {
+    box.innerHTML = '<p>Nenhum atleta com quilometragem registrada ainda.</p>';
+    return;
+  }
+
+  lista.forEach(function(item, index) {
+    const div = document.createElement('div');
+    div.className = 'atividade';
+    div.innerHTML =
+      '<strong>' + (index + 1) + '. ' + escapeHtml(item.nome || '') + ' - ' + escapeHtml(item.cidade_uf || '') + '</strong><br>' +
+      formatNumber(item.realizado) + ' de ' + formatNumber(item.meta) + ' km<br>' +
+      'Faltam ' + formatNumber(item.restante) + ' km';
+    box.appendChild(div);
+  });
+}
+
+function formatDateBR(value) {
+  if (!value) return '';
+  const s = String(value);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const parts = s.split('-');
+    return parts[2] + '/' + parts[1] + '/' + parts[0];
+  }
+  return s;
+}
+
+function formatNumber(value) {
+  const n = Number(value || 0);
+  if (Number.isInteger(n)) return String(n);
+  return n.toFixed(1).replace('.', ',');
+}
+
+function escapeHtml(text) {
+  return String(text || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+</script>
