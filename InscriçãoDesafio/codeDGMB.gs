@@ -1,12 +1,11 @@
 /**
  * SistemaDGMBv3 - Versão USUARIOdgmb1
  */
-const SPREADSHEET_ID = '1wjbEuF5ZHUeLfKUpbNvgB2yuXWqHC20H74JXu4SnnsQ';
 const ABA_PESSOAL = 'DadosPessoais';
 const ABA_LISTA = 'ListaDesafios';
 const PASTA_SISTEMA_ID = '1bDrfsDoim-TN9i5lWJnfCPRXAV1OIKQP';
 
-function doGet() {
+function renderInscricaoDGMB() {
   return HtmlService.createHtmlOutputFromFile('formDGMB')
     .setTitle('Desafio Giro Motos Bikes')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no')
