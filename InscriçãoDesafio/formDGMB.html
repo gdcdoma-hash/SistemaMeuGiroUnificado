@@ -237,6 +237,15 @@ function copiarPix() {
   });
 }
 
+function getMeuGiroUrl(cpf) {
+  const url = new URL(window.location.href);
+  url.searchParams.delete('view');
+  if (cpf) {
+    url.searchParams.set('cpf', cpf.replace(/\D/g, ''));
+  }
+  return url.toString();
+}
+
 function entrar() {
   const btn = document.getElementById('btn-entrar');
   const cpfRaw = document.getElementById('login-cpf').value.replace(/\D/g,'');
@@ -329,6 +338,8 @@ function mostrarSucesso(d) {
   container.innerHTML = `
     <h1 style="color:${pOk?'#22c55e':'#fbbf24'}">${pOk?'INSCRIÇÃO REALIZADA':'INSCRIÇÃO PRÉ-REALIZADA'}</h1>
     <h2 style="text-align:center; color:white; text-transform: none;">Olá, ${getSaudacao()}, <span style="color:#22c55e">${d.nome.toUpperCase()}</span>!</h2>
+    <p style="text-align:center; margin-top:10px; font-size:15px; color:#cbd5e1;">Seu cadastro no desafio foi salvo com sucesso. Para acompanhar sua evolução, acesse o painel do Meu Giro.</p>
+    <button class="btn-main" style="background:#2563eb; margin-top:8px;" onclick="window.location.href='${getMeuGiroUrl(d.cpf || user.cpf)}'">Ir para Meu Giro</button>
     <p style="text-align:center; margin-top:15px; font-size:16px;">Você já está inscrito no<br><b style="color:#60a5fa; font-size:20px;">"${d.nomeExibicao}"</b></p>
     <div class="meta-destaque">A sua META é ${d.meta} KM</div>
     <div class="status-tempo" style="color:#fbbf24">${calcularContagemRegressiva(d.periodo)}</div>
