@@ -29,7 +29,14 @@ function applyCpfMask(value) {
 
 document.addEventListener('DOMContentLoaded', function() {
   const cpfInput = document.getElementById('cpf');
+  const params = new URLSearchParams(window.location.search);
+  const cpfPrefill = onlyDigits(params.get('cpf') || '');
+
   if (cpfInput) {
+    if (cpfPrefill.length === 11) {
+      cpfInput.value = applyCpfMask(cpfPrefill);
+    }
+
     cpfInput.addEventListener('input', function(e) {
       e.target.value = applyCpfMask(e.target.value);
     });
