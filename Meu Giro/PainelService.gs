@@ -133,7 +133,8 @@ function buscarPessoaPainelMG_(idDgmb) {
 }
 
 function buscarInscricaoPainelMG_(idDgmb) {
-  var items = getAllObjects_(SHEETS.DESAFIO);
+  var abaDesafio = localizarAbaDesafioUsuario_(idDgmb).abaDesafio;
+  var items = getAllObjects_(abaDesafio);
 
   for (var i = 0; i < items.length; i++) {
     var row = items[i];
@@ -203,7 +204,8 @@ function painelMG_calcularRitmo_(meta, realizado) {
 
 function painelMG_calcularPosicaoRanking_(idDgmb) {
   var pessoas = getAllObjects_(SHEETS.PESSOAS);
-  var desafio = getAllObjects_(SHEETS.DESAFIO);
+  var abaDesafio = localizarAbaDesafioUsuario_(idDgmb).abaDesafio;
+  var desafio = getAllObjects_(abaDesafio);
   var pessoasMap = {};
 
   for (var i = 0; i < pessoas.length; i++) {
@@ -335,6 +337,5 @@ function painelMG_obterFraseSeguro_(frasePadrao) {
   if (frase) return frase;
   return 'Cada quilômetro conta. Continue no seu ritmo.';
 }
-
 
 
