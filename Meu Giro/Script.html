@@ -146,11 +146,17 @@ function renderPainel(p) {
 
   const posicaoRanking = firstDefined([p.posicao_ranking, p.posicaoRanking]);
   const totalParticipantes = firstDefined([p.total_participantes, p.totalParticipantes]);
+  const hasPosicaoRanking = isValidRankingPosition(posicaoRanking);
   const posicaoRankingEl = document.getElementById('painel-posicao-ranking');
   const posicaoDetalheEl = document.getElementById('painel-posicao-detalhe');
+  const rankingBoxEl = document.getElementById('painel-ranking-box');
+
+  if (rankingBoxEl) {
+    rankingBoxEl.style.display = hasPosicaoRanking ? '' : 'none';
+  }
 
   if (posicaoRankingEl) {
-    posicaoRankingEl.innerText = Number.isFinite(Number(posicaoRanking))
+    posicaoRankingEl.innerText = hasPosicaoRanking
       ? 'Sua posição no ranking geral: ' + formatNumber(posicaoRanking)
       : 'Sua posição no ranking geral: --';
   }
@@ -172,6 +178,11 @@ function firstDefined(values) {
     }
   }
   return null;
+}
+
+function isValidRankingPosition(value) {
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) && numberValue > 0;
 }
 
 function renderAtividades(lista) {
