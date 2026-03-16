@@ -103,46 +103,39 @@ function carregarPainel() {
 }
 
 function renderPainel(p) {
-  document.getElementById('painel-nome').innerText = p.nome || '';
-  document.getElementById('painel-cidade').innerText = p.cidade_uf || '';
+  setTextById('painel-nome', p.nome || '');
+  setTextById('painel-cidade', p.cidade_uf || '');
 
   var idHidden = document.getElementById('painel-id-dgmb');
   if (idHidden) {
     idHidden.value = String(p.id_dgmb || (currentUser && currentUser.id_dgmb) || '').trim();
   }
 
-  document.getElementById('meta-km').innerText = formatNumber(p.meta);
-  document.getElementById('realizado-km').innerText = formatNumber(p.realizado);
-  document.getElementById('restante-km').innerText = formatNumber(p.restante);
+  setTextById('meta-km', formatNumber(p.meta));
+  setTextById('realizado-km', formatNumber(p.realizado));
+  setTextById('restante-km', formatNumber(p.restante));
 
-  document.getElementById('progress-text').innerText =
-    formatNumber(p.realizado) + ' km de ' + formatNumber(p.meta) + ' km';
+  setTextById('progress-text',
+    formatNumber(p.realizado) + ' km de ' + formatNumber(p.meta) + ' km');
 
-  document.getElementById('progress-percent').innerText =
-    formatNumber(p.percentual) + '%';
+  setTextById('progress-percent', formatNumber(p.percentual) + '%');
 
   const bar = document.getElementById('progress-bar');
   if (bar) {
     bar.style.width = Math.max(0, Math.min(100, toFiniteNumber(p.percentual, 0))) + '%';
   }
 
-  document.getElementById('ritmo-dia').innerText =
-    'Hoje é dia ' + formatNumber(p.diaAtual) + ' do desafio.';
+  setTextById('ritmo-dia', 'Hoje é dia ' + formatNumber(p.diaAtual) + ' do desafio.');
 
-  document.getElementById('ritmo-ideal').innerText =
-    'Para concluir no ritmo ideal você deveria ter cerca de ' + formatNumber(p.kmIdealAtual) + ' km.';
+  setTextById('ritmo-ideal', 'Para concluir no ritmo ideal você deveria ter cerca de ' + formatNumber(p.kmIdealAtual) + ' km.');
 
-  document.getElementById('ritmo-atual').innerText =
-    'Você tem ' + formatNumber(p.realizado) + ' km.';
+  setTextById('ritmo-atual', 'Você tem ' + formatNumber(p.realizado) + ' km.');
 
-  document.getElementById('ritmo-restante').innerText =
-    'Ainda faltam ' + formatNumber(p.diasRestantes) + ' dias.';
+  setTextById('ritmo-restante', 'Ainda faltam ' + formatNumber(p.diasRestantes) + ' dias.');
 
-  document.getElementById('ritmo-meta').innerText =
-    'Se pedalar cerca de ' + formatNumber(p.kmPorDiaRestante) + ' km por dia restante, você conclui o desafio.';
+  setTextById('ritmo-meta', 'Se pedalar cerca de ' + formatNumber(p.kmPorDiaRestante) + ' km por dia restante, você conclui o desafio.');
 
-  document.getElementById('frase-box').innerText =
-    p.frase || 'Cada quilômetro conta. Continue no seu ritmo.';
+  setTextById('frase-box', p.frase || 'Cada quilômetro conta. Continue no seu ritmo.');
 
   const posicaoRanking = firstDefined([p.posicao_ranking, p.posicaoRanking]);
   const totalParticipantes = firstDefined([p.total_participantes, p.totalParticipantes]);
@@ -168,7 +161,14 @@ function renderPainel(p) {
   }
 
   renderAtividades(p.atividades || []);
-  document.getElementById('total-pedalado').innerText = formatNumber(p.totalPedalado || p.realizado || 0);
+  setTextById('total-pedalado', formatNumber(p.totalPedalado || p.realizado || 0));
+}
+
+function setTextById(id, text) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.innerText = text;
+  }
 }
 
 function firstDefined(values) {
@@ -216,10 +216,15 @@ function salvarAtividade(forcarDuplicidade) {
     ? String(idHidden.value).trim()
     : (currentUser && currentUser.id_dgmb ? String(currentUser.id_dgmb).trim() : '');
 
-  const data = document.getElementById('data-atividade').value;
-  const km = document.getElementById('km-atividade').value;
+  const dataInput = document.getElementById('data-atividade');
+  const kmInput = document.getElementById('km-atividade');
   const msg = document.getElementById('registro-msg');
   const btn = document.getElementById('btn-salvar');
+
+  if (!dataInput || !kmInput || !msg || !btn) return;
+
+  const data = dataInput.value;
+  const km = kmInput.value;
 
   msg.innerText = '';
 
@@ -256,8 +261,8 @@ function salvarAtividade(forcarDuplicidade) {
       }
 
       msg.innerText = 'Atividade registrada com sucesso.';
-      document.getElementById('data-atividade').value = '';
-      document.getElementById('km-atividade').value = '';
+      dataInput.value = '';
+      kmInput.value = '';
       carregarPainel();
     })
     .withFailureHandler(function(err) {
@@ -274,7 +279,7 @@ function novaFrase() {
   google.script.run
     .withSuccessHandler(function(res) {
       if (res && res.ok && res.data && res.data.frase) {
-        document.getElementById('frase-box').innerText = res.data.frase;
+        setTextById('frase-box', res.data.frase);
       }
     })
     .withFailureHandler(function(err) {
