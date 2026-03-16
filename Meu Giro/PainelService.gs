@@ -311,8 +311,8 @@ function painelMG_calcularPosicaoRanking_(idDgmb) {
     var did = painelMG_norm_(painelMG_firstFilled_(d, ['ID_DGMB', 'id_dgmb']));
     if (!did) continue;
 
-    var meta = painelMG_toNumber_(painelMG_firstFilled_(d, ['Distancia_KM', 'distancia_km', 'Distancia KM']));
-    var realizado = painelMG_toNumber_(painelMG_firstFilled_(d, ['Distancia_Realizada', 'distancia_realizada', 'Distancia Realizada']));
+    var meta = painelMG_round1_(painelMG_toNumber_(painelMG_firstFilled_(d, ['Distancia_KM', 'distancia_km', 'Distancia KM'])));
+    var realizado = painelMG_round1_(painelMG_toNumber_(painelMG_firstFilled_(d, ['Distancia_Realizada', 'distancia_realizada', 'Distancia Realizada'])));
     var restante = Math.max(meta - realizado, 0);
     var percentual = meta > 0 ? (realizado / meta) * 100 : 0;
 
