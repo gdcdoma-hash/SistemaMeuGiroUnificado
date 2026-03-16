@@ -221,16 +221,32 @@ function obterDadosInscricaoUsuario_(idDgmb) {
   var idxMeta = getOptionalColumnIndex_(map, ['distancia_km', 'distancia km']);
   var idxRealizado = getOptionalColumnIndex_(map, ['distancia_realizada', 'distancia realizada']);
   var idxFrase = getOptionalColumnIndex_(map, ['frase_incentivo']);
+  var idxStatus = getOptionalColumnIndex_(map, ['status_inscricao', 'status inscrição', 'status', 'situacao', 'situação']);
+  var idxConfirmacao = getOptionalColumnIndex_(map, ['confirmacao', 'confirmação', 'confirmado', 'inscricao_confirmada']);
+  var idxPagamento = getOptionalColumnIndex_(map, ['status_pagamento', 'pagamento_status', 'pagto_status', 'pagamento', 'pix_status']);
 
   for (var i = 1; i < values.length; i++) {
     var row = values[i];
     var rowId = normalizeText_(row[idxId]);
 
     if (rowId === id) {
+      var statusInscricao = idxStatus > -1 ? normalizeText_(row[idxStatus]) : '';
+      var statusConfirmacao = idxConfirmacao > -1 ? normalizeText_(row[idxConfirmacao]) : '';
+      var statusPagamento = idxPagamento > -1 ? normalizeText_(row[idxPagamento]) : '';
+      var validacao = validarInscricaoMinima_({
+        status_inscricao: statusInscricao,
+        status_confirmacao: statusConfirmacao,
+        status_pagamento: statusPagamento
+      });
+
       return {
         id_dgmb: rowId,
         aba_desafio: abaDesafio,
-        status_inscricao: 'inscrito',
+        status_inscricao: statusInscricao || 'inscrito',
+        status_confirmacao: statusConfirmacao,
+        status_pagamento: statusPagamento,
+        inscricao_valida: validacao.valida,
+        criterio_validacao: validacao.criterio,
         meta: idxMeta > -1 ? row[idxMeta] : '',
         distancia_realizada: idxRealizado > -1 ? row[idxRealizado] : '',
         frase_incentivo: idxFrase > -1 ? normalizeText_(row[idxFrase]) : ''
@@ -239,6 +255,64 @@ function obterDadosInscricaoUsuario_(idDgmb) {
   }
 
   return null;
+}
+
+function validarInscricaoMinima_(dadosInscricao) {
+  var dados = dadosInscricao || {};
+  var marcadores = [
+    { campo: 'status_inscricao', valor: normalizeText_(dados.status_inscricao) },
+    { campo: 'status_confirmacao', valor: normalizeText_(dados.status_confirmacao) },
+    { campo: 'status_pagamento', valor: normalizeText_(dados.status_pagamento) }
+  ];
+
+  var possuiMarcador = false;
+
+  for (var i = 0; i < marcadores.length; i++) {
+    var marcador = marcadores[i];
+    if (marcador.valor) {
+      possuiMarcador = true;
+    }
+
+    if (inscricaoTemBloqueioMinimo_(marcador.valor)) {
+      return {
+        valida: false,
+        criterio: 'bloqueio_em_' + marcador.campo
+      };
+    }
+  }
+
+  return {
+    valida: true,
+    criterio: possuiMarcador ? 'marcadores_sem_bloqueio' : 'presenca_id_dgmb'
+  };
+}
+
+function inscricaoTemBloqueioMinimo_(valor) {
+  var texto = normalizeText_(valor).toLowerCase();
+  if (!texto) return false;
+
+  var textoSemAcento = texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  var bloqueios = [
+    'cancelad',
+    'desist',
+    'inativ',
+    'exclu',
+    'remov',
+    'indefer',
+    'recus',
+    'nao confirmado',
+    'nao conf',
+    'nao pago',
+    'estorn'
+  ];
+
+  for (var i = 0; i < bloqueios.length; i++) {
+    if (textoSemAcento.indexOf(bloqueios[i]) !== -1) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function parseNumber_(value) {

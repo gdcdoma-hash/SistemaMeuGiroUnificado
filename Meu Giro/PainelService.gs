@@ -52,6 +52,7 @@ function getPainelUsuario(idDgmb) {
         cidade_uf: pessoa.cidade_uf || '',
         id_dgmb: pessoa.id_dgmb || '',
         status_inscricao: desafio.status_inscricao || 'inscrito',
+        criterio_validacao_inscricao: desafio.criterio_validacao || 'presenca_id_dgmb',
         desafio_usuario: desafio.aba_desafio || '',
 
         meta: painelMG_round1_(meta),
@@ -137,7 +138,7 @@ function buscarPessoaPainelMG_(idDgmb) {
 function buscarInscricaoPainelMG_(idDgmb) {
   var inscricao = obterDadosInscricaoUsuario_(idDgmb);
 
-  if (!inscricao) {
+  if (!inscricao || inscricao.inscricao_valida === false) {
     return null;
   }
 
@@ -146,6 +147,7 @@ function buscarInscricaoPainelMG_(idDgmb) {
     meta: inscricao.meta,
     realizado: inscricao.distancia_realizada,
     status_inscricao: painelMG_norm_(inscricao.status_inscricao),
+    criterio_validacao: painelMG_norm_(inscricao.criterio_validacao),
     aba_desafio: painelMG_norm_(inscricao.aba_desafio),
     frase_incentivo: painelMG_norm_(inscricao.frase_incentivo)
   };

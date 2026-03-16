@@ -79,13 +79,15 @@ function buscarUsuarioPorCPF_(cpfLimpo) {
 function verificarInscricaoDesafio_(idDgmb) {
   var inscricao = obterDadosInscricaoUsuario_(idDgmb);
 
-  if (!inscricao) {
+  if (!inscricao || inscricao.inscricao_valida === false) {
     return null;
   }
 
   return {
     id_dgmb: inscricao.id_dgmb,
-    aba_desafio: inscricao.aba_desafio
+    aba_desafio: inscricao.aba_desafio,
+    status_inscricao: inscricao.status_inscricao || 'inscrito',
+    criterio_validacao: inscricao.criterio_validacao || 'presenca_id_dgmb'
   };
 }
 
