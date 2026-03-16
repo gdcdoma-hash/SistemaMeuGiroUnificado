@@ -21,12 +21,13 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
       .getSheetByName(SHEETS.REGISTRO_KM);
 
     var dados = sheet.getDataRange().getValues();
+    var cols = getRegistroKmColumnIndexes_(dados);
 
     for (var i = 1; i < dados.length; i++) {
 
-      var rowId = String(dados[i][1] || '').trim();
-      var rowData = String(dados[i][2] || '').trim();
-      var rowKm = Number(dados[i][3] || 0);
+      var rowId = String(dados[i][cols.idxId] || '').trim();
+      var rowData = String(dados[i][cols.idxData] || '').trim();
+      var rowKm = Number(dados[i][cols.idxKm] || 0);
 
       if (rowId === idDgmb && rowData === dataAtividade && rowKm === km) {
 
@@ -152,11 +153,12 @@ function editarAtividade(payload) {
       .getSheetByName(SHEETS.REGISTRO_KM);
 
     var dados = sheet.getDataRange().getValues();
+    var cols = getRegistroKmColumnIndexes_(dados);
     var linhaEncontrada = -1;
 
     for (var i = 1; i < dados.length; i++) {
-      var rowTimestamp = normalizarTimestampEdicao_(dados[i][0]);
-      var rowId = String(dados[i][1] || '').trim();
+      var rowTimestamp = normalizarTimestampEdicao_(dados[i][cols.idxTimestamp]);
+      var rowId = String(dados[i][cols.idxId] || '').trim();
 
       if (rowTimestamp === chaveEdicao && rowId === idDgmb) {
         linhaEncontrada = i + 1;
@@ -173,9 +175,9 @@ function editarAtividade(payload) {
     }
 
     for (var j = 1; j < dados.length; j++) {
-      var checkId = String(dados[j][1] || '').trim();
-      var checkData = normalizarDataEdicao_(dados[j][2]);
-      var checkKm = normalizarKmEdicao_(dados[j][3]);
+      var checkId = String(dados[j][cols.idxId] || '').trim();
+      var checkData = normalizarDataEdicao_(dados[j][cols.idxData]);
+      var checkKm = normalizarKmEdicao_(dados[j][cols.idxKm]);
       var linhaAtual = j + 1;
 
       if (
@@ -192,8 +194,8 @@ function editarAtividade(payload) {
       }
     }
 
-    sheet.getRange(linhaEncontrada, 3).setValue(novaDataAtividade);
-    sheet.getRange(linhaEncontrada, 4).setValue(novoKm);
+    sheet.getRange(linhaEncontrada, cols.idxData + 1).setValue(novaDataAtividade);
+    sheet.getRange(linhaEncontrada, cols.idxKm + 1).setValue(novoKm);
 
     atualizarDistanciaRealizada_(idDgmb);
 
@@ -385,11 +387,12 @@ function excluirAtividade(payload) {
       .getSheetByName(SHEETS.REGISTRO_KM);
 
     var dados = sheet.getDataRange().getValues();
+    var cols = getRegistroKmColumnIndexes_(dados);
     var linhaEncontrada = -1;
 
     for (var i = 1; i < dados.length; i++) {
-      var rowTimestamp = normalizarTimestampEdicao_(dados[i][0]);
-      var rowId = String(dados[i][1] || '').trim();
+      var rowTimestamp = normalizarTimestampEdicao_(dados[i][cols.idxTimestamp]);
+      var rowId = String(dados[i][cols.idxId] || '').trim();
 
       if (rowTimestamp === chaveEdicao && rowId === idDgmb) {
         linhaEncontrada = i + 1;
@@ -419,4 +422,37 @@ function excluirAtividade(payload) {
       msg: err && err.message ? err.message : 'Erro ao excluir atividade.'
     };
   }
+}
+
+function getRegistroKmColumnIndexes_(dados) {
+  var fallback = {
+    idxTimestamp: 0,
+    idxId: 1,
+    idxData: 2,
+    idxKm: 3
+  };
+
+  var aliases = {
+    timestamp: ['timestamp', 'data_hora', 'data hora', 'criado_em', 'criado em'],
+    id: ['id_dgmb'],
+    data: ['data_atividade', 'data atividade', 'data'],
+    km: ['km', 'distancia_km', 'distancia km']
+  };
+
+  if (!dados || !dados.length || !dados[0] || !dados[0].length) {
+    return fallback;
+  }
+
+  var map = buildHeaderMap_(dados[0]);
+  var idxTimestamp = getOptionalColumnIndex_(map, aliases.timestamp);
+  var idxId = getOptionalColumnIndex_(map, aliases.id);
+  var idxData = getOptionalColumnIndex_(map, aliases.data);
+  var idxKm = getOptionalColumnIndex_(map, aliases.km);
+
+  return {
+    idxTimestamp: idxTimestamp > -1 ? idxTimestamp : fallback.idxTimestamp,
+    idxId: idxId > -1 ? idxId : fallback.idxId,
+    idxData: idxData > -1 ? idxData : fallback.idxData,
+    idxKm: idxKm > -1 ? idxKm : fallback.idxKm
+  };
 }
