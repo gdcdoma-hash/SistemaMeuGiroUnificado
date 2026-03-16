@@ -151,14 +151,14 @@ function renderPainel(p) {
 
   if (posicaoRankingEl) {
     posicaoRankingEl.innerText = Number.isFinite(Number(posicaoRanking))
-      ? 'Sua posição de evolução: ' + formatNumber(posicaoRanking)
-      : 'Sua posição de evolução: --';
+      ? 'Sua posição no ranking geral: ' + formatNumber(posicaoRanking)
+      : 'Sua posição no ranking geral: --';
   }
 
   if (posicaoDetalheEl) {
     posicaoDetalheEl.innerText = Number.isFinite(Number(totalParticipantes))
-      ? 'Entre ' + formatNumber(totalParticipantes) + ' participantes no ranking.'
-      : 'Baseado no percentual da sua meta concluída.';
+      ? 'Considerando ' + formatNumber(totalParticipantes) + ' participantes no ranking.'
+      : 'Classificação baseada no percentual da meta concluída.';
   }
 
   renderAtividades(p.atividades || []);
