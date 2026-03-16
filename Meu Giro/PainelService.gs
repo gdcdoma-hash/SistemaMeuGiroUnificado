@@ -88,13 +88,16 @@ function getPainelUsuario(idDgmb) {
 
         posicao_ranking: rankingInfo.posicao,
         total_participantes: rankingInfo.total,
+        posicaoRanking: rankingInfo.posicao,
+        totalParticipantes: rankingInfo.total,
 
         frase: frase || desafioData.frase_incentivo || 'Cada quilômetro conta. Continue no seu ritmo.',
         frase_motivacional: frase || desafioData.frase_incentivo || 'Cada quilômetro conta. Continue no seu ritmo.',
         contexto_frase: contextoFrase || '',
 
         atividades: atividades,
-        totalPedalado: realizadoPainel
+        totalPedalado: realizadoPainel,
+        total_pedalado: realizadoPainel
       }
     };
   } catch (err) {
@@ -143,7 +146,7 @@ function buscarAtividadesUsuario_(idDgmb) {
 
       out.push({
         chave_edicao: String(chaveEdicao || '').trim(),
-        data: dataNormalizada,
+        data: dataNormalizada || painelMG_norm_(dataOriginal),
         km: painelMG_round1_(painelMG_toNumber_(painelMG_firstFilled_(row, ['KM', 'km'])))
       });
     }
