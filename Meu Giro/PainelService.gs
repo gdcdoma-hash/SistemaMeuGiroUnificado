@@ -21,6 +21,14 @@ function getPainelUsuario(idDgmb) {
       };
     }
 
+    if (!desafio.data) {
+      return {
+        ok: false,
+        code: 'CONTRATO_INSCRICAO_INVALIDO',
+        msg: 'Dados de inscrição inválidos para o painel.'
+      };
+    }
+
     var desafioData = desafio.data;
 
     var meta = painelMG_toNumber_(desafioData.meta);
