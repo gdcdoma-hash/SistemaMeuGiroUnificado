@@ -257,6 +257,22 @@ function obterDadosInscricaoUsuario_(idDgmb) {
   return null;
 }
 
+function montarErroInscricaoInvalida_(inscricao) {
+  if (!inscricao) {
+    return {
+      code: 'NAO_INSCRITO',
+      motivo: 'inscricao_nao_localizada',
+      msg: 'Seu CPF foi localizado, mas você não está inscrito no desafio atual.'
+    };
+  }
+
+  return {
+    code: 'INSCRICAO_INVALIDA',
+    motivo: normalizeText_(inscricao.criterio_validacao) || 'criterio_minimo_inscricao',
+    msg: 'Seu cadastro foi localizado, mas a inscrição não está válida para acesso ao desafio.'
+  };
+}
+
 function validarInscricaoMinima_(dadosInscricao) {
   var dados = dadosInscricao || {};
   var marcadores = [

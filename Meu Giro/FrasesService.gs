@@ -515,15 +515,25 @@ function getOutraFraseMotivacional(idDgmb, fraseAtual) {
     var pessoa = buscarPessoaPainelMG_(id);
     var desafio = buscarInscricaoPainelMG_(id);
 
-    if (!pessoa || !desafio) {
+    if (!pessoa) {
       return {
         ok: false,
         msg: 'Atleta não encontrado no desafio.'
       };
     }
 
-    var meta = painelMG_toNumber_(desafio.meta);
-    var realizado = painelMG_toNumber_(desafio.realizado);
+    if (!desafio.ok) {
+      return {
+        ok: false,
+        code: desafio.code,
+        motivo_inscricao: desafio.motivo,
+        msg: desafio.msg
+      };
+    }
+
+    var desafioData = desafio.data;
+    var meta = painelMG_toNumber_(desafioData.meta);
+    var realizado = painelMG_toNumber_(desafioData.realizado);
 
     var progresso = painelMG_calcularProgresso_(meta, realizado);
     var ritmo = painelMG_calcularRitmo_(meta, realizado);
