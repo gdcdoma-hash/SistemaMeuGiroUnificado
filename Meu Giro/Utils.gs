@@ -6,12 +6,6 @@ function normalizeCell_(value) {
   return String(value === null || value === undefined ? '' : value).trim();
 }
 
-function toNumber_(value) {
-  if (value === null || value === undefined || value === '') return 0;
-  var n = Number(String(value).replace(',', '.'));
-  return isNaN(n) ? 0 : n;
-}
-
 function getSpreadsheet_() {
   if (!SPREADSHEET_ID) {
     throw new Error('SPREADSHEET_ID não informado no Config.gs');
@@ -331,7 +325,7 @@ function inscricaoTemBloqueioMinimo_(valor) {
   return false;
 }
 
-function parseNumber_(value) {
+function parseLocalizedNumber_(value) {
   if (value === null || value === undefined || value === '') return 0;
 
   var text = String(value).trim();
@@ -348,7 +342,7 @@ function parseNumber_(value) {
   return isNaN(n) ? 0 : n;
 }
 function toNumber_(value) {
-  return parseNumber_(value);
+  return parseLocalizedNumber_(value);
 }
 
 function firstFilledValue_(obj, keys) {
