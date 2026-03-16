@@ -23,6 +23,25 @@ function readInputValue(inputEl) {
   return String((inputEl && inputEl.value) || '').trim();
 }
 
+function startLoadingState(btn, msg, loadingText) {
+  const text = String(loadingText || 'Processando...');
+  let finalized = false;
+
+  if (msg) msg.innerText = text;
+  if (btn) btn.disabled = true;
+
+  return function finishLoadingState(nextMessage) {
+    if (finalized) return;
+    finalized = true;
+
+    if (btn) btn.disabled = false;
+
+    if (msg && typeof nextMessage === 'string') {
+      msg.innerText = nextMessage;
+    }
+  };
+}
+
 function applyCpfMask(value) {
   const digits = onlyDigits(value).slice(0, 11);
   if (digits.length <= 3) return digits;
@@ -56,35 +75,38 @@ function login() {
 
   const cpf = readInputValue(cpfInput);
 
-  msg.innerText = 'Verificando...';
-  btn.disabled = true;
+  const finishLoading = startLoadingState(btn, msg, 'Verificando...');
 
-  google.script.run
-    .withSuccessHandler(function(res) {
-      btn.disabled = false;
+  try {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        finishLoading();
 
-      if (!res || !res.ok) {
-        msg.innerText = (res && res.msg) ? res.msg : 'Não foi possível entrar.';
-        return;
-      }
+        if (!res || !res.ok) {
+          msg.innerText = (res && res.msg) ? res.msg : 'Não foi possível entrar.';
+          return;
+        }
 
-      currentUser = {
-        id_dgmb: res.data && res.data.id_dgmb ? String(res.data.id_dgmb).trim() : '',
-        nome: res.data && res.data.nome ? res.data.nome : '',
-        cidade_uf: res.data && res.data.cidade_uf ? res.data.cidade_uf : ''
-      };
+        currentUser = {
+          id_dgmb: res.data && res.data.id_dgmb ? String(res.data.id_dgmb).trim() : '',
+          nome: res.data && res.data.nome ? res.data.nome : '',
+          cidade_uf: res.data && res.data.cidade_uf ? res.data.cidade_uf : ''
+        };
 
-      msg.innerText = '';
+        msg.innerText = '';
 
-      showScreen('painel');
-      carregarPainel();
-    })
-    .withFailureHandler(function(err) {
-      btn.disabled = false;
-      msg.innerText = 'Erro de comunicação com o servidor.';
-      console.error(err);
-    })
-    .loginCPF(cpf);
+        showScreen('painel');
+        carregarPainel();
+      })
+      .withFailureHandler(function(err) {
+        finishLoading('Erro de comunicação com o servidor.');
+        console.error(err);
+      })
+      .loginCPF(cpf);
+  } catch (err) {
+    finishLoading('Erro de comunicação com o servidor.');
+    console.error(err);
+  }
 }
 function carregarPainel() {
   if (!currentUser || !currentUser.id_dgmb) return;
@@ -242,39 +264,42 @@ function salvarAtividade(forcarDuplicidade) {
     return;
   }
 
-  btn.disabled = true;
-  msg.innerText = 'Salvando...';
+  const finishLoading = startLoadingState(btn, msg, 'Salvando...');
 
-  google.script.run
-    .withSuccessHandler(function(res) {
-      btn.disabled = false;
+  try {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        finishLoading();
 
-      if (!res || !res.ok) {
-        if (res && res.code === 'DUPLICIDADE' && !forcarDuplicidade) {
-          const confirmar = confirm('Você já registrou uma atividade com esse valor hoje. Deseja continuar?');
-          if (confirmar) {
-            salvarAtividade(true);
-          } else {
-            msg.innerText = 'Registro cancelado.';
+        if (!res || !res.ok) {
+          if (res && res.code === 'DUPLICIDADE' && !forcarDuplicidade) {
+            const confirmar = confirm('Você já registrou uma atividade com esse valor hoje. Deseja continuar?');
+            if (confirmar) {
+              salvarAtividade(true);
+            } else {
+              msg.innerText = 'Registro cancelado.';
+            }
+            return;
           }
+
+          msg.innerText = (res && res.msg) ? res.msg : 'Não foi possível salvar.';
           return;
         }
 
-        msg.innerText = (res && res.msg) ? res.msg : 'Não foi possível salvar.';
-        return;
-      }
-
-      msg.innerText = 'Atividade registrada com sucesso.';
-      dataInput.value = '';
-      kmInput.value = '';
-      carregarPainel();
-    })
-    .withFailureHandler(function(err) {
-      btn.disabled = false;
-      msg.innerText = 'Erro ao salvar atividade.';
-      console.error(err);
-    })
-    .registrarAtividade(idDgmb, data, km, !!forcarDuplicidade);
+        msg.innerText = 'Atividade registrada com sucesso.';
+        dataInput.value = '';
+        kmInput.value = '';
+        carregarPainel();
+      })
+      .withFailureHandler(function(err) {
+        finishLoading('Erro ao salvar atividade.');
+        console.error(err);
+      })
+      .registrarAtividade(idDgmb, data, km, !!forcarDuplicidade);
+  } catch (err) {
+    finishLoading('Erro ao salvar atividade.');
+    console.error(err);
+  }
 }
 
 function novaFrase() {
