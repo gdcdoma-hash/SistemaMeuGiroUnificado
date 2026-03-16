@@ -144,9 +144,36 @@ function renderPainel(p) {
   document.getElementById('frase-box').innerText =
     p.frase || 'Cada quilômetro conta. Continue no seu ritmo.';
 
+  const posicaoRanking = firstDefined([p.posicao_ranking, p.posicaoRanking]);
+  const totalParticipantes = firstDefined([p.total_participantes, p.totalParticipantes]);
+  const posicaoRankingEl = document.getElementById('painel-posicao-ranking');
+  const posicaoDetalheEl = document.getElementById('painel-posicao-detalhe');
+
+  if (posicaoRankingEl) {
+    posicaoRankingEl.innerText = Number.isFinite(Number(posicaoRanking))
+      ? 'Sua posição de evolução: ' + formatNumber(posicaoRanking)
+      : 'Sua posição de evolução: --';
+  }
+
+  if (posicaoDetalheEl) {
+    posicaoDetalheEl.innerText = Number.isFinite(Number(totalParticipantes))
+      ? 'Entre ' + formatNumber(totalParticipantes) + ' participantes no ranking.'
+      : 'Baseado no percentual da sua meta concluída.';
+  }
+
   renderAtividades(p.atividades || []);
   document.getElementById('total-pedalado').innerText = formatNumber(p.totalPedalado || p.realizado || 0);
 }
+
+function firstDefined(values) {
+  for (var i = 0; i < values.length; i++) {
+    if (values[i] !== null && values[i] !== undefined && values[i] !== '') {
+      return values[i];
+    }
+  }
+  return null;
+}
+
 function renderAtividades(lista) {
   const box = document.getElementById('atividades-lista');
   if (!box) return;
