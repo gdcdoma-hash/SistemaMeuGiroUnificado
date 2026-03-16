@@ -51,6 +51,8 @@ function getPainelUsuario(idDgmb) {
         nome: pessoa.nome || '',
         cidade_uf: pessoa.cidade_uf || '',
         id_dgmb: pessoa.id_dgmb || '',
+        status_inscricao: desafio.status_inscricao || 'inscrito',
+        desafio_usuario: desafio.aba_desafio || '',
 
         meta: painelMG_round1_(meta),
         realizado: painelMG_round1_(realizado),
@@ -133,24 +135,20 @@ function buscarPessoaPainelMG_(idDgmb) {
 }
 
 function buscarInscricaoPainelMG_(idDgmb) {
-  var abaDesafio = localizarAbaDesafioUsuario_(idDgmb).abaDesafio;
-  var items = getAllObjects_(abaDesafio);
+  var inscricao = obterDadosInscricaoUsuario_(idDgmb);
 
-  for (var i = 0; i < items.length; i++) {
-    var row = items[i];
-    var rowId = painelMG_firstFilled_(row, ['ID_DGMB', 'id_dgmb']);
-
-    if (painelMG_norm_(rowId) === painelMG_norm_(idDgmb)) {
-      return {
-        id_dgmb: painelMG_norm_(rowId),
-        meta: painelMG_firstFilled_(row, ['Distancia_KM', 'distancia_km', 'Distancia KM']),
-        realizado: painelMG_firstFilled_(row, ['Distancia_Realizada', 'distancia_realizada', 'Distancia Realizada']),
-        frase_incentivo: painelMG_norm_(painelMG_firstFilled_(row, ['Frase_Incentivo', 'frase_incentivo']))
-      };
-    }
+  if (!inscricao) {
+    return null;
   }
 
-  return null;
+  return {
+    id_dgmb: painelMG_norm_(inscricao.id_dgmb),
+    meta: inscricao.meta,
+    realizado: inscricao.distancia_realizada,
+    status_inscricao: painelMG_norm_(inscricao.status_inscricao),
+    aba_desafio: painelMG_norm_(inscricao.aba_desafio),
+    frase_incentivo: painelMG_norm_(inscricao.frase_incentivo)
+  };
 }
 
 function painelMG_calcularProgresso_(meta, realizado) {

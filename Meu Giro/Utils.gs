@@ -201,6 +201,46 @@ function normalizeText_(value) {
     .replace(/\s+/g, ' ')
     .trim();
 }
+
+function obterDadosInscricaoUsuario_(idDgmb) {
+  var id = normalizeText_(idDgmb);
+  if (!id) return null;
+
+  var localizacao = localizarAbaDesafioUsuario_(id);
+  var abaDesafio = localizacao.abaDesafio;
+  var sh = getSheetByName_(abaDesafio);
+  var values = sh.getDataRange().getValues();
+
+  if (!values || values.length < 2) {
+    return null;
+  }
+
+  var header = values[0];
+  var map = buildHeaderMap_(header);
+  var idxId = getRequiredColumnIndex_(map, ['id_dgmb'], abaDesafio);
+  var idxMeta = getOptionalColumnIndex_(map, ['distancia_km', 'distancia km']);
+  var idxRealizado = getOptionalColumnIndex_(map, ['distancia_realizada', 'distancia realizada']);
+  var idxFrase = getOptionalColumnIndex_(map, ['frase_incentivo']);
+
+  for (var i = 1; i < values.length; i++) {
+    var row = values[i];
+    var rowId = normalizeText_(row[idxId]);
+
+    if (rowId === id) {
+      return {
+        id_dgmb: rowId,
+        aba_desafio: abaDesafio,
+        status_inscricao: 'inscrito',
+        meta: idxMeta > -1 ? row[idxMeta] : '',
+        distancia_realizada: idxRealizado > -1 ? row[idxRealizado] : '',
+        frase_incentivo: idxFrase > -1 ? normalizeText_(row[idxFrase]) : ''
+      };
+    }
+  }
+
+  return null;
+}
+
 function parseNumber_(value) {
   if (value === null || value === undefined || value === '') return 0;
 
