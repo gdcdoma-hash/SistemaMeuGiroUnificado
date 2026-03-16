@@ -19,6 +19,10 @@ function onlyDigits(value) {
   return String(value || '').replace(/\D/g, '');
 }
 
+function readInputValue(inputEl) {
+  return String((inputEl && inputEl.value) || '').trim();
+}
+
 function applyCpfMask(value) {
   const digits = onlyDigits(value).slice(0, 11);
   if (digits.length <= 3) return digits;
@@ -50,7 +54,7 @@ function login() {
 
   if (!cpfInput || !msg || !btn) return;
 
-  const cpf = cpfInput.value || '';
+  const cpf = readInputValue(cpfInput);
 
   msg.innerText = 'Verificando...';
   btn.disabled = true;
@@ -223,8 +227,8 @@ function salvarAtividade(forcarDuplicidade) {
 
   if (!dataInput || !kmInput || !msg || !btn) return;
 
-  const data = dataInput.value;
-  const km = kmInput.value;
+  const data = readInputValue(dataInput);
+  const km = readInputValue(kmInput);
 
   msg.innerText = '';
 
