@@ -80,7 +80,10 @@ function atualizarDistanciaRealizada_(idDgmb){
 
   });
 
-  var abaDesafio = localizarAbaDesafioUsuario_(idDgmb).abaDesafio;
+  var inscricao = obterDadosInscricaoUsuario_(idDgmb);
+  if (!inscricao || !inscricao.aba_desafio) return;
+
+  var abaDesafio = inscricao.aba_desafio;
   var sheet = SpreadsheetApp.openById(SPREADSHEET_ID)
     .getSheetByName(abaDesafio);
 
