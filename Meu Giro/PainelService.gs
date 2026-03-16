@@ -33,9 +33,10 @@ function getPainelUsuario(idDgmb) {
 
     var meta = painelMG_toNumber_(desafioData.meta);
     var realizado = painelMG_toNumber_(desafioData.realizado);
+    var realizadoPainel = painelMG_round1_(realizado);
 
-    var progresso = painelMG_calcularProgresso_(meta, realizado);
-    var ritmo = painelMG_calcularRitmo_(meta, realizado);
+    var progresso = painelMG_calcularProgresso_(meta, realizadoPainel);
+    var ritmo = painelMG_calcularRitmo_(meta, realizadoPainel);
     var atividades = buscarAtividadesUsuario_(id);
     var rankingInfo = painelMG_calcularPosicaoRanking_(id);
 
@@ -47,7 +48,7 @@ function getPainelUsuario(idDgmb) {
         id_dgmb: pessoa.id_dgmb || id,
         nome: pessoa.nome || '',
         meta: meta,
-        realizado: realizado,
+        realizado: realizadoPainel,
         restante: progresso.restante,
         percentual: progresso.percentual,
         ritmo_status: ritmo.status,
@@ -73,7 +74,7 @@ function getPainelUsuario(idDgmb) {
         desafio_usuario: desafioData.aba_desafio || '',
 
         meta: painelMG_round1_(meta),
-        realizado: painelMG_round1_(realizado),
+        realizado: realizadoPainel,
         restante: progresso.restante,
         percentual: progresso.percentual,
 
@@ -93,7 +94,7 @@ function getPainelUsuario(idDgmb) {
         contexto_frase: contextoFrase || '',
 
         atividades: atividades,
-        totalPedalado: painelMG_round1_(realizado)
+        totalPedalado: realizadoPainel
       }
     };
   } catch (err) {
@@ -315,6 +316,7 @@ function painelMG_calcularPosicaoRanking_(idDgmb) {
     var realizado = painelMG_round1_(painelMG_toNumber_(painelMG_firstFilled_(d, ['Distancia_Realizada', 'distancia_realizada', 'Distancia Realizada'])));
     var restante = Math.max(meta - realizado, 0);
     var percentual = meta > 0 ? (realizado / meta) * 100 : 0;
+
 
     lista.push({
       id_dgmb: did,
