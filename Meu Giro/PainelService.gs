@@ -107,7 +107,12 @@ function getPainelUsuario(idDgmb) {
   }
 }
 function buscarAtividadesUsuario_(idDgmb) {
-  var items = getAllObjects_(SHEETS.REGISTRO_KM);
+  var items = [];
+  try {
+    items = getAllObjects_(SHEETS.REGISTRO_KM) || [];
+  } catch (e) {
+    return [];
+  }
   var out = [];
 
   for (var i = 0; i < items.length; i++) {
@@ -232,8 +237,20 @@ function painelMG_calcularRitmo_(meta, realizado) {
 }
 
 function painelMG_calcularPosicaoRanking_(idDgmb) {
-  var pessoas = getAllObjects_(SHEETS.PESSOAS);
-  var localizacao = localizarAbaDesafioUsuario_(idDgmb) || {};
+  var pessoas = [];
+  try {
+    pessoas = getAllObjects_(SHEETS.PESSOAS) || [];
+  } catch (e) {
+    pessoas = [];
+  }
+
+  var localizacao = {};
+  try {
+    localizacao = localizarAbaDesafioUsuario_(idDgmb) || {};
+  } catch (e) {
+    localizacao = {};
+  }
+
   var abaDesafio = painelMG_norm_(localizacao.abaDesafio);
   var desafio = [];
 
