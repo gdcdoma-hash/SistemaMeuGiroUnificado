@@ -108,7 +108,7 @@ function renderPainel(p) {
 
   var idHidden = document.getElementById('painel-id-dgmb');
   if (idHidden) {
-    idHidden.value = (p.id_dgmb || (currentUser && currentUser.id_dgmb) || '').trim();
+    idHidden.value = String(p.id_dgmb || (currentUser && currentUser.id_dgmb) || '').trim();
   }
 
   document.getElementById('meta-km').innerText = formatNumber(p.meta);
@@ -123,7 +123,7 @@ function renderPainel(p) {
 
   const bar = document.getElementById('progress-bar');
   if (bar) {
-    bar.style.width = Math.max(0, Math.min(100, Number(p.percentual || 0))) + '%';
+    bar.style.width = Math.max(0, Math.min(100, toFiniteNumber(p.percentual, 0))) + '%';
   }
 
   document.getElementById('ritmo-dia').innerText =
@@ -197,11 +197,17 @@ function renderAtividades(lista) {
   }
 
   lista.forEach(function(item) {
+    item = item || {};
     const div = document.createElement('div');
     div.className = 'atividade';
     div.innerText = 'Dia ' + formatDateBR(item.data) + ' - ' + formatNumber(item.km) + ' km';
     box.appendChild(div);
   });
+}
+
+function toFiniteNumber(value, fallback) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : Number(fallback || 0);
 }
 
 function salvarAtividade(forcarDuplicidade) {
@@ -328,7 +334,7 @@ function formatDateBR(value) {
 }
 
 function formatNumber(value) {
-  const n = Number(value || 0);
+  const n = toFiniteNumber(value, 0);
   if (Number.isInteger(n)) return String(n);
   return n.toFixed(1).replace('.', ',');
 }
