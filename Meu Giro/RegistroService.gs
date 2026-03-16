@@ -35,7 +35,7 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
           return {
             ok:false,
             code:'DUPLICIDADE',
-            msg:'Atividade já registrada.'
+            msg:'Já existe atividade com mesmo ID, data e KM informado.'
           };
         }
 
@@ -61,7 +61,7 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
     return {
       ok:false,
       code:'REGISTRO_ATIVIDADE_ERROR',
-      msg:err && err.message ? err.message : 'Erro ao registrar atividade.'
+      msg:err && err.message ? err.message : 'Erro interno ao registrar atividade na aba REGISTRO_KM.'
     };
 
   }
@@ -171,7 +171,7 @@ function editarAtividade(payload) {
       return {
         ok: false,
         code: 'ATIVIDADE_NAO_ENCONTRADA',
-        msg: 'Atividade não encontrada para edição.'
+        msg: 'Atividade não encontrada para edição com a chave e ID informados.'
       };
     }
 
@@ -209,7 +209,7 @@ function editarAtividade(payload) {
     return {
       ok: false,
       code: 'EDICAO_ATIVIDADE_ERROR',
-      msg: err && err.message ? err.message : 'Erro ao editar atividade.'
+      msg: err && err.message ? err.message : 'Erro interno ao editar atividade na aba REGISTRO_KM.'
     };
   }
 }
@@ -406,7 +406,7 @@ function excluirAtividade(payload) {
       return {
         ok: false,
         code: 'ATIVIDADE_NAO_ENCONTRADA',
-        msg: 'Atividade não encontrada para exclusão.'
+        msg: 'Atividade não encontrada para exclusão com a chave e ID informados.'
       };
     }
 
@@ -422,7 +422,7 @@ function excluirAtividade(payload) {
     return {
       ok: false,
       code: 'EXCLUSAO_ATIVIDADE_ERROR',
-      msg: err && err.message ? err.message : 'Erro ao excluir atividade.'
+      msg: err && err.message ? err.message : 'Erro interno ao excluir atividade na aba REGISTRO_KM.'
     };
   }
 }

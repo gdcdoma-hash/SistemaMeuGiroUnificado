@@ -9,7 +9,7 @@ function getPainelUsuario(idDgmb) {
     var desafio = buscarInscricaoPainelMG_(id);
 
     if (!pessoa) {
-      return { ok: false, code: 'USUARIO_NAO_ENCONTRADO', msg: 'Usuário não encontrado no desafio.' };
+      return { ok: false, code: 'USUARIO_NAO_ENCONTRADO', msg: 'Usuário não encontrado na base de pessoas para carregar o painel.' };
     }
 
     if (!desafio.ok) {
@@ -102,7 +102,7 @@ function getPainelUsuario(idDgmb) {
     return {
       ok: false,
       code: 'PAINEL_ERROR',
-      msg: err && err.message ? err.message : 'Erro ao carregar painel.'
+      msg: err && err.message ? err.message : 'Erro interno ao carregar o painel do usuário.'
     };
   }
 }
@@ -366,4 +366,3 @@ function painelMG_obterFraseSeguro_(frasePadrao) {
   if (frase) return frase;
   return 'Cada quilômetro conta. Continue no seu ritmo.';
 }
-
