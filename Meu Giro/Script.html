@@ -303,4 +303,67 @@ function escapeHtml(text) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 }
+
+function openMeuGiro() {
+  if (currentUser && currentUser.id_dgmb) {
+    showScreen('painel');
+    carregarPainel();
+    return;
+  }
+  showScreen('login');
+}
+
+function openRankingPrivado() {
+  if (currentUser && currentUser.id_dgmb) {
+    carregarRanking();
+    return;
+  }
+  showScreen('login');
+}
+
+function logoutUser() {
+  currentUser = null;
+  currentPainel = null;
+
+  const loginMsg = document.getElementById('login-msg');
+  if (loginMsg) loginMsg.innerText = '';
+
+  const registroMsg = document.getElementById('registro-msg');
+  if (registroMsg) registroMsg.innerText = '';
+
+  const cpfInput = document.getElementById('cpf');
+  if (cpfInput) cpfInput.value = '';
+
+  showScreen('inicio');
+}
+
+function verOutraFrase() {
+  novaFrase();
+}
+
+function addKm(value) {
+  const input = document.getElementById('km-atividade');
+  if (!input) return;
+
+  const current = Number(String(input.value || '0').replace(',', '.')) || 0;
+  const next = current + Number(value || 0);
+  input.value = formatNumber(next);
+}
+
+function clearKm() {
+  const input = document.getElementById('km-atividade');
+  if (input) input.value = '';
+}
+
+function cancelarEdicaoAtividadeUI() {
+  const idInput = document.getElementById('atividade-id');
+  if (idInput) idInput.value = '';
+
+  const cancelBtn = document.getElementById('btn-cancelar-edicao');
+  if (cancelBtn) cancelBtn.style.display = 'none';
+
+  const saveBtn = document.getElementById('btn-salvar');
+  if (saveBtn) saveBtn.innerText = 'Salvar';
+}
+
 </script>
