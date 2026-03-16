@@ -415,6 +415,7 @@ function getOutraFraseMotivacional(idDgmb, fraseAtual) {
     if (!painelResp || !painelResp.ok || !painelResp.data) {
       return {
         ok: false,
+        code: 'PAINEL_INDISPONIVEL',
         msg: 'Não foi possível carregar os dados do atleta.'
       };
     }
@@ -508,6 +509,7 @@ function getOutraFraseMotivacional(idDgmb, fraseAtual) {
     if (!id) {
       return {
         ok: false,
+        code: 'ID_OBRIGATORIO',
         msg: 'ID do atleta não informado.'
       };
     }
@@ -518,6 +520,7 @@ function getOutraFraseMotivacional(idDgmb, fraseAtual) {
     if (!pessoa) {
       return {
         ok: false,
+        code: 'USUARIO_NAO_ENCONTRADO',
         msg: 'Atleta não encontrado no desafio.'
       };
     }

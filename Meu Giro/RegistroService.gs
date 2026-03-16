@@ -60,7 +60,8 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
 
     return {
       ok:false,
-      msg:err.message
+      code:'REGISTRO_ATIVIDADE_ERROR',
+      msg:err && err.message ? err.message : 'Erro ao registrar atividade.'
     };
 
   }
@@ -207,7 +208,8 @@ function editarAtividade(payload) {
   } catch (err) {
     return {
       ok: false,
-      msg: err.message
+      code: 'EDICAO_ATIVIDADE_ERROR',
+      msg: err && err.message ? err.message : 'Erro ao editar atividade.'
     };
   }
 }
@@ -419,6 +421,7 @@ function excluirAtividade(payload) {
   } catch (err) {
     return {
       ok: false,
+      code: 'EXCLUSAO_ATIVIDADE_ERROR',
       msg: err && err.message ? err.message : 'Erro ao excluir atividade.'
     };
   }
