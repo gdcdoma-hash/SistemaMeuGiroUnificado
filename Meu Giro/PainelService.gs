@@ -2,7 +2,7 @@ function getPainelUsuario(idDgmb) {
   try {
     var id = String(idDgmb || '').trim();
     if (!id) {
-      return { ok: false, msg: 'ID do usuário não informado.' };
+      return { ok: false, code: 'ID_OBRIGATORIO', msg: 'ID do usuário não informado.' };
     }
 
     var pessoa = buscarPessoaPainelMG_(id);
@@ -101,6 +101,7 @@ function getPainelUsuario(idDgmb) {
   } catch (err) {
     return {
       ok: false,
+      code: 'PAINEL_ERROR',
       msg: err && err.message ? err.message : 'Erro ao carregar painel.'
     };
   }
@@ -365,5 +366,4 @@ function painelMG_obterFraseSeguro_(frasePadrao) {
   if (frase) return frase;
   return 'Cada quilômetro conta. Continue no seu ritmo.';
 }
-
 
