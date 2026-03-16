@@ -36,6 +36,82 @@ function getSheetByNameOrThrow_(name) {
   return getSheetByName_(name);
 }
 
+function localizarAbaDesafioUsuario_(idDgmb) {
+  var id = normalizeText_(idDgmb);
+  if (!id) {
+    return {
+      abaDesafio: SHEETS.DESAFIO,
+      fallback: true
+    };
+  }
+
+  var ss = getSpreadsheet_();
+  var lista = ss.getSheetByName('ListaDesafios');
+
+  if (!lista) {
+    return {
+      abaDesafio: SHEETS.DESAFIO,
+      fallback: true
+    };
+  }
+
+  var desafios = lista.getDataRange().getDisplayValues();
+  if (!desafios || desafios.length < 2) {
+    return {
+      abaDesafio: SHEETS.DESAFIO,
+      fallback: true
+    };
+  }
+
+  var mapLista = buildHeaderMap_(desafios[0]);
+  var idxAba = getOptionalColumnIndex_(mapLista, ['aba', 'aba desafio', 'abadesafio']);
+  var idxStatus = getOptionalColumnIndex_(mapLista, ['status', 'situacao', 'situação']);
+
+  if (idxAba === -1) idxAba = 1;
+  if (idxStatus === -1) idxStatus = 3;
+
+  for (var i = 1; i < desafios.length; i++) {
+    var row = desafios[i];
+    var abaOriginal = String(row[idxAba] || '').trim();
+    var status = normalizeText_(row[idxStatus]).toLowerCase();
+
+    if (!abaOriginal || status !== 'ativo') {
+      continue;
+    }
+
+    var sheetDesafio = ss.getSheetByName(abaOriginal);
+    if (!sheetDesafio) {
+      continue;
+    }
+
+    var values = sheetDesafio.getDataRange().getValues();
+    if (!values || values.length < 2) {
+      continue;
+    }
+
+    var map = buildHeaderMap_(values[0]);
+    var idxId = getOptionalColumnIndex_(map, ['id_dgmb']);
+    if (idxId === -1) {
+      continue;
+    }
+
+    for (var j = 1; j < values.length; j++) {
+      var rowId = normalizeText_(values[j][idxId]);
+      if (rowId === id) {
+        return {
+          abaDesafio: abaOriginal,
+          fallback: false
+        };
+      }
+    }
+  }
+
+  return {
+    abaDesafio: SHEETS.DESAFIO,
+    fallback: true
+  };
+}
+
 function buildHeaderMap_(headerRow) {
   var map = {};
   for (var i = 0; i < headerRow.length; i++) {

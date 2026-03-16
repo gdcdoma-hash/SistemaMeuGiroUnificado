@@ -77,7 +77,8 @@ function buscarUsuarioPorCPF_(cpfLimpo) {
 }
 
 function verificarInscricaoDesafio_(idDgmb) {
-  var sh = getSheetByName_(SHEETS.DESAFIO);
+  var aba = localizarAbaDesafioUsuario_(idDgmb).abaDesafio;
+  var sh = getSheetByName_(aba);
   var values = sh.getDataRange().getValues();
 
   if (!values || values.length < 2) {
@@ -87,12 +88,15 @@ function verificarInscricaoDesafio_(idDgmb) {
   var header = values[0];
   var map = buildHeaderMap_(header);
 
-  var idxId = getRequiredColumnIndex_(map, ['id_dgmb'], SHEETS.DESAFIO);
+  var idxId = getRequiredColumnIndex_(map, ['id_dgmb'], aba);
 
   for (var i = 1; i < values.length; i++) {
     var rowId = normalizeText_(values[i][idxId]);
     if (rowId === normalizeText_(idDgmb)) {
-      return { id_dgmb: rowId };
+      return {
+        id_dgmb: rowId,
+        aba_desafio: aba
+      };
     }
   }
 

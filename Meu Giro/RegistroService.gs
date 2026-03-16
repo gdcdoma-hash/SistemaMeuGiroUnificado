@@ -80,16 +80,22 @@ function atualizarDistanciaRealizada_(idDgmb){
 
   });
 
+  var abaDesafio = localizarAbaDesafioUsuario_(idDgmb).abaDesafio;
   var sheet = SpreadsheetApp.openById(SPREADSHEET_ID)
-    .getSheetByName(SHEETS.DESAFIO);
+    .getSheetByName(abaDesafio);
 
   var dados = sheet.getDataRange().getValues();
+  if (!dados || dados.length < 2) return;
+
+  var map = buildHeaderMap_(dados[0]);
+  var idxId = getRequiredColumnIndex_(map, ['id_dgmb'], abaDesafio);
+  var idxRealizado = getRequiredColumnIndex_(map, ['distancia_realizada', 'distancia realizada'], abaDesafio);
 
   for(var i=1;i<dados.length;i++){
 
-    if(String(dados[i][1]).trim() === String(idDgmb).trim()){
+    if(String(dados[i][idxId]).trim() === String(idDgmb).trim()){
 
-      sheet.getRange(i+1,11).setValue(total);
+      sheet.getRange(i + 1, idxRealizado + 1).setValue(total);
       break;
 
     }
