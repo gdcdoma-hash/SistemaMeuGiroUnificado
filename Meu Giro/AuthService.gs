@@ -16,11 +16,12 @@ function loginCPF(cpf) {
     }
 
     var inscricao = verificarInscricaoDesafio_(usuario.id_dgmb);
-    if (!inscricao) {
+    if (!inscricao.ok) {
       return {
         ok: false,
-        code: 'NAO_INSCRITO',
-        msg: 'Seu CPF foi localizado, mas você não está inscrito no desafio atual.'
+        code: inscricao.code,
+        motivo_inscricao: inscricao.motivo,
+        msg: inscricao.msg
       };
     }
 
@@ -80,14 +81,23 @@ function verificarInscricaoDesafio_(idDgmb) {
   var inscricao = obterDadosInscricaoUsuario_(idDgmb);
 
   if (!inscricao || inscricao.inscricao_valida === false) {
-    return null;
+    var erro = montarErroInscricaoInvalida_(inscricao);
+    return {
+      ok: false,
+      code: erro.code,
+      motivo: erro.motivo,
+      msg: erro.msg
+    };
   }
 
   return {
-    id_dgmb: inscricao.id_dgmb,
-    aba_desafio: inscricao.aba_desafio,
-    status_inscricao: inscricao.status_inscricao || 'inscrito',
-    criterio_validacao: inscricao.criterio_validacao || 'presenca_id_dgmb'
+    ok: true,
+    data: {
+      id_dgmb: inscricao.id_dgmb,
+      aba_desafio: inscricao.aba_desafio,
+      status_inscricao: inscricao.status_inscricao || 'inscrito',
+      criterio_validacao: inscricao.criterio_validacao || 'presenca_id_dgmb'
+    }
   };
 }
 

@@ -8,12 +8,23 @@ function getPainelUsuario(idDgmb) {
     var pessoa = buscarPessoaPainelMG_(id);
     var desafio = buscarInscricaoPainelMG_(id);
 
-    if (!pessoa || !desafio) {
-      return { ok: false, msg: 'Usuário não encontrado no desafio.' };
+    if (!pessoa) {
+      return { ok: false, code: 'USUARIO_NAO_ENCONTRADO', msg: 'Usuário não encontrado no desafio.' };
     }
 
-    var meta = painelMG_toNumber_(desafio.meta);
-    var realizado = painelMG_toNumber_(desafio.realizado);
+    if (!desafio.ok) {
+      return {
+        ok: false,
+        code: desafio.code,
+        motivo_inscricao: desafio.motivo,
+        msg: desafio.msg
+      };
+    }
+
+    var desafioData = desafio.data;
+
+    var meta = painelMG_toNumber_(desafioData.meta);
+    var realizado = painelMG_toNumber_(desafioData.realizado);
 
     var progresso = painelMG_calcularProgresso_(meta, realizado);
     var ritmo = painelMG_calcularRitmo_(meta, realizado);
@@ -51,9 +62,9 @@ function getPainelUsuario(idDgmb) {
         nome: pessoa.nome || '',
         cidade_uf: pessoa.cidade_uf || '',
         id_dgmb: pessoa.id_dgmb || '',
-        status_inscricao: desafio.status_inscricao || 'inscrito',
-        criterio_validacao_inscricao: desafio.criterio_validacao || 'presenca_id_dgmb',
-        desafio_usuario: desafio.aba_desafio || '',
+        status_inscricao: desafioData.status_inscricao || 'inscrito',
+        criterio_validacao_inscricao: desafioData.criterio_validacao || 'presenca_id_dgmb',
+        desafio_usuario: desafioData.aba_desafio || '',
 
         meta: painelMG_round1_(meta),
         realizado: painelMG_round1_(realizado),
@@ -71,8 +82,8 @@ function getPainelUsuario(idDgmb) {
         posicao_ranking: rankingInfo.posicao,
         total_participantes: rankingInfo.total,
 
-        frase: frase || desafio.frase_incentivo || 'Cada quilômetro conta. Continue no seu ritmo.',
-        frase_motivacional: frase || desafio.frase_incentivo || 'Cada quilômetro conta. Continue no seu ritmo.',
+        frase: frase || desafioData.frase_incentivo || 'Cada quilômetro conta. Continue no seu ritmo.',
+        frase_motivacional: frase || desafioData.frase_incentivo || 'Cada quilômetro conta. Continue no seu ritmo.',
         contexto_frase: contextoFrase || '',
 
         atividades: atividades,
@@ -139,17 +150,26 @@ function buscarInscricaoPainelMG_(idDgmb) {
   var inscricao = obterDadosInscricaoUsuario_(idDgmb);
 
   if (!inscricao || inscricao.inscricao_valida === false) {
-    return null;
+    var erro = montarErroInscricaoInvalida_(inscricao);
+    return {
+      ok: false,
+      code: erro.code,
+      motivo: erro.motivo,
+      msg: erro.msg
+    };
   }
 
   return {
-    id_dgmb: painelMG_norm_(inscricao.id_dgmb),
-    meta: inscricao.meta,
-    realizado: inscricao.distancia_realizada,
-    status_inscricao: painelMG_norm_(inscricao.status_inscricao),
-    criterio_validacao: painelMG_norm_(inscricao.criterio_validacao),
-    aba_desafio: painelMG_norm_(inscricao.aba_desafio),
-    frase_incentivo: painelMG_norm_(inscricao.frase_incentivo)
+    ok: true,
+    data: {
+      id_dgmb: painelMG_norm_(inscricao.id_dgmb),
+      meta: inscricao.meta,
+      realizado: inscricao.distancia_realizada,
+      status_inscricao: painelMG_norm_(inscricao.status_inscricao),
+      criterio_validacao: painelMG_norm_(inscricao.criterio_validacao),
+      aba_desafio: painelMG_norm_(inscricao.aba_desafio),
+      frase_incentivo: painelMG_norm_(inscricao.frase_incentivo)
+    }
   };
 }
 
