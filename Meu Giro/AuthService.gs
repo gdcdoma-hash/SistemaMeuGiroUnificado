@@ -38,7 +38,7 @@ function loginCPF(cpf) {
     return {
       ok: false,
       code: 'LOGIN_ERROR',
-      msg: err && err.message ? err.message : 'Erro ao realizar login.'
+      msg: err && err.message ? err.message : 'Erro interno ao validar CPF e inscrição no login.'
     };
   }
 }

@@ -262,14 +262,14 @@ function montarErroInscricaoInvalida_(inscricao) {
     return {
       code: 'NAO_INSCRITO',
       motivo: 'inscricao_nao_localizada',
-      msg: 'Seu CPF foi localizado, mas você não está inscrito no desafio atual.'
+      msg: 'Seu cadastro foi localizado, mas não há inscrição válida na aba do desafio atual.'
     };
   }
 
   return {
     code: 'INSCRICAO_INVALIDA',
     motivo: normalizeText_(inscricao.criterio_validacao) || 'criterio_minimo_inscricao',
-    msg: 'Seu cadastro foi localizado, mas a inscrição não está válida para acesso ao desafio.'
+    msg: 'Seu cadastro foi localizado, mas a inscrição está bloqueada pelos critérios mínimos do desafio.'
   };
 }
 

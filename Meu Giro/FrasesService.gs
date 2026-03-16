@@ -416,7 +416,7 @@ function getOutraFraseMotivacional(idDgmb, fraseAtual) {
       return {
         ok: false,
         code: 'PAINEL_INDISPONIVEL',
-        msg: 'Não foi possível carregar os dados do atleta.'
+        msg: 'Não foi possível carregar os dados do painel para gerar a frase motivacional.'
       };
     }
 
@@ -510,7 +510,7 @@ function getOutraFraseMotivacional(idDgmb, fraseAtual) {
       return {
         ok: false,
         code: 'ID_OBRIGATORIO',
-        msg: 'ID do atleta não informado.'
+        msg: 'ID do atleta não informado para buscar frase motivacional.'
       };
     }
 
@@ -521,7 +521,7 @@ function getOutraFraseMotivacional(idDgmb, fraseAtual) {
       return {
         ok: false,
         code: 'USUARIO_NAO_ENCONTRADO',
-        msg: 'Atleta não encontrado no desafio.'
+        msg: 'Atleta não encontrado na base de pessoas para frases motivacionais.'
       };
     }
 
@@ -538,7 +538,7 @@ function getOutraFraseMotivacional(idDgmb, fraseAtual) {
       return {
         ok: false,
         code: 'CONTRATO_INSCRICAO_INVALIDO',
-        msg: 'Dados de inscrição inválidos para frases motivacionais.'
+        msg: 'Dados de inscrição inválidos para montar frases motivacionais do usuário.'
       };
     }
 
