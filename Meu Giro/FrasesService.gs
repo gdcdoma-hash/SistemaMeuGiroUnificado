@@ -549,16 +549,16 @@ function getOutraFraseMotivacional(idDgmb, fraseAtual) {
     var progresso = painelMG_calcularProgresso_(meta, realizado);
     var ritmo = painelMG_calcularRitmo_(meta, realizado);
 
-    var painelBaseFrase = {
+    var painelBaseFrase = painelMG_montarBaseFrase_({
       id_dgmb: pessoa.id_dgmb || id,
       nome: pessoa.nome || '',
-      meta: painelMG_round1_(meta),
-      realizado: painelMG_round1_(realizado),
+      meta: meta,
+      realizado: realizado,
       restante: progresso.restante,
       percentual: progresso.percentual,
       ritmo_status: ritmo.status,
       ritmo_mensagem: ritmo.mensagem
-    };
+    });
 
     var pack = listarFrasesDoContextoAtual_(painelBaseFrase);
     var lista = (pack && pack.frases) ? pack.frases : [];

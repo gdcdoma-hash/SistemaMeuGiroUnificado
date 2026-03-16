@@ -43,18 +43,16 @@ function getPainelUsuario(idDgmb) {
     var contextoFrase = '';
 
     try {
-      var painelBaseFrase = {
+      var painelBaseFrase = painelMG_montarBaseFrase_({
         id_dgmb: pessoa.id_dgmb || id,
         nome: pessoa.nome || '',
-
-        meta: painelMG_round1_(meta),
-        realizado: painelMG_round1_(realizado),
+        meta: meta,
+        realizado: realizado,
         restante: progresso.restante,
         percentual: progresso.percentual,
-
         ritmo_status: ritmo.status,
         ritmo_mensagem: ritmo.mensagem
-      };
+      });
 
       var payloadFrase = montarPayloadFraseMotivacional_(painelBaseFrase);
       frase = payloadFrase && payloadFrase.frase_motivacional ? payloadFrase.frase_motivacional : '';
@@ -106,6 +104,22 @@ function getPainelUsuario(idDgmb) {
     };
   }
 }
+
+function painelMG_montarBaseFrase_(dados) {
+  var src = dados || {};
+
+  return {
+    id_dgmb: String(src.id_dgmb || '').trim(),
+    nome: String(src.nome || '').trim(),
+    meta: painelMG_round1_(painelMG_toNumber_(src.meta)),
+    realizado: painelMG_round1_(painelMG_toNumber_(src.realizado)),
+    restante: painelMG_round1_(painelMG_toNumber_(src.restante)),
+    percentual: painelMG_round1_(painelMG_toNumber_(src.percentual)),
+    ritmo_status: String(src.ritmo_status || '').trim(),
+    ritmo_mensagem: String(src.ritmo_mensagem || '').trim()
+  };
+}
+
 function buscarAtividadesUsuario_(idDgmb) {
   var items = [];
   try {
