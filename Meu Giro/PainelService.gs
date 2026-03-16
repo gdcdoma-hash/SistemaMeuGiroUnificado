@@ -233,8 +233,33 @@ function painelMG_calcularRitmo_(meta, realizado) {
 
 function painelMG_calcularPosicaoRanking_(idDgmb) {
   var pessoas = getAllObjects_(SHEETS.PESSOAS);
-  var abaDesafio = localizarAbaDesafioUsuario_(idDgmb).abaDesafio;
-  var desafio = getAllObjects_(abaDesafio);
+  var localizacao = localizarAbaDesafioUsuario_(idDgmb) || {};
+  var abaDesafio = painelMG_norm_(localizacao.abaDesafio);
+  var desafio = [];
+
+  if (!abaDesafio) {
+    return {
+      posicao: 0,
+      total: 0
+    };
+  }
+
+  try {
+    desafio = getAllObjects_(abaDesafio);
+  } catch (e) {
+    return {
+      posicao: 0,
+      total: 0
+    };
+  }
+
+  if (!desafio || !desafio.length) {
+    return {
+      posicao: 0,
+      total: 0
+    };
+  }
+
   var pessoasMap = {};
 
   for (var i = 0; i < pessoas.length; i++) {
