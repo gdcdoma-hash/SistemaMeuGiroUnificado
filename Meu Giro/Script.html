@@ -229,6 +229,9 @@ function renderAtividades(lista) {
     if (item.activity_id) {
       div.setAttribute('data-activity-id', String(item.activity_id).trim());
     }
+    if (item.chave_edicao) {
+      div.setAttribute('data-chave-edicao', String(item.chave_edicao).trim());
+    }
 
     const info = document.createElement('div');
     info.innerText = 'Dia ' + formatDateBR(item.data) + ' - ' + formatNumber(item.km) + ' km';
