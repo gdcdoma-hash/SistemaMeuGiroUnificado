@@ -660,6 +660,10 @@ function openMeuGiro() {
     carregarPainel();
     return;
   }
+  const loginMsg = document.getElementById('login-msg');
+  if (loginMsg) {
+    loginMsg.innerText = 'Sua sessão não está ativa. Faça login para continuar.';
+  }
   showScreen('login');
 }
 
@@ -667,6 +671,10 @@ function openRankingPrivado() {
   if (currentUser && currentUser.id_dgmb) {
     carregarRanking();
     return;
+  }
+  const loginMsg = document.getElementById('login-msg');
+  if (loginMsg) {
+    loginMsg.innerText = 'Sua sessão não está ativa. Faça login para continuar.';
   }
   showScreen('login');
 }
