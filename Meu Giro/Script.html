@@ -353,16 +353,19 @@ function salvarEdicaoAtividade() {
   const msg = document.getElementById('registro-msg');
   const btn = document.getElementById('btn-salvar');
   const chaveEdicaoInput = document.getElementById('atividade-id');
+  const activityIdInput = document.getElementById('atividade-activity-id');
 
-  if (!dataInput || !kmInput || !msg || !btn || !chaveEdicaoInput) return;
+  if (!dataInput || !kmInput || !msg || !btn || !chaveEdicaoInput || !activityIdInput) return;
 
   const data = readInputValue(dataInput);
   const km = readInputValue(kmInput);
   const chaveEdicao = String(chaveEdicaoInput.value || '').trim();
+  const activityId = String(activityIdInput.value || '').trim();
+  const editKey = activityId || chaveEdicao;
 
   msg.innerText = '';
 
-  if (!idDgmb || !chaveEdicao) {
+  if (!idDgmb || !editKey) {
     msg.innerText = 'Sessão ou atividade inválida.';
     return;
   }
@@ -393,6 +396,7 @@ function salvarEdicaoAtividade() {
     })
     .editarAtividade({
       id_dgmb: idDgmb,
+      activity_id: activityId,
       chave_edicao: chaveEdicao,
       data_atividade: data,
       km: km
@@ -401,12 +405,19 @@ function salvarEdicaoAtividade() {
 function iniciarEdicaoAtividadeUI(item) {
   item = item || {};
 
-  if (!item.chave_edicao) {
+  const activityId = String(item.activity_id || '').trim();
+  const chaveEdicao = String(item.chave_edicao || '').trim();
+  const editKey = activityId || chaveEdicao;
+
+  if (!editKey) {
     return;
   }
 
   const idInput = document.getElementById('atividade-id');
-  if (idInput) idInput.value = String(item.chave_edicao || '').trim();
+  if (idInput) idInput.value = chaveEdicao;
+
+  const activityIdInput = document.getElementById('atividade-activity-id');
+  if (activityIdInput) activityIdInput.value = activityId;
 
   const dataInput = document.getElementById('data-atividade');
   if (dataInput) dataInput.value = String(item.data || '').trim();
@@ -643,6 +654,9 @@ function clearKm() {
 function cancelarEdicaoAtividadeUI() {
   const idInput = document.getElementById('atividade-id');
   if (idInput) idInput.value = '';
+
+  const activityIdInput = document.getElementById('atividade-activity-id');
+  if (activityIdInput) activityIdInput.value = '';
 
   const dataInput = document.getElementById('data-atividade');
   if (dataInput) dataInput.value = '';
