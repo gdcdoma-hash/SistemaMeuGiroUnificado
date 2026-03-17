@@ -90,8 +90,15 @@ function login() {
           return;
         }
 
+        const userId = res.data && res.data.id_dgmb ? String(res.data.id_dgmb).trim() : '';
+        if (!userId) {
+          currentUser = null;
+          msg.innerText = 'Sessão inválida. Faça login novamente.';
+          return;
+        }
+
         currentUser = {
-          id_dgmb: res.data && res.data.id_dgmb ? String(res.data.id_dgmb).trim() : '',
+          id_dgmb: userId,
           nome: res.data && res.data.nome ? res.data.nome : '',
           cidade_uf: res.data && res.data.cidade_uf ? res.data.cidade_uf : ''
         };
@@ -111,21 +118,34 @@ function login() {
     console.error(err);
   }
 }
+function setPainelMsg(message) {
+  const painelMsg = document.getElementById('painel-msg');
+  if (painelMsg) painelMsg.innerText = String(message || '');
+}
+
 function carregarPainel() {
-  if (!currentUser || !currentUser.id_dgmb) return;
+  if (!currentUser || !currentUser.id_dgmb) {
+    const loginMsg = document.getElementById('login-msg');
+    if (loginMsg) loginMsg.innerText = 'Sua sessão não está ativa. Faça login para continuar.';
+    showScreen('login');
+    return;
+  }
+
+  setPainelMsg('Carregando painel...');
 
   google.script.run
     .withSuccessHandler(function(res) {
       if (!res || !res.ok) {
-        alert((res && res.msg) ? res.msg : 'Erro ao carregar painel.');
+        setPainelMsg((res && res.msg) ? res.msg : 'Erro ao carregar painel. Tente novamente.');
         return;
       }
 
+      setPainelMsg('');
       currentPainel = res.data || {};
       renderPainel(currentPainel);
     })
     .withFailureHandler(function(err) {
-      alert('Erro ao carregar painel.');
+      setPainelMsg('Erro de comunicação ao carregar painel. Tente novamente.');
       console.error(err);
     })
     .getPainelUsuario(currentUser.id_dgmb);
@@ -663,6 +683,8 @@ function logoutUser() {
 
   const registroMsg = document.getElementById('registro-msg');
   if (registroMsg) registroMsg.innerText = '';
+
+  setPainelMsg('');
 
   const cpfInput = document.getElementById('cpf');
   if (cpfInput) cpfInput.value = '';
