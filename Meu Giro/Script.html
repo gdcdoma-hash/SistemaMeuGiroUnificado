@@ -2,6 +2,7 @@
 let currentUser = null;
 const pendingDeletionKeys = new Set();
 let currentPainel = null;
+let activeEditKey = '';
 
 function showScreen(name) {
   const screens = document.querySelectorAll('.screen');
@@ -247,6 +248,13 @@ function renderAtividades(lista) {
     btnEditar.innerText = 'Editar';
     const editKey = String(item.activity_id || '').trim() || String(item.chave_edicao || '').trim();
     if (editKey) {
+      if (activeEditKey && activeEditKey !== editKey) {
+        btnEditar.disabled = true;
+      }
+      if (activeEditKey && activeEditKey === editKey) {
+        btnEditar.disabled = true;
+        btnEditar.innerText = 'Editando';
+      }
       btnEditar.onclick = function() {
         iniciarEdicaoAtividadeUI(item);
       };
@@ -415,6 +423,19 @@ function iniciarEdicaoAtividadeUI(item) {
     return;
   }
 
+  const registroMsg = document.getElementById('registro-msg');
+  if (activeEditKey && activeEditKey !== editKey) {
+    if (registroMsg) registroMsg.innerText = 'Finalize ou cancele a edição atual antes de editar outra atividade.';
+    return;
+  }
+
+  if (activeEditKey === editKey) {
+    if (registroMsg) registroMsg.innerText = 'Esta atividade já está em edição.';
+    return;
+  }
+
+  activeEditKey = editKey;
+
   const idInput = document.getElementById('atividade-id');
   if (idInput) idInput.value = chaveEdicao;
 
@@ -436,8 +457,11 @@ function iniciarEdicaoAtividadeUI(item) {
     saveBtn.setAttribute('onclick', 'salvarEdicaoAtividade()');
   }
 
-  const registroMsg = document.getElementById('registro-msg');
   if (registroMsg) registroMsg.innerText = 'Editando atividade selecionada.';
+
+  if (currentPainel && Array.isArray(currentPainel.atividades)) {
+    renderAtividades(currentPainel.atividades);
+  }
 }
 
 function excluirAtividadeUI(item, btnExcluir) {
@@ -654,6 +678,12 @@ function clearKm() {
 }
 
 function cancelarEdicaoAtividadeUI() {
+  activeEditKey = '';
+
+  if (currentPainel && Array.isArray(currentPainel.atividades)) {
+    renderAtividades(currentPainel.atividades);
+  }
+
   const idInput = document.getElementById('atividade-id');
   if (idInput) idInput.value = '';
 
