@@ -589,6 +589,8 @@ function novaFrase() {
 }
 
 function carregarRanking() {
+  const idDgmb = currentUser && currentUser.id_dgmb ? String(currentUser.id_dgmb).trim() : '';
+
   google.script.run
     .withSuccessHandler(function(res) {
       if (!res || !res.ok) {
@@ -603,7 +605,7 @@ function carregarRanking() {
       alert('Erro ao carregar ranking.');
       console.error(err);
     })
-    .getRanking();
+    .getRanking(idDgmb);
 }
 
 function renderRanking(lista) {
