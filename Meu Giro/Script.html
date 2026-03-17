@@ -3,6 +3,7 @@ let currentUser = null;
 const pendingDeletionKeys = new Set();
 let currentPainel = null;
 let activeEditKey = '';
+let pendingEditSaveKey = '';
 
 function showScreen(name) {
   const screens = document.querySelectorAll('.screen');
@@ -380,37 +381,56 @@ function salvarEdicaoAtividade() {
     return;
   }
 
+  if (pendingEditSaveKey === editKey || btn.disabled) {
+    msg.innerText = 'Salvando edição...';
+    return;
+  }
+
   if (!data || !km) {
     msg.innerText = 'Informe o dia e os KM.';
     return;
   }
 
-  const finishLoading = startLoadingState(btn, msg, 'Salvando edição...');
+  pendingEditSaveKey = editKey;
+  const originalBtnText = btn.innerText;
+  btn.innerText = 'Salvando...';
 
-  google.script.run
-    .withSuccessHandler(function(res) {
-      finishLoading();
+  const finishLoadingBase = startLoadingState(btn, msg, 'Salvando edição...');
+  const finishLoading = function(nextMessage) {
+    finishLoadingBase(nextMessage);
+    pendingEditSaveKey = '';
+    if (btn) btn.innerText = originalBtnText;
+  };
 
-      if (!res || !res.ok) {
-        msg.innerText = (res && res.msg) ? res.msg : 'Não foi possível salvar a edição.';
-        return;
-      }
+  try {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        finishLoading();
 
-      cancelarEdicaoAtividadeUI();
-      msg.innerText = 'Atividade atualizada com sucesso.';
-      carregarPainel();
-    })
-    .withFailureHandler(function(err) {
-      finishLoading('Erro ao salvar edição.');
-      console.error(err);
-    })
-    .editarAtividade({
-      id_dgmb: idDgmb,
-      activity_id: activityId,
-      chave_edicao: chaveEdicao,
-      data_atividade: data,
-      km: km
-    });
+        if (!res || !res.ok) {
+          msg.innerText = (res && res.msg) ? res.msg : 'Não foi possível salvar a edição.';
+          return;
+        }
+
+        cancelarEdicaoAtividadeUI();
+        msg.innerText = 'Atividade atualizada com sucesso.';
+        carregarPainel();
+      })
+      .withFailureHandler(function(err) {
+        finishLoading('Erro ao salvar edição.');
+        console.error(err);
+      })
+      .editarAtividade({
+        id_dgmb: idDgmb,
+        activity_id: activityId,
+        chave_edicao: chaveEdicao,
+        data_atividade: data,
+        km: km
+      });
+  } catch (err) {
+    finishLoading('Erro ao salvar edição.');
+    console.error(err);
+  }
 }
 function iniciarEdicaoAtividadeUI(item) {
   item = item || {};
