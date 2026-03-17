@@ -404,6 +404,9 @@ function logoutUser() {
   currentUser = null;
   currentPainel = null;
 
+  const painelIdInput = document.getElementById('painel-id-dgmb');
+  if (painelIdInput) painelIdInput.value = '';
+
   const loginMsg = document.getElementById('login-msg');
   if (loginMsg) loginMsg.innerText = '';
 
@@ -445,6 +448,12 @@ function clearKm() {
 function cancelarEdicaoAtividadeUI() {
   const idInput = document.getElementById('atividade-id');
   if (idInput) idInput.value = '';
+
+  const dataInput = document.getElementById('data-atividade');
+  if (dataInput) dataInput.value = '';
+
+  const kmInput = document.getElementById('km-atividade');
+  if (kmInput) kmInput.value = '';
 
   const cancelBtn = document.getElementById('btn-cancelar-edicao');
   if (cancelBtn) cancelBtn.style.display = 'none';
