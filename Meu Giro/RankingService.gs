@@ -1,7 +1,8 @@
-function getRanking() {
+function getRanking(idDgmb) {
   try {
     var pessoas = getAllObjects_(SHEETS.PESSOAS);
-    var desafio = getAllObjects_(SHEETS.DESAFIO);
+    var abaDesafio = rankingMG_resolverAbaDesafio_(idDgmb);
+    var desafio = getAllObjects_(abaDesafio);
 
     if (!desafio || !desafio.length) {
       return {
@@ -67,6 +68,44 @@ function getRanking() {
       msg: err && err.message ? err.message : 'Erro ao carregar ranking.'
     };
   }
+}
+
+function rankingMG_resolverAbaDesafio_(idDgmb) {
+  var id = rankingMG_norm_(idDgmb);
+
+  if (id) {
+    try {
+      var localizacao = localizarAbaDesafioUsuario_(id) || {};
+      var abaUsuario = rankingMG_norm_(localizacao.abaDesafio);
+      if (abaUsuario) return abaUsuario;
+    } catch (e) {}
+  }
+
+  try {
+    var ss = getSpreadsheet_();
+    var lista = ss.getSheetByName(SHEETS.LISTA_DESAFIOS || 'ListaDesafios');
+    if (lista) {
+      var rows = lista.getDataRange().getDisplayValues();
+      if (rows && rows.length > 1) {
+        var map = buildHeaderMap_(rows[0]);
+        var idxAba = getOptionalColumnIndex_(map, ['aba', 'aba desafio', 'abadesafio']);
+        var idxStatus = getOptionalColumnIndex_(map, ['status', 'situacao', 'situação']);
+
+        if (idxAba === -1) idxAba = 1;
+        if (idxStatus === -1) idxStatus = 3;
+
+        for (var i = 1; i < rows.length; i++) {
+          var aba = rankingMG_norm_(rows[i][idxAba]);
+          var status = normalizeText_(rows[i][idxStatus]).toLowerCase();
+
+          if (!aba || status !== 'ativo') continue;
+          if (ss.getSheetByName(aba)) return aba;
+        }
+      }
+    }
+  } catch (e) {}
+
+  return SHEETS.DESAFIO;
 }
 
 function rankingMG_buildPessoasMap_(pessoas) {
