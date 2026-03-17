@@ -257,7 +257,8 @@ function renderAtividades(lista) {
     btnExcluir.type = 'button';
     btnExcluir.className = 'btn-secondary atividade-acao-btn';
     btnExcluir.innerText = 'Excluir';
-    if (item.chave_edicao) {
+    const deleteKey = String(item.activity_id || '').trim() || String(item.chave_edicao || '').trim();
+    if (deleteKey) {
       btnExcluir.onclick = function() {
         excluirAtividadeUI(item, btnExcluir);
       };
