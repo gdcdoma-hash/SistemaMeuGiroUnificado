@@ -148,6 +148,7 @@ function editarAtividade(payload) {
     payload = payload || {};
 
     var idDgmb = String(payload.id_dgmb || '').trim();
+    var activityId = String(payload.activity_id || '').trim();
     var chaveEdicao = String(payload.chave_edicao || '').trim();
     var novaDataAtividade = String(payload.data_atividade || '').trim();
     var novoKm = Number(String(payload.km || '').replace(',', '.'));
@@ -160,11 +161,11 @@ function editarAtividade(payload) {
       };
     }
 
-    if (!chaveEdicao) {
+    if (!activityId && !chaveEdicao) {
       return {
         ok: false,
-        code: 'CHAVE_EDICAO_OBRIGATORIA',
-        msg: 'Chave da atividade é obrigatória para edição.'
+        code: 'IDENTIFICADOR_ATIVIDADE_OBRIGATORIO',
+        msg: 'activity_id ou chave_edicao é obrigatório para edição.'
       };
     }
 
@@ -189,17 +190,7 @@ function editarAtividade(payload) {
 
     var dados = sheet.getDataRange().getValues();
     var cols = getRegistroKmColumnIndexes_(dados);
-    var linhaEncontrada = -1;
-
-    for (var i = 1; i < dados.length; i++) {
-      var rowTimestamp = normalizarTimestampEdicao_(dados[i][cols.idxTimestamp]);
-      var rowId = String(dados[i][cols.idxId] || '').trim();
-
-      if (rowTimestamp === chaveEdicao && rowId === idDgmb) {
-        linhaEncontrada = i + 1;
-        break;
-      }
-    }
+    var linhaEncontrada = localizarLinhaAtividade_(dados, cols, idDgmb, activityId, chaveEdicao);
 
     if (linhaEncontrada === -1) {
       return {
@@ -304,6 +295,7 @@ function excluirAtividade(payload) {
     payload = payload || {};
 
     var idDgmb = String(payload.id_dgmb || '').trim();
+    var activityId = String(payload.activity_id || '').trim();
     var chaveEdicao = String(payload.chave_edicao || '').trim();
 
     if (!idDgmb) {
@@ -314,11 +306,11 @@ function excluirAtividade(payload) {
       };
     }
 
-    if (!chaveEdicao) {
+    if (!activityId && !chaveEdicao) {
       return {
         ok: false,
-        code: 'CHAVE_EDICAO_OBRIGATORIA',
-        msg: 'Chave da atividade é obrigatória para exclusão.'
+        code: 'IDENTIFICADOR_ATIVIDADE_OBRIGATORIO',
+        msg: 'activity_id ou chave_edicao é obrigatório para exclusão.'
       };
     }
 
@@ -327,17 +319,7 @@ function excluirAtividade(payload) {
 
     var dados = sheet.getDataRange().getValues();
     var cols = getRegistroKmColumnIndexes_(dados);
-    var linhaEncontrada = -1;
-
-    for (var i = 1; i < dados.length; i++) {
-      var rowTimestamp = normalizarTimestampEdicao_(dados[i][cols.idxTimestamp]);
-      var rowId = String(dados[i][cols.idxId] || '').trim();
-
-      if (rowTimestamp === chaveEdicao && rowId === idDgmb) {
-        linhaEncontrada = i + 1;
-        break;
-      }
-    }
+    var linhaEncontrada = localizarLinhaAtividade_(dados, cols, idDgmb, activityId, chaveEdicao);
 
     if (linhaEncontrada === -1) {
       return {
@@ -398,4 +380,40 @@ function getRegistroKmColumnIndexes_(dados) {
     idxKm: idxKm > -1 ? idxKm : fallback.idxKm,
     idxActivityId: idxActivityId
   };
+}
+
+function localizarLinhaAtividade_(dados, cols, idDgmb, activityId, chaveEdicao) {
+  var idNormalizado = String(idDgmb || '').trim();
+  var activityIdNormalizado = String(activityId || '').trim();
+  var chaveNormalizada = String(chaveEdicao || '').trim();
+
+  if (!dados || dados.length < 2) {
+    return -1;
+  }
+
+  if (activityIdNormalizado && cols.idxActivityId > -1) {
+    for (var i = 1; i < dados.length; i++) {
+      var rowIdByActivity = String(dados[i][cols.idxId] || '').trim();
+      var rowActivityId = String(dados[i][cols.idxActivityId] || '').trim();
+
+      if (rowIdByActivity === idNormalizado && rowActivityId === activityIdNormalizado) {
+        return i + 1;
+      }
+    }
+  }
+
+  if (!chaveNormalizada) {
+    return -1;
+  }
+
+  for (var j = 1; j < dados.length; j++) {
+    var rowTimestamp = normalizarTimestampEdicao_(dados[j][cols.idxTimestamp]);
+    var rowId = String(dados[j][cols.idxId] || '').trim();
+
+    if (rowTimestamp === chaveNormalizada && rowId === idNormalizado) {
+      return j + 1;
+    }
+  }
+
+  return -1;
 }
