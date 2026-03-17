@@ -23,6 +23,9 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
     var dados = sheet.getDataRange().getValues();
     var cols = getRegistroKmColumnIndexes_(dados);
 
+    cols = ensureRegistroKmActivityIdColumn_(sheet, dados, cols);
+    var activityId = gerarActivityId_();
+
     for (var i = 1; i < dados.length; i++) {
 
       var rowId = String(dados[i][cols.idxId] || '').trim();
@@ -42,12 +45,20 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
       }
     }
 
-    sheet.appendRow([
-      new Date(),
-      idDgmb,
-      dataAtividade,
-      km
-    ]);
+    var row = [];
+    var rowLength = Math.max(cols.idxTimestamp, cols.idxId, cols.idxData, cols.idxKm, cols.idxActivityId) + 1;
+
+    for (var idx = 0; idx < rowLength; idx++) {
+      row[idx] = '';
+    }
+
+    row[cols.idxTimestamp] = new Date();
+    row[cols.idxId] = idDgmb;
+    row[cols.idxData] = dataAtividade;
+    row[cols.idxKm] = km;
+    row[cols.idxActivityId] = activityId;
+
+    sheet.appendRow(row);
 
     atualizarDistanciaRealizada_(idDgmb);
 
@@ -65,6 +76,29 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
     };
 
   }
+}
+
+function gerarActivityId_() {
+  return Utilities.getUuid();
+}
+
+function ensureRegistroKmActivityIdColumn_(sheet, dados, cols) {
+  if (cols && cols.idxActivityId > -1) {
+    return cols;
+  }
+
+  var headerLength = (dados && dados[0] && dados[0].length) ? dados[0].length : 0;
+  var newIndex = headerLength;
+
+  sheet.getRange(1, newIndex + 1).setValue('activity_id');
+
+  return {
+    idxTimestamp: cols.idxTimestamp,
+    idxId: cols.idxId,
+    idxData: cols.idxData,
+    idxKm: cols.idxKm,
+    idxActivityId: newIndex
+  };
 }
 
 function atualizarDistanciaRealizada_(idDgmb){
@@ -342,7 +376,8 @@ function getRegistroKmColumnIndexes_(dados) {
     timestamp: ['timestamp', 'data_hora', 'data hora', 'criado_em', 'criado em'],
     id: ['id_dgmb'],
     data: ['data_atividade', 'data atividade', 'data'],
-    km: ['km', 'distancia_km', 'distancia km']
+    km: ['km', 'distancia_km', 'distancia km'],
+    activityId: ['activity_id', 'activity id', 'id_atividade', 'id atividade']
   };
 
   if (!dados || !dados.length || !dados[0] || !dados[0].length) {
@@ -354,11 +389,13 @@ function getRegistroKmColumnIndexes_(dados) {
   var idxId = getOptionalColumnIndex_(map, aliases.id);
   var idxData = getOptionalColumnIndex_(map, aliases.data);
   var idxKm = getOptionalColumnIndex_(map, aliases.km);
+  var idxActivityId = getOptionalColumnIndex_(map, aliases.activityId);
 
   return {
     idxTimestamp: idxTimestamp > -1 ? idxTimestamp : fallback.idxTimestamp,
     idxId: idxId > -1 ? idxId : fallback.idxId,
     idxData: idxData > -1 ? idxData : fallback.idxData,
-    idxKm: idxKm > -1 ? idxKm : fallback.idxKm
+    idxKm: idxKm > -1 ? idxKm : fallback.idxKm,
+    idxActivityId: idxActivityId
   };
 }

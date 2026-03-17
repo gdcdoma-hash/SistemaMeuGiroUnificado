@@ -6,7 +6,7 @@ MEU GIRO V1
    - dadosPessoais
    - dgmgCamisa
 4. Crie a nova aba REGISTRO_KM com cabeçalho na linha 1:
-   Timestamp | ID_DGMB | Data_Atividade | KM
+   Timestamp | ID_DGMB | Data_Atividade | KM | activity_id
 5. Crie a nova aba FRASES com cabeçalho na linha 1:
    Fase | Situacao | Frase
 6. Publique como Web App.
