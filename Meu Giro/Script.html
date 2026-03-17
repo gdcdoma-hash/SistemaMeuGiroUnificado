@@ -430,12 +430,14 @@ function iniciarEdicaoAtividadeUI(item) {
 function excluirAtividadeUI(item, btnExcluir) {
   item = item || {};
 
+  const activityId = String(item.activity_id || '').trim();
   const chaveEdicao = String(item.chave_edicao || '').trim();
-  if (!chaveEdicao) {
+  const deletionKey = activityId || chaveEdicao;
+  if (!deletionKey) {
     return;
   }
 
-  if (pendingDeletionKeys.has(chaveEdicao)) {
+  if (pendingDeletionKeys.has(deletionKey)) {
     return;
   }
 
@@ -454,7 +456,7 @@ function excluirAtividadeUI(item, btnExcluir) {
     return;
   }
 
-  pendingDeletionKeys.add(chaveEdicao);
+  pendingDeletionKeys.add(deletionKey);
   if (btnExcluir) {
     btnExcluir.disabled = true;
     btnExcluir.innerText = 'Excluindo...';
@@ -464,7 +466,7 @@ function excluirAtividadeUI(item, btnExcluir) {
 
   google.script.run
     .withSuccessHandler(function(res) {
-      pendingDeletionKeys.delete(chaveEdicao);
+      pendingDeletionKeys.delete(deletionKey);
 
       if (!res || !res.ok) {
         if (btnExcluir) {
@@ -480,7 +482,7 @@ function excluirAtividadeUI(item, btnExcluir) {
       carregarPainel();
     })
     .withFailureHandler(function(err) {
-      pendingDeletionKeys.delete(chaveEdicao);
+      pendingDeletionKeys.delete(deletionKey);
       if (btnExcluir) {
         btnExcluir.disabled = false;
         btnExcluir.innerText = 'Excluir';
@@ -490,6 +492,7 @@ function excluirAtividadeUI(item, btnExcluir) {
     })
     .excluirAtividade({
       id_dgmb: idDgmb,
+      activity_id: activityId,
       chave_edicao: chaveEdicao
     });
 }
