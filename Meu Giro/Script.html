@@ -4,6 +4,10 @@ const pendingDeletionKeys = new Set();
 let currentPainel = null;
 let activeEditKey = '';
 let pendingEditSaveKey = '';
+let loginInProgress = false;
+let painelLoadInProgress = false;
+let painelReloadPending = false;
+let painelLoadRequestId = 0;
 
 function showScreen(name) {
   const screens = document.querySelectorAll('.screen');
@@ -76,9 +80,19 @@ function login() {
 
   if (!cpfInput || !msg || !btn) return;
 
+  if (loginInProgress) {
+    msg.innerText = 'Aguarde, estamos verificando seu acesso...';
+    return;
+  }
+
   const cpf = readInputValue(cpfInput);
 
-  const finishLoading = startLoadingState(btn, msg, 'Verificando...');
+  loginInProgress = true;
+  const finishLoadingBase = startLoadingState(btn, msg, 'Verificando...');
+  const finishLoading = function(nextMessage) {
+    finishLoadingBase(nextMessage);
+    loginInProgress = false;
+  };
 
   try {
     google.script.run
@@ -123,7 +137,23 @@ function setPainelMsg(message) {
   if (painelMsg) painelMsg.innerText = String(message || '');
 }
 
-function carregarPainel() {
+
+function setManualPainelRefreshDisabled(disabled) {
+  const topBtn = document.getElementById('btn-meu-giro-top');
+  const homeBtn = document.getElementById('btn-meu-giro-home');
+
+  if (topBtn) topBtn.disabled = !!disabled;
+  if (homeBtn) homeBtn.disabled = !!disabled;
+}
+function resetPainelVisualState() {
+  currentPainel = null;
+  renderPainel({
+    atividades: [],
+    frase: 'Cada quilômetro conta. Continue no seu ritmo.'
+  });
+}
+
+function carregarPainel(triggerSource) {
   if (!currentUser || !currentUser.id_dgmb) {
     const loginMsg = document.getElementById('login-msg');
     if (loginMsg) loginMsg.innerText = 'Sua sessão não está ativa. Faça login para continuar.';
@@ -131,22 +161,56 @@ function carregarPainel() {
     return;
   }
 
-  setPainelMsg('Carregando painel...');
+  if (painelLoadInProgress) {
+    painelReloadPending = true;
+    setPainelMsg(triggerSource === 'manual'
+      ? 'Atualização manual em andamento...'
+      : 'Atualizando painel...');
+    return;
+  }
+
+  painelLoadInProgress = true;
+  painelReloadPending = false;
+  painelLoadRequestId += 1;
+  const requestId = painelLoadRequestId;
+
+  setManualPainelRefreshDisabled(true);
+  resetPainelVisualState();
+  setPainelMsg(triggerSource === 'manual' ? 'Atualizando painel...' : 'Carregando painel...');
 
   google.script.run
     .withSuccessHandler(function(res) {
+      if (requestId !== painelLoadRequestId) {
+        return;
+      }
+
+      painelLoadInProgress = false;
+      setManualPainelRefreshDisabled(false);
+
       if (!res || !res.ok) {
         setPainelMsg((res && res.msg) ? res.msg : 'Erro ao carregar painel. Tente novamente.');
+        painelReloadPending = false;
         return;
       }
 
       setPainelMsg('');
       currentPainel = res.data || {};
       renderPainel(currentPainel);
+
+      if (painelReloadPending) {
+        carregarPainel();
+      }
     })
     .withFailureHandler(function(err) {
+      if (requestId !== painelLoadRequestId) {
+        return;
+      }
+
+      painelLoadInProgress = false;
+      setManualPainelRefreshDisabled(false);
       setPainelMsg('Erro de comunicação ao carregar painel. Tente novamente.');
       console.error(err);
+      painelReloadPending = false;
     })
     .getPainelUsuario(currentUser.id_dgmb);
 }
@@ -659,7 +723,13 @@ function escapeHtml(text) {
 function openMeuGiro() {
   if (currentUser && currentUser.id_dgmb) {
     showScreen('painel');
-    carregarPainel();
+
+    if (painelLoadInProgress) {
+      setPainelMsg('Atualização manual em andamento...');
+      return;
+    }
+
+    carregarPainel('manual');
     return;
   }
   const loginMsg = document.getElementById('login-msg');
