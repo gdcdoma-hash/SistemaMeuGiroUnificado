@@ -245,13 +245,14 @@ function renderAtividades(lista) {
     btnEditar.type = 'button';
     btnEditar.className = 'btn-secondary atividade-acao-btn';
     btnEditar.innerText = 'Editar';
-    if (item.chave_edicao) {
+    const editKey = String(item.activity_id || '').trim() || String(item.chave_edicao || '').trim();
+    if (editKey) {
       btnEditar.onclick = function() {
         iniciarEdicaoAtividadeUI(item);
       };
-    } else {
-      btnEditar.disabled = true;
     }
+    // Botão permanece desligado nesta etapa; somente preparamos o callback para religamento futuro seguro.
+    btnEditar.disabled = true;
     const btnExcluir = document.createElement('button');
     btnExcluir.type = 'button';
     btnExcluir.className = 'btn-secondary atividade-acao-btn';
