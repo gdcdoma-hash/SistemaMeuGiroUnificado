@@ -413,6 +413,14 @@ function logoutUser() {
   const cpfInput = document.getElementById('cpf');
   if (cpfInput) cpfInput.value = '';
 
+  const dataInput = document.getElementById('data-atividade');
+  if (dataInput) dataInput.value = '';
+
+  const kmInput = document.getElementById('km-atividade');
+  if (kmInput) kmInput.value = '';
+
+  cancelarEdicaoAtividadeUI();
+
   showScreen('inicio');
 }
 
@@ -424,8 +432,8 @@ function addKm(value) {
   const input = document.getElementById('km-atividade');
   if (!input) return;
 
-  const current = Number(String(input.value || '0').replace(',', '.')) || 0;
-  const next = current + Number(value || 0);
+  const current = toFiniteNumber(readInputValue(input).replace(',', '.'), 0);
+  const next = current + toFiniteNumber(value, 0);
   input.value = formatNumber(next);
 }
 
@@ -443,6 +451,9 @@ function cancelarEdicaoAtividadeUI() {
 
   const saveBtn = document.getElementById('btn-salvar');
   if (saveBtn) saveBtn.innerText = 'Salvar';
+
+  const registroMsg = document.getElementById('registro-msg');
+  if (registroMsg) registroMsg.innerText = '';
 }
 
 </script>
