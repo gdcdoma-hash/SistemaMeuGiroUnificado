@@ -250,9 +250,9 @@ function renderAtividades(lista) {
       btnEditar.onclick = function() {
         iniciarEdicaoAtividadeUI(item);
       };
+    } else {
+      btnEditar.disabled = true;
     }
-    // Botão permanece desligado nesta etapa; somente preparamos o callback para religamento futuro seguro.
-    btnEditar.disabled = true;
     const btnExcluir = document.createElement('button');
     btnExcluir.type = 'button';
     btnExcluir.className = 'btn-secondary atividade-acao-btn';
