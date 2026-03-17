@@ -238,10 +238,24 @@ function renderAtividades(lista) {
     btnEditar.type = 'button';
     btnEditar.className = 'btn-secondary atividade-acao-btn';
     btnEditar.innerText = 'Editar';
+    if (item.chave_edicao) {
+      btnEditar.onclick = function() {
+        iniciarEdicaoAtividadeUI(item);
+      };
+    } else {
+      btnEditar.disabled = true;
+    }
     const btnExcluir = document.createElement('button');
     btnExcluir.type = 'button';
     btnExcluir.className = 'btn-secondary atividade-acao-btn';
     btnExcluir.innerText = 'Excluir';
+    if (item.chave_edicao) {
+      btnExcluir.onclick = function() {
+        excluirAtividadeUI(item);
+      };
+    } else {
+      btnExcluir.disabled = true;
+    }
     actions.appendChild(btnEditar);
     actions.appendChild(btnExcluir);
     div.appendChild(actions);
@@ -319,6 +333,137 @@ function salvarAtividade(forcarDuplicidade) {
     finishLoading('Erro ao salvar atividade.');
     console.error(err);
   }
+}
+
+function salvarEdicaoAtividade() {
+  const idHidden = document.getElementById('painel-id-dgmb');
+  const idDgmb = idHidden && idHidden.value
+    ? String(idHidden.value).trim()
+    : (currentUser && currentUser.id_dgmb ? String(currentUser.id_dgmb).trim() : '');
+
+  const dataInput = document.getElementById('data-atividade');
+  const kmInput = document.getElementById('km-atividade');
+  const msg = document.getElementById('registro-msg');
+  const btn = document.getElementById('btn-salvar');
+  const chaveEdicaoInput = document.getElementById('atividade-id');
+
+  if (!dataInput || !kmInput || !msg || !btn || !chaveEdicaoInput) return;
+
+  const data = readInputValue(dataInput);
+  const km = readInputValue(kmInput);
+  const chaveEdicao = String(chaveEdicaoInput.value || '').trim();
+
+  msg.innerText = '';
+
+  if (!idDgmb || !chaveEdicao) {
+    msg.innerText = 'Sessão ou atividade inválida.';
+    return;
+  }
+
+  if (!data || !km) {
+    msg.innerText = 'Informe o dia e os KM.';
+    return;
+  }
+
+  const finishLoading = startLoadingState(btn, msg, 'Salvando edição...');
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      finishLoading();
+
+      if (!res || !res.ok) {
+        msg.innerText = (res && res.msg) ? res.msg : 'Não foi possível salvar a edição.';
+        return;
+      }
+
+      cancelarEdicaoAtividadeUI();
+      msg.innerText = 'Atividade atualizada com sucesso.';
+      carregarPainel();
+    })
+    .withFailureHandler(function(err) {
+      finishLoading('Erro ao salvar edição.');
+      console.error(err);
+    })
+    .editarAtividade({
+      id_dgmb: idDgmb,
+      chave_edicao: chaveEdicao,
+      data_atividade: data,
+      km: km
+    });
+}
+function iniciarEdicaoAtividadeUI(item) {
+  item = item || {};
+
+  if (!item.chave_edicao) {
+    return;
+  }
+
+  const idInput = document.getElementById('atividade-id');
+  if (idInput) idInput.value = String(item.chave_edicao || '').trim();
+
+  const dataInput = document.getElementById('data-atividade');
+  if (dataInput) dataInput.value = String(item.data || '').trim();
+
+  const kmInput = document.getElementById('km-atividade');
+  if (kmInput) kmInput.value = formatNumber(item.km);
+
+  const cancelBtn = document.getElementById('btn-cancelar-edicao');
+  if (cancelBtn) cancelBtn.style.display = '';
+
+  const saveBtn = document.getElementById('btn-salvar');
+  if (saveBtn) {
+    saveBtn.innerText = 'Salvar edição';
+    saveBtn.setAttribute('onclick', 'salvarEdicaoAtividade()');
+  }
+
+  const registroMsg = document.getElementById('registro-msg');
+  if (registroMsg) registroMsg.innerText = 'Editando atividade selecionada.';
+}
+
+function excluirAtividadeUI(item) {
+  item = item || {};
+
+  const chaveEdicao = String(item.chave_edicao || '').trim();
+  if (!chaveEdicao) {
+    return;
+  }
+
+  const idHidden = document.getElementById('painel-id-dgmb');
+  const idDgmb = idHidden && idHidden.value
+    ? String(idHidden.value).trim()
+    : (currentUser && currentUser.id_dgmb ? String(currentUser.id_dgmb).trim() : '');
+
+  const msg = document.getElementById('registro-msg');
+  if (!idDgmb || !msg) {
+    return;
+  }
+
+  const confirmar = confirm('Deseja excluir esta atividade?');
+  if (!confirmar) {
+    return;
+  }
+
+  msg.innerText = '';
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res || !res.ok) {
+        msg.innerText = (res && res.msg) ? res.msg : 'Não foi possível excluir.';
+        return;
+      }
+
+      cancelarEdicaoAtividadeUI();
+      msg.innerText = 'Atividade excluída com sucesso.';
+      carregarPainel();
+    })
+    .withFailureHandler(function(err) {
+      msg.innerText = 'Erro ao excluir atividade.';
+      console.error(err);
+    })
+    .excluirAtividade({
+      id_dgmb: idDgmb,
+      chave_edicao: chaveEdicao
+    });
 }
 
 function novaFrase() {
@@ -478,7 +623,10 @@ function cancelarEdicaoAtividadeUI() {
   if (cancelBtn) cancelBtn.style.display = 'none';
 
   const saveBtn = document.getElementById('btn-salvar');
-  if (saveBtn) saveBtn.innerText = 'Salvar';
+  if (saveBtn) {
+    saveBtn.innerText = 'Salvar';
+    saveBtn.setAttribute('onclick', 'salvarAtividade(false)');
+  }
 
   const registroMsg = document.getElementById('registro-msg');
   if (registroMsg) registroMsg.innerText = '';
