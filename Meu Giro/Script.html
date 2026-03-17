@@ -1,5 +1,6 @@
 <script>
 let currentUser = null;
+const pendingDeletionKeys = new Set();
 let currentPainel = null;
 
 function showScreen(name) {
@@ -257,7 +258,7 @@ function renderAtividades(lista) {
     btnExcluir.innerText = 'Excluir';
     if (item.chave_edicao) {
       btnExcluir.onclick = function() {
-        excluirAtividadeUI(item);
+        excluirAtividadeUI(item, btnExcluir);
       };
     } else {
       btnExcluir.disabled = true;
@@ -426,11 +427,15 @@ function iniciarEdicaoAtividadeUI(item) {
   if (registroMsg) registroMsg.innerText = 'Editando atividade selecionada.';
 }
 
-function excluirAtividadeUI(item) {
+function excluirAtividadeUI(item, btnExcluir) {
   item = item || {};
 
   const chaveEdicao = String(item.chave_edicao || '').trim();
   if (!chaveEdicao) {
+    return;
+  }
+
+  if (pendingDeletionKeys.has(chaveEdicao)) {
     return;
   }
 
@@ -449,11 +454,23 @@ function excluirAtividadeUI(item) {
     return;
   }
 
+  pendingDeletionKeys.add(chaveEdicao);
+  if (btnExcluir) {
+    btnExcluir.disabled = true;
+    btnExcluir.innerText = 'Excluindo...';
+  }
+
   msg.innerText = '';
 
   google.script.run
     .withSuccessHandler(function(res) {
+      pendingDeletionKeys.delete(chaveEdicao);
+
       if (!res || !res.ok) {
+        if (btnExcluir) {
+          btnExcluir.disabled = false;
+          btnExcluir.innerText = 'Excluir';
+        }
         msg.innerText = (res && res.msg) ? res.msg : 'Não foi possível excluir.';
         return;
       }
@@ -463,6 +480,11 @@ function excluirAtividadeUI(item) {
       carregarPainel();
     })
     .withFailureHandler(function(err) {
+      pendingDeletionKeys.delete(chaveEdicao);
+      if (btnExcluir) {
+        btnExcluir.disabled = false;
+        btnExcluir.innerText = 'Excluir';
+      }
       msg.innerText = 'Erro ao excluir atividade.';
       console.error(err);
     })
