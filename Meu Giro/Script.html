@@ -287,8 +287,8 @@ function salvarAtividade(forcarDuplicidade) {
         }
 
         msg.innerText = 'Atividade registrada com sucesso.';
-        dataInput.value = '';
-        kmInput.value = '';
+        cancelarEdicaoAtividadeUI();
+        msg.innerText = 'Atividade registrada com sucesso.';
         carregarPainel();
       })
       .withFailureHandler(function(err) {
