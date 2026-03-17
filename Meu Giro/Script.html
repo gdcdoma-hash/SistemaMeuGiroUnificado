@@ -226,7 +226,26 @@ function renderAtividades(lista) {
     item = item || {};
     const div = document.createElement('div');
     div.className = 'atividade';
-    div.innerText = 'Dia ' + formatDateBR(item.data) + ' - ' + formatNumber(item.km) + ' km';
+
+    const info = document.createElement('div');
+    info.innerText = 'Dia ' + formatDateBR(item.data) + ' - ' + formatNumber(item.km) + ' km';
+    div.appendChild(info);
+
+    const actions = document.createElement('div');
+    actions.className = 'atividade-acoes';
+
+    const btnEditar = document.createElement('button');
+    btnEditar.type = 'button';
+    btnEditar.className = 'btn-secondary atividade-acao-btn';
+    btnEditar.innerText = 'Editar';
+    const btnExcluir = document.createElement('button');
+    btnExcluir.type = 'button';
+    btnExcluir.className = 'btn-secondary atividade-acao-btn';
+    btnExcluir.innerText = 'Excluir';
+    actions.appendChild(btnEditar);
+    actions.appendChild(btnExcluir);
+    div.appendChild(actions);
+
     box.appendChild(div);
   });
 }
