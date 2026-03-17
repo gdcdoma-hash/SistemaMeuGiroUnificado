@@ -40,7 +40,7 @@ function localizarAbaDesafioUsuario_(idDgmb) {
   }
 
   var ss = getSpreadsheet_();
-  var lista = ss.getSheetByName('ListaDesafios');
+  var lista = ss.getSheetByName(SHEETS.LISTA_DESAFIOS || 'ListaDesafios');
 
   if (!lista) {
     return {

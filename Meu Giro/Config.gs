@@ -4,7 +4,8 @@ const SHEETS = {
   PESSOAS: 'DadosPessoais',
   DESAFIO: 'dgmbCamisa',
   REGISTRO_KM: 'REGISTRO_KM',
-  FRASES: 'FRASES'
+  FRASES: 'FRASES',
+  LISTA_DESAFIOS: 'ListaDesafios'
 };
 
 const DESAFIO_DIAS = 30;
