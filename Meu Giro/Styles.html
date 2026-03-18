@@ -638,6 +638,60 @@
     margin: 6px 0 4px;
   }
 
+  .painel-value-flash {
+    animation: painelValueFlash 1.6s ease-out;
+    transform-origin: center;
+    will-change: transform, color, text-shadow;
+  }
+
+  .painel-value-pulse {
+    animation: painelValuePulse 1.05s ease-out;
+    transform-origin: center;
+    will-change: transform;
+  }
+
+  @keyframes painelValueFlash {
+    0% {
+      color: #0f172a;
+      text-shadow: 0 0 0 rgba(59, 130, 246, 0);
+      transform: translateZ(0) scale(1);
+    }
+
+    22% {
+      color: #2563eb;
+      text-shadow: 0 0 14px rgba(59, 130, 246, 0.18);
+      transform: translateZ(0) scale(1.04);
+    }
+
+    100% {
+      color: #111827;
+      text-shadow: 0 0 0 rgba(59, 130, 246, 0);
+      transform: translateZ(0) scale(1);
+    }
+  }
+
+  @keyframes painelValuePulse {
+    0%,
+    100% {
+      transform: translateZ(0) scale(1);
+    }
+
+    35% {
+      transform: translateZ(0) scale(1.08);
+    }
+
+    62% {
+      transform: translateZ(0) scale(0.98);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .painel-value-flash,
+    .painel-value-pulse {
+      animation-duration: 0.01ms;
+    }
+  }
+
   .progress-wrap-strong {
     height: 24px;
     margin-bottom: 10px;

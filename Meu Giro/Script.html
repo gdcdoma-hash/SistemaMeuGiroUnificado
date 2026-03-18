@@ -15,6 +15,9 @@ let activityMutationInProgress = false;
 let registroCardFeedbackTimer = null;
 let registroSubmitGuardActive = false;
 let registroTapFeedbackTimer = null;
+let painelProgressFeedbackMode = '';
+let painelProgressFeedbackTimers = [];
+let painelProgressAnimationToken = 0;
 const statusMessageTimers = {};
 
 function syncGlobalBusyState() {
@@ -472,12 +475,156 @@ function setActivityFormLocked(disabled) {
 }
 
 function resetPainelVisualState() {
+  clearPainelProgressFeedback();
   currentPainel = null;
   renderPainel({
     atividades: [],
     frase: 'Cada quilômetro conta. Continue no seu ritmo.'
   });
   renderAtividadesState('loading', 'Carregando atividades registradas...', 'Estamos preparando a área com seus pedais mais recentes.');
+}
+
+function clearPainelProgressFeedback() {
+  painelProgressAnimationToken += 1;
+  painelProgressFeedbackTimers.forEach(function(timerId) {
+    clearTimeout(timerId);
+  });
+  painelProgressFeedbackTimers = [];
+
+  [
+    'realizado-km',
+    'restante-km',
+    'progress-percent',
+    'progress-text'
+  ].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) {
+      el.classList.remove('painel-value-flash', 'painel-value-pulse');
+    }
+  });
+}
+
+function animatePainelValue(id, fromValue, toValue, suffix, durationMs) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var animationToken = painelProgressAnimationToken;
+
+  var start = Number(fromValue);
+  var end = Number(toValue);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) {
+    el.innerText = formatNumber(end) + (suffix || '');
+    return;
+  }
+
+  var delta = end - start;
+  if (!delta) {
+    el.innerText = formatNumber(end) + (suffix || '');
+    return;
+  }
+
+  var maxDuration = Math.min(durationMs || 900, 1200);
+  var startAt = null;
+
+  function step(timestamp) {
+    if (animationToken !== painelProgressAnimationToken) {
+      return;
+    }
+
+    if (startAt === null) startAt = timestamp;
+    var progress = Math.min((timestamp - startAt) / maxDuration, 1);
+    var eased = 1 - Math.pow(1 - progress, 3);
+    var value = start + (delta * eased);
+    el.innerText = formatNumber(value) + (suffix || '');
+
+    if (progress < 1) {
+      window.requestAnimationFrame(step);
+      return;
+    }
+
+    el.innerText = formatNumber(end) + (suffix || '');
+  }
+
+  window.requestAnimationFrame(step);
+}
+
+function playPainelProgressFeedback(previousPainel, nextPainel) {
+  if (painelProgressFeedbackMode !== 'activity-registered') {
+    return;
+  }
+
+  painelProgressFeedbackMode = '';
+
+  if (!previousPainel || !nextPainel) {
+    return;
+  }
+
+  var previousRealizado = toFiniteNumber(previousPainel.realizado, 0);
+  var nextRealizado = toFiniteNumber(nextPainel.realizado, previousRealizado);
+  var previousRestante = toFiniteNumber(previousPainel.restante, 0);
+  var nextRestante = toFiniteNumber(nextPainel.restante, previousRestante);
+  var previousPercentual = toFiniteNumber(previousPainel.percentual, 0);
+  var nextPercentual = toFiniteNumber(nextPainel.percentual, previousPercentual);
+
+  var realizouAvanco = nextRealizado > previousRealizado;
+  var reduziuRestante = nextRestante < previousRestante;
+  var percentualMudou = nextPercentual !== previousPercentual;
+
+  if (!realizouAvanco && !reduziuRestante && !percentualMudou) {
+    return;
+  }
+
+  clearPainelProgressFeedback();
+
+  var realizadoEl = document.getElementById('realizado-km');
+  var restanteEl = document.getElementById('restante-km');
+  var percentEl = document.getElementById('progress-percent');
+  var progressTextEl = document.getElementById('progress-text');
+
+  if (realizouAvanco && realizadoEl) {
+    realizadoEl.classList.add('painel-value-flash');
+  }
+
+  if (reduziuRestante && restanteEl) {
+    restanteEl.classList.add('painel-value-flash');
+  }
+
+  if (percentualMudou && percentEl) {
+    percentEl.classList.add('painel-value-pulse', 'painel-value-flash');
+  }
+
+  if ((realizouAvanco || reduziuRestante) && progressTextEl) {
+    progressTextEl.classList.add('painel-value-flash');
+  }
+
+  var percentualDiff = Math.abs(nextPercentual - previousPercentual);
+  var realizadoDiff = Math.abs(nextRealizado - previousRealizado);
+  var restanteDiff = Math.abs(previousRestante - nextRestante);
+  var shouldAnimateNumbers = percentualDiff <= 12 && realizadoDiff <= 60 && restanteDiff <= 60;
+
+  if (shouldAnimateNumbers) {
+    if (realizouAvanco) {
+      animatePainelValue('realizado-km', previousRealizado, nextRealizado, '', 900);
+    }
+
+    if (reduziuRestante) {
+      animatePainelValue('restante-km', previousRestante, nextRestante, '', 900);
+    }
+
+    if (percentualMudou) {
+      animatePainelValue('progress-percent', previousPercentual, nextPercentual, '%', 1050);
+    }
+  }
+
+  painelProgressFeedbackTimers.push(window.setTimeout(function() {
+    clearPainelProgressFeedback();
+    setTextById('realizado-km', formatNumber(nextRealizado));
+    setTextById('restante-km', formatNumber(nextRestante));
+    setTextById('progress-percent', formatNumber(nextPercentual) + '%');
+    setTextById(
+      'progress-text',
+      formatNumber(nextRealizado) + ' km de ' + formatNumber(toFiniteNumber(nextPainel.meta, 0)) + ' km'
+    );
+  }, 1600));
 }
 
 function carregarPainel(triggerSource) {
@@ -529,8 +676,10 @@ function carregarPainel(triggerSource) {
         'success',
         triggerSource === 'manual' ? 2200 : 1600
       );
+      var previousPainel = currentPainel;
       currentPainel = res.data || {};
       renderPainel(currentPainel);
+      playPainelProgressFeedback(previousPainel, currentPainel);
 
       if (painelReloadPending) {
         carregarPainel();
@@ -812,6 +961,7 @@ function salvarAtividade(forcarDuplicidade) {
         setRegistroCardState('success');
         setRegistroMsg('Atividade registrada.', 'success', 1800);
         renderAtividadesState('loading', 'Atualizando atividades registradas...', 'Aplicando seu novo pedal na lista.');
+        painelProgressFeedbackMode = 'activity-registered';
         carregarPainel();
       })
       .withFailureHandler(function(err) {
