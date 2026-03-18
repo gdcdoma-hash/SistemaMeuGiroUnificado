@@ -41,6 +41,7 @@
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     gap: 8px;
+    align-items: stretch;
   }
 
   .menu-btn {
@@ -65,9 +66,9 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    min-height: 84px;
-    padding: 12px 8px;
+    gap: 5px;
+    min-height: 80px;
+    padding: 10px 8px;
   }
 
   .menu-icon {
@@ -87,9 +88,11 @@
   }
 
   .menu-label {
-    font-size: 14px;
-    line-height: 1.2;
+    max-width: 72px;
+    font-size: 13px;
+    line-height: 1.15;
     text-align: center;
+    text-wrap: balance;
   }
 
   .container {
@@ -306,6 +309,234 @@
     color: #166534;
   }
 
+  .card-identidade {
+    border: 1px solid #e5e7eb;
+    background: linear-gradient(180deg, #fff7ed 0%, #ffffff 100%);
+  }
+
+  .identidade-topo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .identidade-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    max-width: 64px;
+    max-height: 64px;
+    border-radius: 18px;
+    background: #ffffff;
+    color: #f97316;
+    box-shadow: inset 0 0 0 1px #fed7aa;
+    flex-shrink: 0;
+  }
+
+  .identidade-avatar svg {
+    width: 32px;
+    height: 32px;
+    display: block;
+  }
+
+  .identidade-topo-texto,
+  .identidade-conteudo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .identidade-label,
+  .identidade-apoio,
+  .identidade-nome,
+  .identidade-cidade,
+  .progresso-mini-label,
+  .progresso-mini-valor,
+  .progresso-mini-unit,
+  .progress-text-center,
+  .ritmo-dia-helper,
+  .ritmo-valor,
+  .ritmo-hidden-helper,
+  .alerta-ritmo-titulo,
+  .alerta-ritmo-texto {
+    margin: 0;
+  }
+
+  .identidade-label {
+    font-size: 13px;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #f97316;
+  }
+
+  .identidade-apoio,
+  .identidade-cidade {
+    color: #4b5563;
+    font-size: 15px;
+    line-height: 1.4;
+  }
+
+  .identidade-nome {
+    font-size: 24px;
+    line-height: 1.2;
+    color: #111827;
+  }
+
+  .card-progresso {
+    border: 1px solid #e5e7eb;
+  }
+
+  .progresso-resumo-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin: 12px 0 14px;
+  }
+
+  .progresso-mini-card {
+    padding: 12px 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: #f9fafb;
+    text-align: center;
+  }
+
+  .progresso-mini-label,
+  .progresso-mini-unit {
+    font-size: 13px;
+    line-height: 1.2;
+    color: #6b7280;
+  }
+
+  .progresso-mini-valor {
+    font-size: 22px;
+    line-height: 1.1;
+    color: #111827;
+    margin: 6px 0 4px;
+  }
+
+  .progress-wrap-strong {
+    height: 24px;
+    margin-bottom: 10px;
+    background: #dbeafe;
+  }
+
+  .progress-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 10px;
+  }
+
+  .progress-percent-inside {
+    font-size: 13px;
+    line-height: 1;
+    font-weight: 700;
+    color: #ffffff;
+    white-space: nowrap;
+  }
+
+  .progress-text-center {
+    text-align: center;
+    color: #374151;
+  }
+
+  .painel-ranking-box {
+    padding: 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: #f9fafb;
+  }
+
+  .painel-ranking-main {
+    font-weight: 700;
+    line-height: 1.35;
+    color: #111827;
+  }
+
+  .ritmo-card {
+    border: 1px solid #e5e7eb;
+    background: #fcfcfd;
+  }
+
+  .ritmo-dia-helper {
+    margin-bottom: 12px;
+    color: #4b5563;
+    font-size: 15px;
+    line-height: 1.4;
+  }
+
+  .ritmo-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .ritmo-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: #f9fafb;
+  }
+
+  .ritmo-row-principal {
+    background: #fff7ed;
+    border-color: #fed7aa;
+  }
+
+  .ritmo-titulo {
+    display: block;
+    font-size: 15px;
+    line-height: 1.35;
+    font-weight: 700;
+    color: #374151;
+  }
+
+  .ritmo-valor {
+    font-size: 20px;
+    line-height: 1.15;
+    font-weight: 700;
+    text-align: right;
+    color: #111827;
+  }
+
+  .ritmo-hidden-helper {
+    margin-top: 12px;
+    color: #6b7280;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .alerta-ritmo {
+    padding: 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: #f9fafb;
+  }
+
+  .alerta-ritmo-titulo {
+    font-size: 16px;
+    line-height: 1.35;
+    font-weight: 700;
+    color: #111827;
+  }
+
+  .alerta-ritmo-texto {
+    margin-top: 6px;
+    color: #4b5563;
+    font-size: 15px;
+    line-height: 1.45;
+  }
+
   .progress-wrap {
     width: 100%;
     height: 22px;
@@ -347,20 +578,36 @@
   }
 
   .atividade {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     background: #f9fafb;
     border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 12px;
+    border-radius: 14px;
+    padding: 14px;
     word-break: break-word;
   }
 
+  .atividade > div:first-child {
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.4;
+  }
+
+  .atividade-empty {
+    border-style: dashed;
+    background: #ffffff;
+  }
+
   .atividade-acoes {
-    margin-top: 10px;
+    margin-top: 0;
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
   }
 
   .atividade-acao-btn {
+    flex: 1 1 120px;
     min-height: 42px;
     padding: 8px 12px;
   }
@@ -379,7 +626,7 @@
     }
 
     .menu {
-      gap: 6px;
+      gap: 5px;
     }
 
     .menu-btn {
@@ -389,9 +636,9 @@
     }
 
     .menu-icon-btn {
-      min-height: 76px;
-      gap: 5px;
-      padding: 10px 6px;
+      min-height: 72px;
+      gap: 4px;
+      padding: 9px 6px;
     }
 
     .menu-icon {
@@ -405,7 +652,9 @@
     }
 
     .menu-label {
-      font-size: 13px;
+      max-width: 64px;
+      font-size: 12px;
+      line-height: 1.1;
     }
 
     .container {
@@ -442,6 +691,52 @@
 
     .status-msg {
       font-size: 14px;
+    }
+
+    .identidade-topo {
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .identidade-avatar {
+      width: 56px;
+      height: 56px;
+      max-width: 56px;
+      max-height: 56px;
+      border-radius: 16px;
+    }
+
+    .identidade-avatar svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    .identidade-nome {
+      font-size: 22px;
+    }
+
+    .progresso-resumo-grid {
+      gap: 8px;
+    }
+
+    .progresso-mini-card,
+    .painel-ranking-box,
+    .ritmo-row,
+    .alerta-ritmo,
+    .atividade {
+      padding: 12px;
+    }
+
+    .progresso-mini-valor {
+      font-size: 20px;
+    }
+
+    .ritmo-row {
+      gap: 10px;
+    }
+
+    .ritmo-valor {
+      font-size: 18px;
     }
 
     .painel-ranking-sub {
