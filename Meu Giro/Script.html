@@ -179,6 +179,10 @@ function setPainelMsg(message, variant, timeoutMs) {
   setTransientStatus('painel-msg', message, variant, timeoutMs);
 }
 
+function setRegistroMsg(message, variant, timeoutMs) {
+  setTransientStatus('registro-msg', message, variant, timeoutMs);
+}
+
 
 function setManualPainelRefreshDisabled(disabled) {
   const topBtn = document.getElementById('btn-meu-giro-top');
@@ -424,18 +428,19 @@ function salvarAtividade(forcarDuplicidade) {
   const data = readInputValue(dataInput);
   const km = readInputValue(kmInput);
 
-  msg.innerText = '';
+  setRegistroMsg('');
 
   if (!idDgmb) {
-    msg.innerText = 'Sessão inválida. Entre novamente.';
+    setRegistroMsg('Sessão inválida. Entre novamente.', 'error');
     return;
   }
 
   if (!data || !km) {
-    msg.innerText = 'Preencha a data e os km.';
+    setRegistroMsg('Informe a data e os km.', 'error');
     return;
   }
 
+  setRegistroMsg('Salvando atividade...', 'loading');
   const finishLoading = startLoadingState(btn, msg, 'Salvando...');
 
   try {
@@ -449,26 +454,28 @@ function salvarAtividade(forcarDuplicidade) {
             if (confirmar) {
               salvarAtividade(true);
             } else {
-              msg.innerText = 'Registro cancelado.';
+              setRegistroMsg('Registro cancelado.');
             }
             return;
           }
 
-          msg.innerText = (res && res.msg) ? res.msg : 'Não foi possível salvar.';
+          setRegistroMsg((res && res.msg) ? res.msg : 'Não foi possível registrar.', 'error');
           return;
         }
 
-        msg.innerText = 'Atividade registrada.';
         cancelarEdicaoAtividadeUI();
+        setRegistroMsg('Atividade registrada.', 'success', 1800);
         carregarPainel();
       })
       .withFailureHandler(function(err) {
-        finishLoading('Erro ao salvar atividade.');
+        finishLoading();
+        setRegistroMsg('Erro ao registrar atividade.', 'error');
         console.error(err);
       })
       .registrarAtividade(idDgmb, data, km, !!forcarDuplicidade);
   } catch (err) {
-    finishLoading('Erro ao salvar atividade.');
+    finishLoading();
+    setRegistroMsg('Erro ao registrar atividade.', 'error');
     console.error(err);
   }
 }
@@ -494,20 +501,20 @@ function salvarEdicaoAtividade() {
   const activityId = String(activityIdInput.value || '').trim();
   const editKey = activityId || chaveEdicao;
 
-  msg.innerText = '';
+  setRegistroMsg('');
 
   if (!idDgmb || !editKey) {
-    msg.innerText = 'Sessão ou atividade inválida.';
+    setRegistroMsg('Sessão ou atividade inválida.', 'error');
     return;
   }
 
   if (pendingEditSaveKey === editKey || btn.disabled) {
-    msg.innerText = 'Salvando edição...';
+    setRegistroMsg('Salvando edição...', 'loading');
     return;
   }
 
   if (!data || !km) {
-    msg.innerText = 'Preencha a data e os km.';
+    setRegistroMsg('Informe a data e os km.', 'error');
     return;
   }
 
@@ -515,6 +522,7 @@ function salvarEdicaoAtividade() {
   const originalBtnText = btn.innerText;
   btn.innerText = 'Salvando...';
 
+  setRegistroMsg('Salvando edição...', 'loading');
   const finishLoadingBase = startLoadingState(btn, msg, 'Salvando edição...');
   const finishLoading = function(nextMessage) {
     finishLoadingBase(nextMessage);
@@ -528,16 +536,17 @@ function salvarEdicaoAtividade() {
         finishLoading();
 
         if (!res || !res.ok) {
-          msg.innerText = (res && res.msg) ? res.msg : 'Não foi possível salvar a edição.';
+          setRegistroMsg((res && res.msg) ? res.msg : 'Não foi possível salvar a edição.', 'error');
           return;
         }
 
         cancelarEdicaoAtividadeUI();
-        msg.innerText = 'Atividade atualizada.';
+        setRegistroMsg('Edição salva.', 'success', 1800);
         carregarPainel();
       })
       .withFailureHandler(function(err) {
-        finishLoading('Erro ao salvar edição.');
+        finishLoading();
+        setRegistroMsg('Erro ao salvar edição.', 'error');
         console.error(err);
       })
       .editarAtividade({
@@ -548,7 +557,8 @@ function salvarEdicaoAtividade() {
         km: km
       });
   } catch (err) {
-    finishLoading('Erro ao salvar edição.');
+    finishLoading();
+    setRegistroMsg('Erro ao salvar edição.', 'error');
     console.error(err);
   }
 }
@@ -565,12 +575,12 @@ function iniciarEdicaoAtividadeUI(item) {
 
   const registroMsg = document.getElementById('registro-msg');
   if (activeEditKey && activeEditKey !== editKey) {
-    if (registroMsg) registroMsg.innerText = 'Finalize ou cancele a edição atual antes de editar outra atividade.';
+    if (registroMsg) setRegistroMsg('Finalize ou cancele a edição atual.', 'error');
     return;
   }
 
   if (activeEditKey === editKey) {
-    if (registroMsg) registroMsg.innerText = 'Esta atividade já está em edição.';
+    if (registroMsg) setRegistroMsg('Esta atividade já está em edição.');
     return;
   }
 
@@ -597,7 +607,7 @@ function iniciarEdicaoAtividadeUI(item) {
     saveBtn.setAttribute('onclick', 'salvarEdicaoAtividade()');
   }
 
-  if (registroMsg) registroMsg.innerText = 'Editando atividade.';
+  if (registroMsg) setRegistroMsg('Editando atividade.');
 
   if (currentPainel && Array.isArray(currentPainel.atividades)) {
     renderAtividades(currentPainel.atividades);
@@ -639,7 +649,7 @@ function excluirAtividadeUI(item, btnExcluir) {
     btnExcluir.innerText = 'Excluindo...';
   }
 
-  msg.innerText = '';
+  setRegistroMsg('');
 
   google.script.run
     .withSuccessHandler(function(res) {
@@ -650,12 +660,12 @@ function excluirAtividadeUI(item, btnExcluir) {
           btnExcluir.disabled = false;
           btnExcluir.innerText = 'Excluir';
         }
-        msg.innerText = (res && res.msg) ? res.msg : 'Não foi possível excluir.';
+        setRegistroMsg((res && res.msg) ? res.msg : 'Não foi possível excluir.', 'error');
         return;
       }
 
       cancelarEdicaoAtividadeUI();
-      msg.innerText = 'Atividade excluída com sucesso.';
+      setRegistroMsg('Atividade excluída.', 'success', 1800);
       carregarPainel();
     })
     .withFailureHandler(function(err) {
@@ -664,7 +674,7 @@ function excluirAtividadeUI(item, btnExcluir) {
         btnExcluir.disabled = false;
         btnExcluir.innerText = 'Excluir';
       }
-      msg.innerText = 'Erro ao excluir atividade.';
+      setRegistroMsg('Erro ao excluir atividade.', 'error');
       console.error(err);
     })
     .excluirAtividade({
@@ -795,7 +805,7 @@ function logoutUser() {
   if (loginMsg) setTransientStatus('login-msg', '');
 
   const registroMsg = document.getElementById('registro-msg');
-  if (registroMsg) registroMsg.innerText = '';
+  if (registroMsg) setRegistroMsg('');
 
   setPainelMsg('');
 
@@ -860,7 +870,7 @@ function cancelarEdicaoAtividadeUI() {
   }
 
   const registroMsg = document.getElementById('registro-msg');
-  if (registroMsg) registroMsg.innerText = '';
+  if (registroMsg) setRegistroMsg('');
 }
 
 </script>
