@@ -339,6 +339,37 @@
     margin-bottom: 12px;
   }
 
+  #frase-box {
+    margin: 0 0 12px;
+    transition: color 0.2s ease, transform 0.2s ease;
+  }
+
+  #frase-box.phrase-box-updated {
+    color: #166534;
+    transform: translateY(-1px);
+  }
+
+  .phrase-feedback {
+    display: none;
+    margin: 10px 0 0;
+    padding-left: 2px;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  .phrase-feedback.is-visible {
+    display: block;
+  }
+
+  .phrase-feedback-loading {
+    color: #1d4ed8;
+  }
+
+  .phrase-feedback-success {
+    color: #166534;
+  }
+
   .painel-error-state {
     margin-top: 12px;
     padding: 14px;

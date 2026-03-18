@@ -10,6 +10,7 @@ let painelReloadPending = false;
 let painelLoadRequestId = 0;
 let rankingLoadInProgress = false;
 let phraseLoadInProgress = false;
+let phraseFeedbackTimeout = null;
 let activityMutationInProgress = false;
 const statusMessageTimers = {};
 
@@ -242,7 +243,54 @@ function setPhraseButtonLoading(disabled) {
   if (!btn) return;
 
   btn.disabled = !!disabled;
-  btn.innerText = disabled ? 'Buscando...' : 'Outra mensagem';
+  btn.innerText = disabled ? 'Buscando nova mensagem...' : 'Outra mensagem';
+}
+
+function setPhraseFeedback(message, variant) {
+  const feedback = document.getElementById('frase-feedback');
+  const phraseBox = document.getElementById('frase-box');
+  const text = String(message || '').trim();
+
+  if (phraseFeedbackTimeout) {
+    clearTimeout(phraseFeedbackTimeout);
+    phraseFeedbackTimeout = null;
+  }
+
+  if (!feedback) return;
+
+  feedback.classList.remove('is-visible', 'phrase-feedback-loading', 'phrase-feedback-success');
+
+  if (phraseBox) {
+    phraseBox.classList.remove('phrase-box-updated');
+  }
+
+  feedback.textContent = text;
+
+  if (!text) return;
+
+  if (variant === 'loading') {
+    feedback.classList.add('is-visible', 'phrase-feedback-loading');
+    return;
+  }
+
+  if (variant === 'success') {
+    feedback.classList.add('is-visible', 'phrase-feedback-success');
+
+    if (phraseBox) {
+      phraseBox.classList.add('phrase-box-updated');
+    }
+
+    phraseFeedbackTimeout = setTimeout(function() {
+      feedback.textContent = '';
+      feedback.classList.remove('is-visible', 'phrase-feedback-success');
+
+      if (phraseBox) {
+        phraseBox.classList.remove('phrase-box-updated');
+      }
+
+      phraseFeedbackTimeout = null;
+    }, 2400);
+  }
 }
 
 function setActivityFormLocked(disabled) {
@@ -824,6 +872,7 @@ function novaFrase() {
   phraseLoadInProgress = true;
   syncGlobalBusyState();
   setPhraseButtonLoading(true);
+  setPhraseFeedback('Atualizando sua mensagem motivacional...', 'loading');
 
   google.script.run
     .withSuccessHandler(function(res) {
@@ -832,12 +881,17 @@ function novaFrase() {
       setPhraseButtonLoading(false);
       if (res && res.ok && res.data && res.data.frase) {
         setTextById('frase-box', res.data.frase);
+        setPhraseFeedback('Mensagem atualizada com sucesso.', 'success');
+        return;
       }
+
+      setPhraseFeedback('', '');
     })
     .withFailureHandler(function(err) {
       phraseLoadInProgress = false;
       syncGlobalBusyState();
       setPhraseButtonLoading(false);
+      setPhraseFeedback('', '');
       console.error(err);
     })
     .getNovaFrase(currentUser.id_dgmb);
