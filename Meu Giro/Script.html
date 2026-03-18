@@ -432,7 +432,7 @@ function salvarAtividade(forcarDuplicidade) {
   }
 
   if (!data || !km) {
-    msg.innerText = 'Informe o dia e os KM.';
+    msg.innerText = 'Preencha a data e os km.';
     return;
   }
 
@@ -458,7 +458,7 @@ function salvarAtividade(forcarDuplicidade) {
           return;
         }
 
-        msg.innerText = 'Atividade registrada com sucesso.';
+        msg.innerText = 'Atividade registrada.';
         cancelarEdicaoAtividadeUI();
         carregarPainel();
       })
@@ -507,7 +507,7 @@ function salvarEdicaoAtividade() {
   }
 
   if (!data || !km) {
-    msg.innerText = 'Informe o dia e os KM.';
+    msg.innerText = 'Preencha a data e os km.';
     return;
   }
 
@@ -533,7 +533,7 @@ function salvarEdicaoAtividade() {
         }
 
         cancelarEdicaoAtividadeUI();
-        msg.innerText = 'Atividade atualizada com sucesso.';
+        msg.innerText = 'Atividade atualizada.';
         carregarPainel();
       })
       .withFailureHandler(function(err) {
@@ -597,7 +597,7 @@ function iniciarEdicaoAtividadeUI(item) {
     saveBtn.setAttribute('onclick', 'salvarEdicaoAtividade()');
   }
 
-  if (registroMsg) registroMsg.innerText = 'Editando atividade selecionada.';
+  if (registroMsg) registroMsg.innerText = 'Editando atividade.';
 
   if (currentPainel && Array.isArray(currentPainel.atividades)) {
     renderAtividades(currentPainel.atividades);
@@ -855,7 +855,7 @@ function cancelarEdicaoAtividadeUI() {
 
   const saveBtn = document.getElementById('btn-salvar');
   if (saveBtn) {
-    saveBtn.innerText = 'Salvar';
+    saveBtn.innerText = 'Registrar atividade';
     saveBtn.setAttribute('onclick', 'salvarAtividade(false)');
   }
 
