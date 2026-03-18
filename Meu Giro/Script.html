@@ -20,6 +20,8 @@ let painelProgressFeedbackTimers = [];
 let painelProgressAnimationToken = 0;
 let rankingPreviewFeedbackTimer = null;
 let ritmoAgoraFeedbackTimer = null;
+let atividadeRecenteFeedbackTimer = null;
+let pendingRecentActivityHighlight = null;
 const statusMessageTimers = {};
 
 function syncGlobalBusyState() {
@@ -531,6 +533,61 @@ function animateAtividadesEntry(box) {
   }, 420);
 }
 
+function queueRecentActivityHighlight(payload) {
+  pendingRecentActivityHighlight = payload || null;
+}
+
+function clearRecentActivityHighlight() {
+  if (atividadeRecenteFeedbackTimer) {
+    clearTimeout(atividadeRecenteFeedbackTimer);
+    atividadeRecenteFeedbackTimer = null;
+  }
+
+  document.querySelectorAll('.atividade-highlight-recent').forEach(function(item) {
+    item.classList.remove('atividade-highlight-recent');
+    item.removeAttribute('data-highlight-label');
+  });
+}
+
+function findRecentActivityHighlightMatch(lista) {
+  if (!pendingRecentActivityHighlight || !Array.isArray(lista) || !lista.length) {
+    return null;
+  }
+
+  const highlight = pendingRecentActivityHighlight;
+  const highlightKey = String(highlight.key || '').trim();
+  const highlightDate = String(highlight.data || '').trim();
+  const highlightKm = formatNumber(highlight.km);
+
+  if (highlightKey) {
+    return lista.find(function(item) {
+      const itemKey = String((item && (item.activity_id || item.chave_edicao)) || '').trim();
+      return itemKey && itemKey === highlightKey;
+    }) || null;
+  }
+
+  return lista.find(function(item) {
+    return String((item && item.data) || '').trim() === highlightDate
+      && formatNumber(item && item.km) === highlightKm;
+  }) || null;
+}
+
+function playRecentActivityHighlight(itemEl, label) {
+  if (!itemEl) return;
+
+  clearRecentActivityHighlight();
+  itemEl.setAttribute('data-highlight-label', label || 'Agora');
+  itemEl.classList.add('atividade-highlight-recent');
+
+  atividadeRecenteFeedbackTimer = window.setTimeout(function() {
+    if (itemEl) {
+      itemEl.classList.remove('atividade-highlight-recent');
+      itemEl.removeAttribute('data-highlight-label');
+    }
+    atividadeRecenteFeedbackTimer = null;
+  }, 1700);
+}
+
 function setActivityFormLocked(disabled) {
   const cancelBtn = document.getElementById('btn-cancelar-edicao');
   const dataInput = document.getElementById('data-atividade');
@@ -945,12 +1002,15 @@ function renderAtividades(lista) {
   const box = document.getElementById('atividades-lista');
   if (!box) return;
 
+  clearRecentActivityHighlight();
   box.innerHTML = '';
 
   if (!Array.isArray(lista) || !lista.length) {
     renderAtividadesState('empty', 'Nenhuma atividade registrada ainda.', 'Assim que você registrar um pedal, a lista aparecerá aqui com data e quilometragem.');
     return;
   }
+
+  const highlightedItem = findRecentActivityHighlightMatch(lista);
 
   lista.forEach(function(item) {
     item = item || {};
@@ -1005,10 +1065,27 @@ function renderAtividades(lista) {
     actions.appendChild(btnExcluir);
     div.appendChild(actions);
 
+    if (highlightedItem === item) {
+      div.dataset.recentApplied = 'true';
+    }
+
     box.appendChild(div);
   });
 
   animateAtividadesEntry(box);
+
+  const recentItem = box.querySelector('.atividade[data-recent-applied="true"]');
+  if (recentItem) {
+    recentItem.removeAttribute('data-recent-applied');
+    playRecentActivityHighlight(
+      recentItem,
+      pendingRecentActivityHighlight && pendingRecentActivityHighlight.label
+        ? pendingRecentActivityHighlight.label
+        : 'Agora'
+    );
+  }
+
+  pendingRecentActivityHighlight = null;
 }
 
 function renderAtividadesState(variant, title, description) {
@@ -1124,6 +1201,11 @@ function salvarAtividade(forcarDuplicidade) {
         setRegistroCardState('success');
         setRegistroMsg('Atividade registrada.', 'success', 1800);
         renderAtividadesState('loading', 'Atualizando atividades registradas...', 'Aplicando seu novo pedal na lista.');
+        queueRecentActivityHighlight({
+          data: data,
+          km: km,
+          label: 'Novo'
+        });
         painelProgressFeedbackMode = 'activity-registered';
         carregarPainel();
       })
@@ -1217,6 +1299,12 @@ function salvarEdicaoAtividade() {
         setRegistroCardState('success');
         setRegistroMsg('Edição salva.', 'success', 1800);
         renderAtividadesState('loading', 'Atualizando atividades registradas...', 'Aplicando a edição na lista.');
+        queueRecentActivityHighlight({
+          key: editKey,
+          data: data,
+          km: km,
+          label: 'Agora'
+        });
         carregarPainel();
       })
       .withFailureHandler(function(err) {
@@ -1560,6 +1648,8 @@ function logoutUser() {
   activityMutationInProgress = false;
   painelLoadInProgress = false;
   painelReloadPending = false;
+  clearRecentActivityHighlight();
+  pendingRecentActivityHighlight = null;
   clearRankingPreviewFeedback();
   if (registroCardFeedbackTimer) {
     clearTimeout(registroCardFeedbackTimer);
