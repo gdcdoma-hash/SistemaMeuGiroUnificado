@@ -297,22 +297,17 @@ function renderPainel(p) {
   const hasPosicaoRanking = isValidRankingPosition(posicaoRanking);
   const posicaoRankingEl = document.getElementById('painel-posicao-ranking');
   const posicaoDetalheEl = document.getElementById('painel-posicao-detalhe');
-  const rankingBoxEl = document.getElementById('painel-ranking-box');
-
-  if (rankingBoxEl) {
-    rankingBoxEl.style.display = hasPosicaoRanking ? '' : 'none';
-  }
 
   if (posicaoRankingEl) {
     posicaoRankingEl.innerText = hasPosicaoRanking
       ? 'Sua posição no ranking geral: ' + formatNumber(posicaoRanking)
-      : 'Sua posição no ranking geral: --';
+      : 'Ranking ainda indisponível.';
   }
 
   if (posicaoDetalheEl) {
     posicaoDetalheEl.innerText = Number.isFinite(Number(totalParticipantes))
       ? 'Considerando ' + formatNumber(totalParticipantes) + ' participantes no ranking.'
-      : 'Classificação baseada no percentual da meta concluída.';
+      : 'Ele aparece quando houver base suficiente para comparação.';
   }
 
   renderAtividades(p.atividades || []);
@@ -347,7 +342,7 @@ function renderAtividades(lista) {
   box.innerHTML = '';
 
   if (!Array.isArray(lista) || !lista.length) {
-    box.innerHTML = '<p>Nenhuma atividade registrada ainda.</p>';
+    box.innerHTML = '<div class="atividade atividade-empty"><p><strong>Nenhuma atividade por aqui.</strong> Registre um pedal para ver a lista.</p></div>';
     return;
   }
 
