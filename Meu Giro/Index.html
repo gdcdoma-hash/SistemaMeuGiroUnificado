@@ -214,16 +214,17 @@
 
                 <div class="card">
             <h2>Registrar atividade</h2>
+            <p class="field-helper field-helper-intro">Preencha só o dia e os km do pedal.</p>
 
-            <label for="data-atividade">Dia</label>
+            <label for="data-atividade">Data da atividade</label>
             <input id="data-atividade" type="date">
 
-            <label for="km-atividade">KM</label>
-            <input id="km-atividade" type="text" inputmode="decimal" placeholder="Ex.: 25,5">
+            <label for="km-atividade">KM pedalados</label>
+            <input id="km-atividade" type="text" inputmode="decimal" placeholder="Só o número. Ex.: 25,5">
 
-            <p class="field-helper">Você pode digitar números com vírgula.</p>
+            <p class="field-helper">Use vírgula ou ponto.</p>
 
-            <div class="quick-km-list">
+            <div class="quick-km-list" aria-label="Atalhos de quilometragem">
               <button type="button" class="quick-km-btn" onclick="addKm(5)">+5</button>
               <button type="button" class="quick-km-btn" onclick="addKm(10)">+10</button>
               <button type="button" class="quick-km-btn" onclick="addKm(15)">+15</button>
@@ -239,7 +240,7 @@
                     <div id="registro-msg" class="msg"></div>
 
           <div class="form-acoes-atividade">
-            <button id="btn-salvar" class="btn-main" onclick="salvarAtividade(false)">Salvar</button>
+            <button id="btn-salvar" class="btn-main" onclick="salvarAtividade(false)">Registrar atividade</button>
             <button id="btn-cancelar-edicao" class="btn-secondary btn-cancelar-edicao" type="button" onclick="cancelarEdicaoAtividadeUI()" style="display:none;">
               Cancelar edição
             </button>
