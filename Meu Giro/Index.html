@@ -39,7 +39,7 @@
       <span class="menu-label">Meu Giro</span>
     </button>
 
-    <button class="menu-btn menu-icon-btn" type="button" onclick="openRankingPrivado()">
+    <button id="btn-ranking-top" class="menu-btn menu-icon-btn" type="button" onclick="openRankingPrivado()">
       <span class="menu-icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
           <path d="M8 21h8"></path>
@@ -248,7 +248,7 @@
       </div>
 
       <div class="card">
-        <button class="btn-main" onclick="carregarRanking()">Ver ranking geral</button>
+        <button id="btn-ranking-painel" class="btn-main" onclick="carregarRanking('manual')">Ver ranking geral</button>
       </div>
     </section>
 
@@ -256,8 +256,9 @@
       <div class="card">
         <h2>Ranking geral</h2>
         <p>O ranking é apenas para acompanhamento. O verdadeiro desafio é superar você mesmo.</p>
+        <div id="ranking-msg" class="msg status-msg" aria-live="polite"></div>
         <div id="ranking-lista" class="lista"></div>
-        <button class="btn-secondary" onclick="showScreen('painel')">Voltar ao painel</button>
+        <button id="btn-ranking-voltar" class="btn-secondary" onclick="showScreen('painel')">Voltar ao painel</button>
       </div>
     </section>
   </main>
