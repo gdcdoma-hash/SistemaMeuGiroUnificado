@@ -358,6 +358,7 @@ function setPhraseButtonLoading(disabled) {
 function setPhraseFeedback(message, variant) {
   const feedback = document.getElementById('frase-feedback');
   const phraseBox = document.getElementById('frase-box');
+  const phraseCard = phraseBox ? phraseBox.closest('.phrase-card') : null;
   const text = String(message || '').trim();
 
   if (phraseFeedbackTimeout) {
@@ -373,12 +374,19 @@ function setPhraseFeedback(message, variant) {
     phraseBox.classList.remove('phrase-box-updated');
   }
 
+  if (phraseCard) {
+    phraseCard.classList.remove('phrase-card-loading', 'phrase-card-updated');
+  }
+
   feedback.textContent = text;
 
   if (!text) return;
 
   if (variant === 'loading') {
     feedback.classList.add('is-visible', 'phrase-feedback-loading');
+    if (phraseCard) {
+      phraseCard.classList.add('phrase-card-loading');
+    }
     return;
   }
 
@@ -386,7 +394,13 @@ function setPhraseFeedback(message, variant) {
     feedback.classList.add('is-visible', 'phrase-feedback-success');
 
     if (phraseBox) {
+      void phraseBox.offsetWidth;
       phraseBox.classList.add('phrase-box-updated');
+    }
+
+    if (phraseCard) {
+      void phraseCard.offsetWidth;
+      phraseCard.classList.add('phrase-card-updated');
     }
 
     phraseFeedbackTimeout = setTimeout(function() {
@@ -395,6 +409,10 @@ function setPhraseFeedback(message, variant) {
 
       if (phraseBox) {
         phraseBox.classList.remove('phrase-box-updated');
+      }
+
+      if (phraseCard) {
+        phraseCard.classList.remove('phrase-card-updated');
       }
 
       phraseFeedbackTimeout = null;
