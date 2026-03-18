@@ -13,6 +13,8 @@ let phraseLoadInProgress = false;
 let phraseFeedbackTimeout = null;
 let activityMutationInProgress = false;
 let registroCardFeedbackTimer = null;
+let registroSubmitGuardActive = false;
+let registroTapFeedbackTimer = null;
 const statusMessageTimers = {};
 
 function syncGlobalBusyState() {
@@ -47,6 +49,105 @@ function onlyDigits(value) {
 
 function readInputValue(inputEl) {
   return String((inputEl && inputEl.value) || '').trim();
+}
+
+function getRegistroSubmitButton() {
+  return document.getElementById('btn-salvar');
+}
+
+function releaseRegistroSubmitGuard() {
+  const btn = getRegistroSubmitButton();
+
+  registroSubmitGuardActive = false;
+
+  if (registroTapFeedbackTimer) {
+    clearTimeout(registroTapFeedbackTimer);
+    registroTapFeedbackTimer = null;
+  }
+
+  if (!btn) return;
+
+  btn.classList.remove('is-pressed', 'is-instant-loading', 'tap-feedback');
+}
+
+function triggerRegistroTapFeedback() {
+  const btn = getRegistroSubmitButton();
+  if (!btn || btn.disabled) return;
+
+  btn.classList.remove('tap-feedback');
+  void btn.offsetWidth;
+  btn.classList.add('tap-feedback');
+
+  if (registroTapFeedbackTimer) {
+    clearTimeout(registroTapFeedbackTimer);
+  }
+
+  registroTapFeedbackTimer = window.setTimeout(function() {
+    btn.classList.remove('tap-feedback');
+    registroTapFeedbackTimer = null;
+  }, 260);
+}
+
+function setRegistroPressedState(active) {
+  const btn = getRegistroSubmitButton();
+  if (!btn || btn.disabled) return;
+
+  btn.classList.toggle('is-pressed', !!active);
+}
+
+function getRegistroBusyMessage() {
+  const saveBtn = getRegistroSubmitButton();
+  const handler = saveBtn ? String(saveBtn.getAttribute('onclick') || '') : '';
+  return handler.indexOf('salvarEdicaoAtividade') !== -1
+    ? 'Salvando edição...'
+    : 'Processando registro...';
+}
+
+function activateRegistroSubmitGuard() {
+  const btn = getRegistroSubmitButton();
+
+  if (!btn || btn.disabled || activityMutationInProgress || registroSubmitGuardActive) {
+    return false;
+  }
+
+  registroSubmitGuardActive = true;
+  btn.classList.add('is-instant-loading');
+  return true;
+}
+
+function setupRegistroSubmitProtection() {
+  const btn = getRegistroSubmitButton();
+  if (!btn || btn.dataset.submitProtectionReady === 'true') return;
+
+  btn.dataset.submitProtectionReady = 'true';
+
+  btn.addEventListener('pointerdown', function(event) {
+    if (event.button !== undefined && event.button !== 0) return;
+    if (btn.disabled) return;
+
+    triggerRegistroTapFeedback();
+    setRegistroPressedState(true);
+  });
+
+  ['pointerup', 'pointercancel', 'pointerleave', 'blur'].forEach(function(eventName) {
+    btn.addEventListener(eventName, function() {
+      if (!registroSubmitGuardActive) {
+        setRegistroPressedState(false);
+      }
+    });
+  });
+
+  btn.addEventListener('click', function(event) {
+    if (btn.disabled || activityMutationInProgress || registroSubmitGuardActive) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      setRegistroPressedState(false);
+      setRegistroMsg(getRegistroBusyMessage(), 'loading');
+      return;
+    }
+
+    activateRegistroSubmitGuard();
+  }, true);
 }
 
 function startLoadingState(btn, msg, loadingText) {
@@ -128,6 +229,8 @@ document.addEventListener('DOMContentLoaded', function() {
       e.target.value = applyCpfMask(e.target.value);
     });
   }
+
+  setupRegistroSubmitProtection();
 });
 
 function login() {
@@ -640,7 +743,10 @@ function salvarAtividade(forcarDuplicidade) {
   const msg = document.getElementById('registro-msg');
   const btn = document.getElementById('btn-salvar');
 
-  if (!dataInput || !kmInput || !msg || !btn) return;
+  if (!dataInput || !kmInput || !msg || !btn) {
+    releaseRegistroSubmitGuard();
+    return;
+  }
 
   const data = readInputValue(dataInput);
   const km = readInputValue(kmInput);
@@ -648,16 +754,19 @@ function salvarAtividade(forcarDuplicidade) {
   setRegistroMsg('');
 
   if (!idDgmb) {
+    releaseRegistroSubmitGuard();
     setRegistroMsg('Sessão inválida. Entre novamente.', 'error');
     return;
   }
 
   if (activityMutationInProgress || btn.disabled) {
+    setRegistroPressedState(false);
     setRegistroMsg('Processando registro...', 'loading');
     return;
   }
 
   if (!data || !km) {
+    releaseRegistroSubmitGuard();
     setRegistroMsg('Informe a data e os km.', 'error');
     return;
   }
@@ -670,6 +779,7 @@ function salvarAtividade(forcarDuplicidade) {
   const finishLoadingBase = startLoadingState(btn, msg, 'Registrando...');
   const finishLoading = function(nextMessage) {
     finishLoadingBase(nextMessage);
+    releaseRegistroSubmitGuard();
     activityMutationInProgress = false;
     syncGlobalBusyState();
     setActivityFormLocked(false);
@@ -730,7 +840,10 @@ function salvarEdicaoAtividade() {
   const chaveEdicaoInput = document.getElementById('atividade-id');
   const activityIdInput = document.getElementById('atividade-activity-id');
 
-  if (!dataInput || !kmInput || !msg || !btn || !chaveEdicaoInput || !activityIdInput) return;
+  if (!dataInput || !kmInput || !msg || !btn || !chaveEdicaoInput || !activityIdInput) {
+    releaseRegistroSubmitGuard();
+    return;
+  }
 
   const data = readInputValue(dataInput);
   const km = readInputValue(kmInput);
@@ -741,16 +854,19 @@ function salvarEdicaoAtividade() {
   setRegistroMsg('');
 
   if (!idDgmb || !editKey) {
+    releaseRegistroSubmitGuard();
     setRegistroMsg('Sessão ou atividade inválida.', 'error');
     return;
   }
 
   if (activityMutationInProgress || pendingEditSaveKey === editKey || btn.disabled) {
+    setRegistroPressedState(false);
     setRegistroMsg('Salvando edição...', 'loading');
     return;
   }
 
   if (!data || !km) {
+    releaseRegistroSubmitGuard();
     setRegistroMsg('Informe a data e os km.', 'error');
     return;
   }
@@ -764,6 +880,7 @@ function salvarEdicaoAtividade() {
   const finishLoadingBase = startLoadingState(btn, msg, 'Salvando edição...');
   const finishLoading = function(nextMessage) {
     finishLoadingBase(nextMessage);
+    releaseRegistroSubmitGuard();
     pendingEditSaveKey = '';
     activityMutationInProgress = false;
     syncGlobalBusyState();
@@ -1186,6 +1303,7 @@ function clearKm() {
 }
 
 function cancelarEdicaoAtividadeUI() {
+  releaseRegistroSubmitGuard();
   activeEditKey = '';
 
   if (currentPainel && Array.isArray(currentPainel.atividades)) {
