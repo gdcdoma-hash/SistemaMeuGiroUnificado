@@ -848,9 +848,9 @@ function carregarRanking(triggerSource) {
 
   if (rankingLoadInProgress) {
     if (triggerSource === 'manual') {
-      setPainelMsg('Carregando ranking...', 'loading');
+      setPainelMsg('Atualizando ranking geral...', 'loading');
     }
-    setRankingMsg('Carregando ranking...', 'loading');
+    setRankingMsg('Atualizando ranking geral...', 'loading');
     return;
   }
 
@@ -858,7 +858,7 @@ function carregarRanking(triggerSource) {
   syncGlobalBusyState();
   setRankingLoadDisabled(true);
   showScreen('ranking');
-  setRankingMsg('Carregando ranking...', 'loading');
+  setRankingMsg('Atualizando ranking geral...', 'loading');
   renderRankingState('loading', 'Atualizando ranking geral', 'Estamos preparando a lista com os participantes e as quilometragens registradas.');
 
   google.script.run
@@ -873,7 +873,7 @@ function carregarRanking(triggerSource) {
         return;
       }
 
-      setRankingMsg('Ranking atualizado.', 'success', 1400);
+      setRankingMsg('Ranking geral atualizado com sucesso. Confira a lista abaixo.', 'success', 2600);
       renderRanking(res.data || []);
     })
     .withFailureHandler(function(err) {
