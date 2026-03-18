@@ -84,7 +84,7 @@
         <h2>Login</h2>
         <label for="cpf">CPF</label>
         <input id="cpf" type="text" inputmode="numeric" maxlength="14" placeholder="000.000.000-00">
-        <div id="login-msg" class="msg"></div>
+        <div id="login-msg" class="msg status-msg" aria-live="polite"></div>
         <button id="btn-login" class="btn-main" onclick="login()">Entrar</button>
       </div>
     </section>
@@ -110,7 +110,7 @@
               <input id="painel-id-dgmb" type="hidden">
               <p class="identidade-cidade" id="painel-cidade"></p>
             </div>
-            <div id="painel-msg" class="msg"></div>
+            <div id="painel-msg" class="msg status-msg" aria-live="polite"></div>
       </div>
 
       <div class="card card-progresso">
