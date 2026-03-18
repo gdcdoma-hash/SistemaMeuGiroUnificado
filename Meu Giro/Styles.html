@@ -273,6 +273,65 @@
     animation: registro-btn-ripple 240ms ease-out;
   }
 
+  #btn-meu-giro-top,
+  #btn-meu-giro-home,
+  #btn-painel-retry {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  #btn-meu-giro-top::after,
+  #btn-meu-giro-home::after,
+  #btn-painel-retry::after {
+    content: attr(data-success-label);
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: inherit;
+    border-radius: inherit;
+    background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+    color: #ffffff;
+    font-weight: 700;
+    opacity: 0;
+    transform: scale(0.98);
+    transition: opacity 180ms ease, transform 180ms ease;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  #btn-meu-giro-top.manual-refresh-success,
+  #btn-meu-giro-home.manual-refresh-success,
+  #btn-painel-retry.manual-refresh-success {
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18), 0 10px 24px rgba(22, 163, 74, 0.18);
+    animation: manual-refresh-success-ring 1.5s ease;
+  }
+
+  #btn-meu-giro-top.manual-refresh-success::after,
+  #btn-meu-giro-home.manual-refresh-success::after,
+  #btn-painel-retry.manual-refresh-success::after {
+    content: '✓ ' attr(data-success-label);
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  @keyframes manual-refresh-success-ring {
+    0% {
+      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.26), 0 0 0 rgba(22, 163, 74, 0);
+    }
+
+    22% {
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2), 0 10px 24px rgba(22, 163, 74, 0.18);
+    }
+
+    100% {
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0), 0 0 0 rgba(22, 163, 74, 0);
+    }
+  }
+
   .btn-secondary {
     background: #e5e7eb;
     color: #111827;

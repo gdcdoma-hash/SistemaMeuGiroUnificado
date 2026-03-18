@@ -22,6 +22,7 @@ let rankingPreviewFeedbackTimer = null;
 let ritmoAgoraFeedbackTimer = null;
 let atividadeRecenteFeedbackTimer = null;
 let totalPedaladoFeedbackTimer = null;
+let painelManualSuccessFeedbackTimer = null;
 let pendingRecentActivityHighlight = null;
 let pendingTotalPedaladoFeedback = false;
 const statusMessageTimers = {};
@@ -324,14 +325,55 @@ function setRankingMsg(message, variant, timeoutMs) {
   }
 }
 
-function setManualPainelRefreshDisabled(disabled) {
-  const topBtn = document.getElementById('btn-meu-giro-top');
-  const homeBtn = document.getElementById('btn-meu-giro-home');
-  const retryBtn = document.getElementById('btn-painel-retry');
+function getManualPainelRefreshButtons() {
+  return [
+    document.getElementById('btn-meu-giro-top'),
+    document.getElementById('btn-meu-giro-home'),
+    document.getElementById('btn-painel-retry')
+  ].filter(Boolean);
+}
 
-  if (topBtn) topBtn.disabled = !!disabled;
-  if (homeBtn) homeBtn.disabled = !!disabled;
-  if (retryBtn) retryBtn.disabled = !!disabled;
+function clearManualPainelSuccessFeedback() {
+  const buttons = getManualPainelRefreshButtons();
+
+  if (painelManualSuccessFeedbackTimer) {
+    clearTimeout(painelManualSuccessFeedbackTimer);
+    painelManualSuccessFeedbackTimer = null;
+  }
+
+  buttons.forEach(function(btn) {
+    btn.classList.remove('manual-refresh-success');
+    btn.removeAttribute('data-success-label');
+  });
+}
+
+function playManualPainelSuccessFeedback() {
+  const buttons = getManualPainelRefreshButtons();
+  if (!buttons.length) return;
+
+  clearManualPainelSuccessFeedback();
+
+  buttons.forEach(function(btn) {
+    btn.setAttribute('data-success-label', 'Atualizado');
+    void btn.offsetWidth;
+    btn.classList.add('manual-refresh-success');
+  });
+
+  painelManualSuccessFeedbackTimer = window.setTimeout(function() {
+    clearManualPainelSuccessFeedback();
+  }, 1500);
+}
+
+function setManualPainelRefreshDisabled(disabled) {
+  const buttons = getManualPainelRefreshButtons();
+
+  if (disabled) {
+    clearManualPainelSuccessFeedback();
+  }
+
+  buttons.forEach(function(btn) {
+    btn.disabled = !!disabled;
+  });
 }
 
 function syncPainelErrorState(message, variant) {
@@ -975,6 +1017,9 @@ function carregarPainel(triggerSource) {
         'success',
         triggerSource === 'manual' ? 2200 : 1600
       );
+      if (triggerSource === 'manual') {
+        playManualPainelSuccessFeedback();
+      }
       var previousPainel = currentPainel;
       var shouldPlayRankingPreviewFeedback = painelProgressFeedbackMode === 'activity-registered';
       var shouldPlayRitmoAgoraFeedback = painelProgressFeedbackMode === 'activity-registered';
