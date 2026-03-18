@@ -12,6 +12,7 @@ let rankingLoadInProgress = false;
 let phraseLoadInProgress = false;
 let phraseFeedbackTimeout = null;
 let activityMutationInProgress = false;
+let registroCardFeedbackTimer = null;
 const statusMessageTimers = {};
 
 function syncGlobalBusyState() {
@@ -293,6 +294,65 @@ function setPhraseFeedback(message, variant) {
   }
 }
 
+function setRegistroCardState(state) {
+  const card = document.getElementById('registro-card');
+  if (!card) return;
+
+  if (registroCardFeedbackTimer) {
+    clearTimeout(registroCardFeedbackTimer);
+    registroCardFeedbackTimer = null;
+  }
+
+  card.classList.remove('is-loading', 'is-success');
+
+  if (state === 'loading') {
+    card.classList.add('is-loading');
+    return;
+  }
+
+  if (state === 'success') {
+    card.classList.add('is-success');
+    registroCardFeedbackTimer = setTimeout(function() {
+      card.classList.remove('is-success');
+      registroCardFeedbackTimer = null;
+    }, 1900);
+  }
+}
+
+function markAtividadesRefreshing() {
+  const box = document.getElementById('atividades-lista');
+  if (!box) return;
+
+  box.classList.add('lista-refreshing');
+}
+
+function animateAtividadesEntry(box) {
+  if (!box) return;
+
+  box.classList.remove('lista-refreshing');
+
+  const items = box.querySelectorAll('.atividade:not(.atividade-state)');
+  if (!items.length) return;
+
+  items.forEach(function(item, index) {
+    item.classList.add('atividade-enter');
+    item.style.transitionDelay = Math.min(index * 45, 180) + 'ms';
+  });
+
+  requestAnimationFrame(function() {
+    items.forEach(function(item) {
+      item.classList.add('is-visible');
+    });
+  });
+
+  window.setTimeout(function() {
+    items.forEach(function(item) {
+      item.classList.remove('atividade-enter', 'is-visible');
+      item.style.transitionDelay = '';
+    });
+  }, 420);
+}
+
 function setActivityFormLocked(disabled) {
   const cancelBtn = document.getElementById('btn-cancelar-edicao');
   const dataInput = document.getElementById('data-atividade');
@@ -532,11 +592,19 @@ function renderAtividades(lista) {
 
     box.appendChild(div);
   });
+
+  animateAtividadesEntry(box);
 }
 
 function renderAtividadesState(variant, title, description) {
   const box = document.getElementById('atividades-lista');
   if (!box) return;
+
+  if (variant === 'loading') {
+    markAtividadesRefreshing();
+  } else {
+    box.classList.remove('lista-refreshing');
+  }
 
   const safeVariant = escapeHtml(variant || 'empty');
   const safeTitle = escapeHtml(title || '');
@@ -597,6 +665,7 @@ function salvarAtividade(forcarDuplicidade) {
   activityMutationInProgress = true;
   syncGlobalBusyState();
   setRegistroMsg('Registrando atividade...', 'loading');
+  setRegistroCardState('loading');
   setActivityFormLocked(true);
   const finishLoadingBase = startLoadingState(btn, msg, 'Registrando...');
   const finishLoading = function(nextMessage) {
@@ -604,6 +673,9 @@ function salvarAtividade(forcarDuplicidade) {
     activityMutationInProgress = false;
     syncGlobalBusyState();
     setActivityFormLocked(false);
+    if (nextMessage !== 'success') {
+      setRegistroCardState('');
+    }
   };
 
   try {
@@ -627,6 +699,7 @@ function salvarAtividade(forcarDuplicidade) {
         }
 
         cancelarEdicaoAtividadeUI();
+        setRegistroCardState('success');
         setRegistroMsg('Atividade registrada.', 'success', 1800);
         renderAtividadesState('loading', 'Atualizando atividades registradas...', 'Aplicando seu novo pedal na lista.');
         carregarPainel();
@@ -686,6 +759,7 @@ function salvarEdicaoAtividade() {
   activityMutationInProgress = true;
   syncGlobalBusyState();
   setRegistroMsg('Salvando edição...', 'loading');
+  setRegistroCardState('loading');
   setActivityFormLocked(true);
   const finishLoadingBase = startLoadingState(btn, msg, 'Salvando edição...');
   const finishLoading = function(nextMessage) {
@@ -694,6 +768,9 @@ function salvarEdicaoAtividade() {
     activityMutationInProgress = false;
     syncGlobalBusyState();
     setActivityFormLocked(false);
+    if (nextMessage !== 'success') {
+      setRegistroCardState('');
+    }
   };
 
   try {
@@ -707,6 +784,7 @@ function salvarEdicaoAtividade() {
         }
 
         cancelarEdicaoAtividadeUI();
+        setRegistroCardState('success');
         setRegistroMsg('Edição salva.', 'success', 1800);
         renderAtividadesState('loading', 'Atualizando atividades registradas...', 'Aplicando a edição na lista.');
         carregarPainel();
@@ -818,6 +896,7 @@ function excluirAtividadeUI(item, btnExcluir) {
   pendingDeletionKeys.add(deletionKey);
   activityMutationInProgress = true;
   syncGlobalBusyState();
+  setRegistroCardState('loading');
   setActivityFormLocked(true);
   if (btnExcluir) {
     btnExcluir.disabled = true;
@@ -831,6 +910,7 @@ function excluirAtividadeUI(item, btnExcluir) {
       pendingDeletionKeys.delete(deletionKey);
       activityMutationInProgress = false;
       syncGlobalBusyState();
+      setRegistroCardState('');
       setActivityFormLocked(false);
 
       if (!res || !res.ok) {
@@ -843,6 +923,7 @@ function excluirAtividadeUI(item, btnExcluir) {
       }
 
       cancelarEdicaoAtividadeUI();
+      setRegistroCardState('success');
       setRegistroMsg('Atividade excluída.', 'success', 1800);
       renderAtividadesState('loading', 'Atualizando atividades registradas...', 'Removendo a atividade da lista para mostrar a versão mais recente.');
       carregarPainel();
@@ -851,6 +932,7 @@ function excluirAtividadeUI(item, btnExcluir) {
       pendingDeletionKeys.delete(deletionKey);
       activityMutationInProgress = false;
       syncGlobalBusyState();
+      setRegistroCardState('');
       setActivityFormLocked(false);
       if (btnExcluir) {
         btnExcluir.disabled = false;
@@ -1048,6 +1130,10 @@ function logoutUser() {
   activityMutationInProgress = false;
   painelLoadInProgress = false;
   painelReloadPending = false;
+  if (registroCardFeedbackTimer) {
+    clearTimeout(registroCardFeedbackTimer);
+    registroCardFeedbackTimer = null;
+  }
   syncGlobalBusyState();
 
   const painelIdInput = document.getElementById('painel-id-dgmb');
@@ -1058,6 +1144,7 @@ function logoutUser() {
 
   const registroMsg = document.getElementById('registro-msg');
   if (registroMsg) setRegistroMsg('');
+  setRegistroCardState('');
 
   setPainelMsg('');
   setRankingMsg('');
