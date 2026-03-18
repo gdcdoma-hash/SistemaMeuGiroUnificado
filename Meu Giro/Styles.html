@@ -625,6 +625,84 @@
     background: #ffffff;
   }
 
+  .ranking-state {
+    gap: 10px;
+    padding: 16px;
+  }
+
+  .ranking-state-label {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    max-width: 100%;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #f3f4f6;
+    color: #374151;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .ranking-state strong {
+    color: #111827;
+    line-height: 1.35;
+  }
+
+  .ranking-state p {
+    margin: 0;
+    color: #4b5563;
+    line-height: 1.5;
+  }
+
+  .ranking-state-loading {
+    background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
+    border-color: #bfdbfe;
+  }
+
+  .ranking-state-loading .ranking-state-label {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  .ranking-state-error {
+    background: linear-gradient(180deg, #fef2f2 0%, #ffffff 100%);
+    border-color: #fecaca;
+  }
+
+  .ranking-state-error .ranking-state-label {
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+
+  .ranking-state-empty .ranking-state-label {
+    background: #f3f4f6;
+    color: #4b5563;
+  }
+
+  .ranking-state-skeleton {
+    display: grid;
+    gap: 8px;
+  }
+
+  .ranking-state-skeleton span {
+    display: block;
+    height: 10px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(219, 234, 254, 0.45) 0%, rgba(191, 219, 254, 0.95) 50%, rgba(219, 234, 254, 0.45) 100%);
+    background-size: 200% 100%;
+    animation: ranking-loading-pulse 1.2s ease-in-out infinite;
+  }
+
+  .ranking-state-skeleton span:nth-child(2) {
+    width: 88%;
+  }
+
+  .ranking-state-skeleton span:nth-child(3) {
+    width: 72%;
+  }
+
   .atividade-acoes {
     margin-top: 0;
     display: flex;
@@ -640,6 +718,15 @@
 
   strong {
     font-weight: 700;
+  }
+
+  @keyframes ranking-loading-pulse {
+    0% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0 50%;
+    }
   }
 
   @media (max-width: 480px) {
@@ -721,6 +808,14 @@
 
     .status-msg {
       font-size: 14px;
+    }
+
+    .ranking-state {
+      padding: 14px;
+    }
+
+    .ranking-state-label {
+      font-size: 11px;
     }
 
     .identidade-topo {

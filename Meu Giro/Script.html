@@ -817,10 +817,7 @@ function carregarRanking(triggerSource) {
   setRankingLoadDisabled(true);
   showScreen('ranking');
   setRankingMsg('Carregando ranking...', 'loading');
-  const rankingBox = document.getElementById('ranking-lista');
-  if (rankingBox) {
-    rankingBox.innerHTML = '<div class="atividade atividade-empty"><p><strong>Carregando ranking...</strong> Aguarde um instante.</p></div>';
-  }
+  renderRankingState('loading', 'Atualizando ranking geral', 'Estamos preparando a lista com os participantes e as quilometragens registradas.');
 
   google.script.run
     .withSuccessHandler(function(res) {
@@ -830,6 +827,7 @@ function carregarRanking(triggerSource) {
 
       if (!res || !res.ok) {
         setRankingMsg((res && res.msg) ? res.msg : 'Erro ao carregar ranking.', 'error');
+        renderRankingState('error', 'Não foi possível carregar o ranking.', 'Tente novamente em instantes para atualizar a classificação.');
         return;
       }
 
@@ -841,9 +839,34 @@ function carregarRanking(triggerSource) {
       syncGlobalBusyState();
       setRankingLoadDisabled(false);
       setRankingMsg('Erro ao carregar ranking.', 'error');
+      renderRankingState('error', 'Não foi possível carregar o ranking.', 'Confira sua conexão e tente novamente em instantes.');
       console.error(err);
     })
     .getRanking(idDgmb);
+}
+
+function renderRankingState(variant, title, description) {
+  const box = document.getElementById('ranking-lista');
+  if (!box) return;
+
+  const safeVariant = escapeHtml(variant || 'empty');
+  const safeTitle = escapeHtml(title || '');
+  const safeDescription = escapeHtml(description || '');
+  const loadingDetails = safeVariant === 'loading'
+    ? '<div class="ranking-state-skeleton" aria-hidden="true"><span></span><span></span><span></span></div>'
+    : '';
+
+  box.innerHTML =
+    '<div class="atividade atividade-empty ranking-state ranking-state-' + safeVariant + '">' +
+      '<div class="ranking-state-label">' + (
+        safeVariant === 'loading' ? 'Atualizando' :
+        safeVariant === 'error' ? 'Atenção' :
+        'Ranking geral'
+      ) + '</div>' +
+      '<strong>' + safeTitle + '</strong>' +
+      '<p>' + safeDescription + '</p>' +
+      loadingDetails +
+    '</div>';
 }
 
 function renderRanking(lista) {
@@ -853,7 +876,7 @@ function renderRanking(lista) {
   box.innerHTML = '';
 
   if (!Array.isArray(lista) || !lista.length) {
-    box.innerHTML = '<p>Nenhum atleta com quilometragem registrada.</p>';
+    renderRankingState('empty', 'Ainda não há participantes com km registrado.', 'Assim que as primeiras quilometragens forem lançadas, o ranking geral aparecerá aqui.');
     return;
   }
 
