@@ -254,6 +254,7 @@ function resetPainelVisualState() {
     atividades: [],
     frase: 'Cada quilômetro conta. Continue no seu ritmo.'
   });
+  renderAtividadesState('loading', 'Carregando atividades registradas...', 'Estamos preparando a área com seus pedais mais recentes.');
 }
 
 function carregarPainel(triggerSource) {
@@ -408,7 +409,7 @@ function renderAtividades(lista) {
   box.innerHTML = '';
 
   if (!Array.isArray(lista) || !lista.length) {
-    box.innerHTML = '<div class="atividade atividade-empty"><p><strong>Nenhuma atividade registrada.</strong> Registre um pedal para ver a lista.</p></div>';
+    renderAtividadesState('empty', 'Nenhuma atividade registrada ainda.', 'Assim que você registrar um pedal, a lista aparecerá aqui com data e quilometragem.');
     return;
   }
 
@@ -467,6 +468,28 @@ function renderAtividades(lista) {
 
     box.appendChild(div);
   });
+}
+
+function renderAtividadesState(variant, title, description) {
+  const box = document.getElementById('atividades-lista');
+  if (!box) return;
+
+  const safeVariant = escapeHtml(variant || 'empty');
+  const safeTitle = escapeHtml(title || '');
+  const safeDescription = escapeHtml(description || '');
+  const loadingDetails = safeVariant === 'loading'
+    ? '<div class="atividade-state-skeleton" aria-hidden="true"><span></span><span></span><span></span></div>'
+    : '';
+
+  box.innerHTML =
+    '<div class="atividade atividade-empty atividade-state atividade-state-' + safeVariant + '">' +
+      '<div class="atividade-state-label">' + (
+        safeVariant === 'loading' ? 'Atualizando' : 'Sua lista'
+      ) + '</div>' +
+      '<strong>' + safeTitle + '</strong>' +
+      '<p>' + safeDescription + '</p>' +
+      loadingDetails +
+    '</div>';
 }
 
 function toFiniteNumber(value, fallback) {
@@ -541,6 +564,7 @@ function salvarAtividade(forcarDuplicidade) {
 
         cancelarEdicaoAtividadeUI();
         setRegistroMsg('Atividade registrada.', 'success', 1800);
+        renderAtividadesState('loading', 'Atualizando atividades registradas...', 'Aplicando seu novo pedal na lista.');
         carregarPainel();
       })
       .withFailureHandler(function(err) {
@@ -620,6 +644,7 @@ function salvarEdicaoAtividade() {
 
         cancelarEdicaoAtividadeUI();
         setRegistroMsg('Edição salva.', 'success', 1800);
+        renderAtividadesState('loading', 'Atualizando atividades registradas...', 'Aplicando a edição na lista.');
         carregarPainel();
       })
       .withFailureHandler(function(err) {
@@ -755,6 +780,7 @@ function excluirAtividadeUI(item, btnExcluir) {
 
       cancelarEdicaoAtividadeUI();
       setRegistroMsg('Atividade excluída.', 'success', 1800);
+      renderAtividadesState('loading', 'Atualizando atividades registradas...', 'Removendo a atividade da lista para mostrar a versão mais recente.');
       carregarPainel();
     })
     .withFailureHandler(function(err) {
