@@ -625,11 +625,13 @@
     background: #ffffff;
   }
 
+  .atividade-state,
   .ranking-state {
     gap: 10px;
     padding: 16px;
   }
 
+  .atividade-state-label,
   .ranking-state-label {
     display: inline-flex;
     align-items: center;
@@ -645,22 +647,26 @@
     text-transform: uppercase;
   }
 
+  .atividade-state strong,
   .ranking-state strong {
     color: #111827;
     line-height: 1.35;
   }
 
+  .atividade-state p,
   .ranking-state p {
     margin: 0;
     color: #4b5563;
     line-height: 1.5;
   }
 
+  .atividade-state-loading,
   .ranking-state-loading {
     background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
     border-color: #bfdbfe;
   }
 
+  .atividade-state-loading .atividade-state-label,
   .ranking-state-loading .ranking-state-label {
     background: #dbeafe;
     color: #1d4ed8;
@@ -681,11 +687,13 @@
     color: #4b5563;
   }
 
+  .atividade-state-skeleton,
   .ranking-state-skeleton {
     display: grid;
     gap: 8px;
   }
 
+  .atividade-state-skeleton span,
   .ranking-state-skeleton span {
     display: block;
     height: 10px;
@@ -695,10 +703,12 @@
     animation: ranking-loading-pulse 1.2s ease-in-out infinite;
   }
 
+  .atividade-state-skeleton span:nth-child(2),
   .ranking-state-skeleton span:nth-child(2) {
     width: 88%;
   }
 
+  .atividade-state-skeleton span:nth-child(3),
   .ranking-state-skeleton span:nth-child(3) {
     width: 72%;
   }
