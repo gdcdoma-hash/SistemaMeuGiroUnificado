@@ -759,6 +759,8 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .total-pedalado-flash,
+    .total-pedalado-pulse,
     .painel-value-flash,
     .painel-value-pulse {
       animation-duration: 0.01ms;
@@ -789,6 +791,59 @@
   .progress-text-center {
     text-align: center;
     color: #374151;
+  }
+
+  .total-pedalado-resumo {
+    margin-bottom: 0;
+    color: #374151;
+  }
+
+  #total-pedalado {
+    display: inline-block;
+    min-width: 2.4ch;
+    transform: translateZ(0);
+    will-change: transform, color, text-shadow;
+  }
+
+  .total-pedalado-flash {
+    animation: totalPedaladoFlash 1.6s ease-out, totalPedaladoPulse 1.6s ease-out;
+  }
+
+  .total-pedalado-pulse {
+    transform-origin: center;
+  }
+
+  @keyframes totalPedaladoFlash {
+    0%,
+    100% {
+      color: inherit;
+      text-shadow: 0 0 0 rgba(249, 115, 22, 0);
+    }
+
+    20% {
+      color: #ea580c;
+      text-shadow: 0 0 14px rgba(249, 115, 22, 0.2);
+    }
+
+    55% {
+      color: #f97316;
+      text-shadow: 0 0 10px rgba(249, 115, 22, 0.12);
+    }
+  }
+
+  @keyframes totalPedaladoPulse {
+    0%,
+    100% {
+      transform: translateZ(0) scale(1);
+    }
+
+    24% {
+      transform: translateZ(0) scale(1.08);
+    }
+
+    46% {
+      transform: translateZ(0) scale(0.98);
+    }
   }
 
   .painel-ranking-box {
