@@ -13,6 +13,19 @@ let phraseLoadInProgress = false;
 let activityMutationInProgress = false;
 const statusMessageTimers = {};
 
+function syncGlobalBusyState() {
+  const root = document.body;
+  if (!root) return;
+
+  const isBusy = loginInProgress
+    || painelLoadInProgress
+    || rankingLoadInProgress
+    || phraseLoadInProgress
+    || activityMutationInProgress;
+
+  root.classList.toggle('app-busy', isBusy);
+}
+
 function showScreen(name) {
   const screens = document.querySelectorAll('.screen');
   screens.forEach(function(screen) {
@@ -130,11 +143,13 @@ function login() {
   const cpf = readInputValue(cpfInput);
 
   loginInProgress = true;
+  syncGlobalBusyState();
   setTransientStatus('login-msg', 'Verificando acesso...', 'loading');
   const finishLoadingBase = startLoadingState(btn, msg, 'Verificando acesso...');
   const finishLoading = function(nextMessage) {
     finishLoadingBase(nextMessage);
     loginInProgress = false;
+    syncGlobalBusyState();
   };
 
   try {
@@ -258,6 +273,7 @@ function carregarPainel(triggerSource) {
   }
 
   painelLoadInProgress = true;
+  syncGlobalBusyState();
   painelReloadPending = false;
   painelLoadRequestId += 1;
   const requestId = painelLoadRequestId;
@@ -275,6 +291,7 @@ function carregarPainel(triggerSource) {
       }
 
       painelLoadInProgress = false;
+      syncGlobalBusyState();
       setManualPainelRefreshDisabled(false);
 
       if (!res || !res.ok) {
@@ -297,6 +314,7 @@ function carregarPainel(triggerSource) {
       }
 
       painelLoadInProgress = false;
+      syncGlobalBusyState();
       setManualPainelRefreshDisabled(false);
       setPainelMsg('Erro de conexão ao atualizar painel.', 'error');
       console.error(err);
@@ -490,12 +508,14 @@ function salvarAtividade(forcarDuplicidade) {
   }
 
   activityMutationInProgress = true;
+  syncGlobalBusyState();
   setRegistroMsg('Registrando atividade...', 'loading');
   setActivityFormLocked(true);
   const finishLoadingBase = startLoadingState(btn, msg, 'Registrando...');
   const finishLoading = function(nextMessage) {
     finishLoadingBase(nextMessage);
     activityMutationInProgress = false;
+    syncGlobalBusyState();
     setActivityFormLocked(false);
   };
 
@@ -576,6 +596,7 @@ function salvarEdicaoAtividade() {
 
   pendingEditSaveKey = editKey;
   activityMutationInProgress = true;
+  syncGlobalBusyState();
   setRegistroMsg('Salvando edição...', 'loading');
   setActivityFormLocked(true);
   const finishLoadingBase = startLoadingState(btn, msg, 'Salvando edição...');
@@ -583,6 +604,7 @@ function salvarEdicaoAtividade() {
     finishLoadingBase(nextMessage);
     pendingEditSaveKey = '';
     activityMutationInProgress = false;
+    syncGlobalBusyState();
     setActivityFormLocked(false);
   };
 
@@ -706,6 +728,7 @@ function excluirAtividadeUI(item, btnExcluir) {
 
   pendingDeletionKeys.add(deletionKey);
   activityMutationInProgress = true;
+  syncGlobalBusyState();
   setActivityFormLocked(true);
   if (btnExcluir) {
     btnExcluir.disabled = true;
@@ -718,6 +741,7 @@ function excluirAtividadeUI(item, btnExcluir) {
     .withSuccessHandler(function(res) {
       pendingDeletionKeys.delete(deletionKey);
       activityMutationInProgress = false;
+      syncGlobalBusyState();
       setActivityFormLocked(false);
 
       if (!res || !res.ok) {
@@ -736,6 +760,7 @@ function excluirAtividadeUI(item, btnExcluir) {
     .withFailureHandler(function(err) {
       pendingDeletionKeys.delete(deletionKey);
       activityMutationInProgress = false;
+      syncGlobalBusyState();
       setActivityFormLocked(false);
       if (btnExcluir) {
         btnExcluir.disabled = false;
@@ -755,11 +780,13 @@ function novaFrase() {
   if (!currentUser || !currentUser.id_dgmb || phraseLoadInProgress) return;
 
   phraseLoadInProgress = true;
+  syncGlobalBusyState();
   setPhraseButtonLoading(true);
 
   google.script.run
     .withSuccessHandler(function(res) {
       phraseLoadInProgress = false;
+      syncGlobalBusyState();
       setPhraseButtonLoading(false);
       if (res && res.ok && res.data && res.data.frase) {
         setTextById('frase-box', res.data.frase);
@@ -767,6 +794,7 @@ function novaFrase() {
     })
     .withFailureHandler(function(err) {
       phraseLoadInProgress = false;
+      syncGlobalBusyState();
       setPhraseButtonLoading(false);
       console.error(err);
     })
@@ -785,6 +813,7 @@ function carregarRanking(triggerSource) {
   }
 
   rankingLoadInProgress = true;
+  syncGlobalBusyState();
   setRankingLoadDisabled(true);
   showScreen('ranking');
   setRankingMsg('Carregando ranking...', 'loading');
@@ -796,6 +825,7 @@ function carregarRanking(triggerSource) {
   google.script.run
     .withSuccessHandler(function(res) {
       rankingLoadInProgress = false;
+      syncGlobalBusyState();
       setRankingLoadDisabled(false);
 
       if (!res || !res.ok) {
@@ -808,6 +838,7 @@ function carregarRanking(triggerSource) {
     })
     .withFailureHandler(function(err) {
       rankingLoadInProgress = false;
+      syncGlobalBusyState();
       setRankingLoadDisabled(false);
       setRankingMsg('Erro ao carregar ranking.', 'error');
       console.error(err);
@@ -898,6 +929,7 @@ function logoutUser() {
   activityMutationInProgress = false;
   painelLoadInProgress = false;
   painelReloadPending = false;
+  syncGlobalBusyState();
 
   const painelIdInput = document.getElementById('painel-id-dgmb');
   if (painelIdInput) painelIdInput.value = '';
