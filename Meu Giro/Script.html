@@ -21,7 +21,9 @@ let painelProgressAnimationToken = 0;
 let rankingPreviewFeedbackTimer = null;
 let ritmoAgoraFeedbackTimer = null;
 let atividadeRecenteFeedbackTimer = null;
+let totalPedaladoFeedbackTimer = null;
 let pendingRecentActivityHighlight = null;
+let pendingTotalPedaladoFeedback = false;
 const statusMessageTimers = {};
 
 function syncGlobalBusyState() {
@@ -780,6 +782,88 @@ function clearRankingPreviewFeedback() {
   }
 }
 
+function clearTotalPedaladoFeedback() {
+  if (totalPedaladoFeedbackTimer) {
+    clearTimeout(totalPedaladoFeedbackTimer);
+    totalPedaladoFeedbackTimer = null;
+  }
+
+  var totalEl = document.getElementById('total-pedalado');
+  if (totalEl) {
+    totalEl.classList.remove('total-pedalado-flash', 'total-pedalado-pulse');
+  }
+}
+
+function animateTotalPedaladoValue(fromValue, toValue, durationMs) {
+  var totalEl = document.getElementById('total-pedalado');
+  if (!totalEl) return;
+
+  var start = Number(fromValue);
+  var end = Number(toValue);
+
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start === end) {
+    totalEl.innerText = formatNumber(end);
+    return;
+  }
+
+  var startAt = null;
+  var maxDuration = Math.min(durationMs || 960, 1200);
+
+  function step(timestamp) {
+    if (startAt === null) startAt = timestamp;
+
+    var progress = Math.min((timestamp - startAt) / maxDuration, 1);
+    var eased = 1 - Math.pow(1 - progress, 3);
+    var value = start + ((end - start) * eased);
+    totalEl.innerText = formatNumber(value);
+
+    if (progress < 1) {
+      window.requestAnimationFrame(step);
+      return;
+    }
+
+    totalEl.innerText = formatNumber(end);
+  }
+
+  window.requestAnimationFrame(step);
+}
+
+function playTotalPedaladoFeedback(previousPainel, nextPainel) {
+  if (!pendingTotalPedaladoFeedback) {
+    return;
+  }
+
+  pendingTotalPedaladoFeedback = false;
+
+  var totalEl = document.getElementById('total-pedalado');
+  if (!totalEl || !nextPainel) {
+    return;
+  }
+
+  var previousTotal = toFiniteNumber(
+    previousPainel && (previousPainel.totalPedalado || previousPainel.realizado),
+    0
+  );
+  var nextTotal = toFiniteNumber(nextPainel.totalPedalado || nextPainel.realizado, previousTotal);
+  var totalDiff = Math.abs(nextTotal - previousTotal);
+  var shouldAnimateValue = totalDiff > 0 && totalDiff <= 60;
+
+  clearTotalPedaladoFeedback();
+  void totalEl.offsetWidth;
+  totalEl.classList.add('total-pedalado-flash', 'total-pedalado-pulse');
+
+  if (shouldAnimateValue) {
+    animateTotalPedaladoValue(previousTotal, nextTotal, 980);
+  } else {
+    totalEl.innerText = formatNumber(nextTotal);
+  }
+
+  totalPedaladoFeedbackTimer = window.setTimeout(function() {
+    clearTotalPedaladoFeedback();
+    totalEl.innerText = formatNumber(nextTotal);
+  }, 1600);
+}
+
 function playRankingPreviewFeedback(previousPainel, nextPainel) {
   var rankingBox = document.getElementById('painel-ranking-box');
   var rankingMain = document.getElementById('painel-posicao-ranking');
@@ -896,6 +980,7 @@ function carregarPainel(triggerSource) {
       var shouldPlayRitmoAgoraFeedback = painelProgressFeedbackMode === 'activity-registered';
       currentPainel = res.data || {};
       renderPainel(currentPainel);
+      playTotalPedaladoFeedback(previousPainel, currentPainel);
       playPainelProgressFeedback(previousPainel, currentPainel);
       if (shouldPlayRankingPreviewFeedback) {
         playRankingPreviewFeedback(previousPainel, currentPainel);
@@ -1206,6 +1291,7 @@ function salvarAtividade(forcarDuplicidade) {
           km: km,
           label: 'Novo'
         });
+        pendingTotalPedaladoFeedback = true;
         painelProgressFeedbackMode = 'activity-registered';
         carregarPainel();
       })
@@ -1305,6 +1391,8 @@ function salvarEdicaoAtividade() {
           km: km,
           label: 'Agora'
         });
+        pendingTotalPedaladoFeedback = true;
+        painelProgressFeedbackMode = 'activity-registered';
         carregarPainel();
       })
       .withFailureHandler(function(err) {
