@@ -8,6 +8,7 @@ let loginInProgress = false;
 let painelLoadInProgress = false;
 let painelReloadPending = false;
 let painelLoadRequestId = 0;
+const statusMessageTimers = {};
 
 function showScreen(name) {
   const screens = document.querySelectorAll('.screen');
@@ -49,6 +50,44 @@ function startLoadingState(btn, msg, loadingText) {
   };
 }
 
+function setTransientStatus(elementId, message, variant, timeoutMs) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+
+  if (statusMessageTimers[elementId]) {
+    clearTimeout(statusMessageTimers[elementId]);
+    delete statusMessageTimers[elementId];
+  }
+
+  const text = String(message || '').trim();
+  el.innerText = text;
+  el.className = 'msg status-msg';
+
+  if (!text) {
+    return;
+  }
+
+  el.classList.add('is-visible');
+
+  if (variant === 'loading') {
+    el.classList.add('msg-loading');
+  } else if (variant === 'error') {
+    el.classList.add('msg-error');
+  } else if (variant === 'success') {
+    el.classList.add('msg-success');
+  }
+
+  if (Number(timeoutMs) > 0) {
+    statusMessageTimers[elementId] = setTimeout(function() {
+      if (el) {
+        el.innerText = '';
+        el.className = 'msg status-msg';
+      }
+      delete statusMessageTimers[elementId];
+    }, Number(timeoutMs));
+  }
+}
+
 function applyCpfMask(value) {
   const digits = onlyDigits(value).slice(0, 11);
   if (digits.length <= 3) return digits;
@@ -81,14 +120,15 @@ function login() {
   if (!cpfInput || !msg || !btn) return;
 
   if (loginInProgress) {
-    msg.innerText = 'Aguarde, estamos verificando seu acesso...';
+    setTransientStatus('login-msg', 'Verificando acesso...', 'loading');
     return;
   }
 
   const cpf = readInputValue(cpfInput);
 
   loginInProgress = true;
-  const finishLoadingBase = startLoadingState(btn, msg, 'Verificando...');
+  setTransientStatus('login-msg', 'Verificando acesso...', 'loading');
+  const finishLoadingBase = startLoadingState(btn, msg, 'Verificando acesso...');
   const finishLoading = function(nextMessage) {
     finishLoadingBase(nextMessage);
     loginInProgress = false;
@@ -100,14 +140,14 @@ function login() {
         finishLoading();
 
         if (!res || !res.ok) {
-          msg.innerText = (res && res.msg) ? res.msg : 'Não foi possível entrar.';
+          setTransientStatus('login-msg', (res && res.msg) ? res.msg : 'Não foi possível entrar.', 'error');
           return;
         }
 
         const userId = res.data && res.data.id_dgmb ? String(res.data.id_dgmb).trim() : '';
         if (!userId) {
           currentUser = null;
-          msg.innerText = 'Sessão inválida. Faça login novamente.';
+          setTransientStatus('login-msg', 'Sessão inválida. Entre novamente.', 'error');
           return;
         }
 
@@ -117,24 +157,26 @@ function login() {
           cidade_uf: res.data && res.data.cidade_uf ? res.data.cidade_uf : ''
         };
 
-        msg.innerText = '';
+        setTransientStatus('login-msg', '');
 
         showScreen('painel');
         carregarPainel();
       })
       .withFailureHandler(function(err) {
-        finishLoading('Erro de comunicação com o servidor.');
+        finishLoading();
+        setTransientStatus('login-msg', 'Erro de conexão. Tente novamente.', 'error');
         console.error(err);
       })
       .loginCPF(cpf);
   } catch (err) {
-    finishLoading('Erro de comunicação com o servidor.');
+    finishLoading();
+    setTransientStatus('login-msg', 'Erro de conexão. Tente novamente.', 'error');
     console.error(err);
   }
 }
-function setPainelMsg(message) {
-  const painelMsg = document.getElementById('painel-msg');
-  if (painelMsg) painelMsg.innerText = String(message || '');
+
+function setPainelMsg(message, variant, timeoutMs) {
+  setTransientStatus('painel-msg', message, variant, timeoutMs);
 }
 
 
@@ -155,8 +197,7 @@ function resetPainelVisualState() {
 
 function carregarPainel(triggerSource) {
   if (!currentUser || !currentUser.id_dgmb) {
-    const loginMsg = document.getElementById('login-msg');
-    if (loginMsg) loginMsg.innerText = 'Sua sessão não está ativa. Faça login para continuar.';
+    setTransientStatus('login-msg', 'Sua sessão expirou. Entre novamente.', 'error');
     showScreen('login');
     return;
   }
@@ -164,8 +205,9 @@ function carregarPainel(triggerSource) {
   if (painelLoadInProgress) {
     painelReloadPending = true;
     setPainelMsg(triggerSource === 'manual'
-      ? 'Atualização manual em andamento...'
-      : 'Atualizando painel...');
+      ? 'Atualização em andamento...'
+      : 'Atualizando painel...',
+      'loading');
     return;
   }
 
@@ -176,7 +218,7 @@ function carregarPainel(triggerSource) {
 
   setManualPainelRefreshDisabled(true);
   resetPainelVisualState();
-  setPainelMsg(triggerSource === 'manual' ? 'Atualizando painel...' : 'Carregando painel...');
+  setPainelMsg(triggerSource === 'manual' ? 'Atualizando painel...' : 'Carregando painel...', 'loading');
 
   google.script.run
     .withSuccessHandler(function(res) {
@@ -188,12 +230,12 @@ function carregarPainel(triggerSource) {
       setManualPainelRefreshDisabled(false);
 
       if (!res || !res.ok) {
-        setPainelMsg((res && res.msg) ? res.msg : 'Erro ao carregar painel. Tente novamente.');
+        setPainelMsg((res && res.msg) ? res.msg : 'Erro ao carregar painel. Tente novamente.', 'error');
         painelReloadPending = false;
         return;
       }
 
-      setPainelMsg('');
+      setPainelMsg('Painel pronto.', 'success', 1600);
       currentPainel = res.data || {};
       renderPainel(currentPainel);
 
@@ -208,7 +250,7 @@ function carregarPainel(triggerSource) {
 
       painelLoadInProgress = false;
       setManualPainelRefreshDisabled(false);
-      setPainelMsg('Erro de comunicação ao carregar painel. Tente novamente.');
+      setPainelMsg('Erro de conexão ao atualizar painel.', 'error');
       console.error(err);
       painelReloadPending = false;
     })
@@ -725,7 +767,7 @@ function openMeuGiro() {
     showScreen('painel');
 
     if (painelLoadInProgress) {
-      setPainelMsg('Atualização manual em andamento...');
+      setPainelMsg('Atualização em andamento...', 'loading');
       return;
     }
 
@@ -733,9 +775,7 @@ function openMeuGiro() {
     return;
   }
   const loginMsg = document.getElementById('login-msg');
-  if (loginMsg) {
-    loginMsg.innerText = 'Sua sessão não está ativa. Faça login para continuar.';
-  }
+  if (loginMsg) setTransientStatus('login-msg', 'Sua sessão expirou. Entre novamente.', 'error');
   showScreen('login');
 }
 
@@ -745,9 +785,7 @@ function openRankingPrivado() {
     return;
   }
   const loginMsg = document.getElementById('login-msg');
-  if (loginMsg) {
-    loginMsg.innerText = 'Sua sessão não está ativa. Faça login para continuar.';
-  }
+  if (loginMsg) setTransientStatus('login-msg', 'Sua sessão expirou. Entre novamente.', 'error');
   showScreen('login');
 }
 
@@ -759,7 +797,7 @@ function logoutUser() {
   if (painelIdInput) painelIdInput.value = '';
 
   const loginMsg = document.getElementById('login-msg');
-  if (loginMsg) loginMsg.innerText = '';
+  if (loginMsg) setTransientStatus('login-msg', '');
 
   const registroMsg = document.getElementById('registro-msg');
   if (registroMsg) registroMsg.innerText = '';
