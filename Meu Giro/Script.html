@@ -284,15 +284,15 @@ function renderPainel(p) {
     bar.style.width = Math.max(0, Math.min(100, toFiniteNumber(p.percentual, 0))) + '%';
   }
 
-  setTextById('ritmo-dia', 'Hoje é dia ' + formatNumber(p.diaAtual) + ' do desafio.');
+  setTextById('ritmo-dia', 'Dia ' + formatNumber(p.diaAtual) + ' do desafio.');
 
-  setTextById('ritmo-ideal', 'Para concluir no ritmo ideal você deveria ter cerca de ' + formatNumber(p.kmIdealAtual) + ' km.');
+  setTextById('ritmo-ideal', formatNumber(p.kmIdealAtual) + ' km');
 
   setTextById('ritmo-atual', 'Você tem ' + formatNumber(p.realizado) + ' km.');
 
-  setTextById('ritmo-restante', 'Ainda faltam ' + formatNumber(p.diasRestantes) + ' dias.');
+  setTextById('ritmo-restante', formatNumber(p.diasRestantes) + ' dias');
 
-  setTextById('ritmo-meta', 'Se pedalar cerca de ' + formatNumber(p.kmPorDiaRestante) + ' km por dia restante, você conclui o desafio.');
+  setTextById('ritmo-meta', formatNumber(p.kmPorDiaRestante) + ' km/dia');
 
   setTextById('frase-box', p.frase || 'Cada quilômetro conta. Continue no seu ritmo.');
 
@@ -304,14 +304,14 @@ function renderPainel(p) {
 
   if (posicaoRankingEl) {
     posicaoRankingEl.innerText = hasPosicaoRanking
-      ? 'Sua posição no ranking geral: ' + formatNumber(posicaoRanking)
+      ? 'Sua posição no ranking: ' + formatNumber(posicaoRanking)
       : 'Ranking ainda indisponível.';
   }
 
   if (posicaoDetalheEl) {
     posicaoDetalheEl.innerText = Number.isFinite(Number(totalParticipantes))
-      ? 'Considerando ' + formatNumber(totalParticipantes) + ' participantes no ranking.'
-      : 'Ele aparece quando houver base suficiente para comparação.';
+      ? 'Base atual: ' + formatNumber(totalParticipantes) + ' participantes.'
+      : 'Disponível quando houver base de comparação.';
   }
 
   renderAtividades(p.atividades || []);
