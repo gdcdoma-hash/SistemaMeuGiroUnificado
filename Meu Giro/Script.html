@@ -195,6 +195,7 @@ function login() {
 
 function setPainelMsg(message, variant, timeoutMs) {
   setTransientStatus('painel-msg', message, variant, timeoutMs);
+  syncPainelErrorState(message, variant);
 }
 
 function setRegistroMsg(message, variant, timeoutMs) {
@@ -212,9 +213,20 @@ function setRankingMsg(message, variant, timeoutMs) {
 function setManualPainelRefreshDisabled(disabled) {
   const topBtn = document.getElementById('btn-meu-giro-top');
   const homeBtn = document.getElementById('btn-meu-giro-home');
+  const retryBtn = document.getElementById('btn-painel-retry');
 
   if (topBtn) topBtn.disabled = !!disabled;
   if (homeBtn) homeBtn.disabled = !!disabled;
+  if (retryBtn) retryBtn.disabled = !!disabled;
+}
+
+function syncPainelErrorState(message, variant) {
+  const errorState = document.getElementById('painel-error-state');
+  if (!errorState) return;
+
+  const hasMessage = !!String(message || '').trim();
+  const shouldShow = variant === 'error' && hasMessage;
+  errorState.hidden = !shouldShow;
 }
 
 function setRankingLoadDisabled(disabled) {

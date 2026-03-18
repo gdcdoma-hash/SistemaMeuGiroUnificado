@@ -111,6 +111,11 @@
               <p class="identidade-cidade" id="painel-cidade"></p>
             </div>
             <div id="painel-msg" class="msg status-msg" aria-live="polite"></div>
+            <div id="painel-error-state" class="painel-error-state" hidden>
+              <p class="painel-error-title">Não foi possível atualizar seu painel.</p>
+              <p class="painel-error-text">Você pode tentar novamente agora. Se a falha continuar, aguarde um instante e repita a atualização.</p>
+              <button id="btn-painel-retry" class="btn-secondary painel-error-btn" type="button" onclick="carregarPainel('manual')">Tentar novamente</button>
+            </div>
       </div>
 
       <div class="card card-progresso">
