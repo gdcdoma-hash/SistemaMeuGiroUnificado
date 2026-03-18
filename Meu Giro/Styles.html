@@ -842,11 +842,98 @@
     line-height: 1.4;
   }
 
+  @keyframes ritmo-agora-flash {
+    0% {
+      opacity: 0;
+      transform: scale(0.985);
+    }
+
+    18% {
+      opacity: 1;
+    }
+
+    100% {
+      opacity: 0;
+      transform: scale(1.03);
+    }
+  }
+
+  @keyframes ritmo-agora-title-pulse {
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+
+    35% {
+      transform: scale(1.02);
+      opacity: 0.92;
+    }
+
+    60% {
+      transform: scale(1.01);
+      opacity: 1;
+    }
+  }
+
+  @keyframes ritmo-agora-text-refresh {
+    0% {
+      opacity: 0.78;
+      transform: translateY(4px);
+    }
+
+    45% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .card-ritmo-agora {
+    position: relative;
+  }
+
+  .ritmo-agora-heading {
+    transition: color 180ms ease;
+  }
+
   .alerta-ritmo {
+    position: relative;
+    overflow: hidden;
     padding: 14px;
     border: 1px solid #e5e7eb;
     border-radius: 14px;
     background: #f9fafb;
+    transition: border-color 220ms ease, background-color 220ms ease, box-shadow 220ms ease;
+  }
+
+  .alerta-ritmo::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.12) 42%, rgba(255, 255, 255, 0) 72%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .alerta-ritmo-neutro {
+    border-color: #e5e7eb;
+    background: #f9fafb;
+  }
+
+  .alerta-ritmo-bom {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+  }
+
+  .alerta-ritmo-atencao {
+    border-color: #fed7aa;
+    background: #fff7ed;
   }
 
   .alerta-ritmo-titulo {
@@ -854,6 +941,7 @@
     line-height: 1.35;
     font-weight: 700;
     color: #111827;
+    will-change: transform, opacity;
   }
 
   .alerta-ritmo-texto {
@@ -861,6 +949,24 @@
     color: #4b5563;
     font-size: 15px;
     line-height: 1.45;
+    will-change: transform, opacity;
+  }
+
+  .card-ritmo-agora.ritmo-agora-feedback .ritmo-agora-heading,
+  .card-ritmo-agora.ritmo-agora-feedback .alerta-ritmo-titulo {
+    animation: ritmo-agora-title-pulse 1.6s ease;
+  }
+
+  .card-ritmo-agora.ritmo-agora-feedback .alerta-ritmo {
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+  }
+
+  .card-ritmo-agora.ritmo-agora-feedback .alerta-ritmo::after {
+    animation: ritmo-agora-flash 1.6s ease;
+  }
+
+  .card-ritmo-agora.ritmo-agora-feedback .alerta-ritmo-texto {
+    animation: ritmo-agora-text-refresh 1.6s ease;
   }
 
   .progress-wrap {

@@ -19,6 +19,7 @@ let painelProgressFeedbackMode = '';
 let painelProgressFeedbackTimers = [];
 let painelProgressAnimationToken = 0;
 let rankingPreviewFeedbackTimer = null;
+let ritmoAgoraFeedbackTimer = null;
 const statusMessageTimers = {};
 
 function syncGlobalBusyState() {
@@ -426,6 +427,58 @@ function setRegistroCardState(state) {
   }
 }
 
+function normalizeRitmoText(value, fallback) {
+  var text = String(value || '').trim();
+  return text || fallback;
+}
+
+function getRitmoAgoraVariant(statusText) {
+  var status = String(statusText || '').toLowerCase();
+
+  if (status.indexOf('adiant') !== -1 || status.indexOf('em dia') !== -1) {
+    return 'alerta-ritmo-bom';
+  }
+
+  if (status.indexOf('aten') !== -1 || status.indexOf('atras') !== -1 || status.indexOf('aceler') !== -1) {
+    return 'alerta-ritmo-atencao';
+  }
+
+  return 'alerta-ritmo-neutro';
+}
+
+function renderRitmoAgora(p) {
+  var statusText = normalizeRitmoText(p && p.ritmo_status, 'Seu ritmo aparece aqui.');
+  var mensagemText = normalizeRitmoText(p && p.ritmo_mensagem, 'Registre atividades para ver uma orientação simples.');
+  var alerta = document.getElementById('alerta-ritmo');
+
+  setTextById('alerta-ritmo-titulo', statusText);
+  setTextById('alerta-ritmo-texto', mensagemText);
+
+  if (!alerta) return;
+
+  alerta.classList.remove('alerta-ritmo-neutro', 'alerta-ritmo-bom', 'alerta-ritmo-atencao');
+  alerta.classList.add(getRitmoAgoraVariant(statusText));
+}
+
+function playRitmoAgoraFeedback() {
+  var card = document.querySelector('.card-ritmo-agora');
+  if (!card) return;
+
+  if (ritmoAgoraFeedbackTimer) {
+    clearTimeout(ritmoAgoraFeedbackTimer);
+    ritmoAgoraFeedbackTimer = null;
+  }
+
+  card.classList.remove('ritmo-agora-feedback');
+  void card.offsetWidth;
+  card.classList.add('ritmo-agora-feedback');
+
+  ritmoAgoraFeedbackTimer = window.setTimeout(function() {
+    card.classList.remove('ritmo-agora-feedback');
+    ritmoAgoraFeedbackTimer = null;
+  }, 1600);
+}
+
 function markAtividadesRefreshing() {
   const box = document.getElementById('atividades-lista');
   if (!box) return;
@@ -765,11 +818,15 @@ function carregarPainel(triggerSource) {
       );
       var previousPainel = currentPainel;
       var shouldPlayRankingPreviewFeedback = painelProgressFeedbackMode === 'activity-registered';
+      var shouldPlayRitmoAgoraFeedback = painelProgressFeedbackMode === 'activity-registered';
       currentPainel = res.data || {};
       renderPainel(currentPainel);
       playPainelProgressFeedback(previousPainel, currentPainel);
       if (shouldPlayRankingPreviewFeedback) {
         playRankingPreviewFeedback(previousPainel, currentPainel);
+      }
+      if (shouldPlayRitmoAgoraFeedback) {
+        playRitmoAgoraFeedback();
       }
 
       if (painelReloadPending) {
@@ -825,6 +882,7 @@ function renderPainel(p) {
   setTextById('ritmo-meta', formatNumber(p.kmPorDiaRestante) + ' km/dia');
 
   setTextById('frase-box', p.frase || 'Cada quilômetro conta. Continue no seu ritmo.');
+  renderRitmoAgora(p || {});
 
   const posicaoRankingSource = p.posicao_ranking !== null
     && p.posicao_ranking !== undefined
