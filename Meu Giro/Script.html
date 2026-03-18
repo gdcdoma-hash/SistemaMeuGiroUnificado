@@ -18,6 +18,7 @@ let registroTapFeedbackTimer = null;
 let painelProgressFeedbackMode = '';
 let painelProgressFeedbackTimers = [];
 let painelProgressAnimationToken = 0;
+let rankingPreviewFeedbackTimer = null;
 const statusMessageTimers = {};
 
 function syncGlobalBusyState() {
@@ -627,6 +628,92 @@ function playPainelProgressFeedback(previousPainel, nextPainel) {
   }, 1600));
 }
 
+function clearRankingPreviewFeedback() {
+  if (rankingPreviewFeedbackTimer) {
+    clearTimeout(rankingPreviewFeedbackTimer);
+    rankingPreviewFeedbackTimer = null;
+  }
+
+  var rankingBox = document.getElementById('painel-ranking-box');
+  var rankingMain = document.getElementById('painel-posicao-ranking');
+  var rankingDetail = document.getElementById('painel-posicao-detalhe');
+
+  if (rankingBox) {
+    rankingBox.classList.remove('ranking-preview-highlight', 'ranking-preview-shift');
+    rankingBox.removeAttribute('data-sync-label');
+  }
+
+  if (rankingMain) {
+    rankingMain.classList.remove('ranking-preview-pulse', 'ranking-preview-shift-text');
+  }
+
+  if (rankingDetail) {
+    rankingDetail.classList.remove('ranking-preview-shift-text');
+  }
+}
+
+function playRankingPreviewFeedback(previousPainel, nextPainel) {
+  var rankingBox = document.getElementById('painel-ranking-box');
+  var rankingMain = document.getElementById('painel-posicao-ranking');
+  var rankingDetail = document.getElementById('painel-posicao-detalhe');
+
+  if (!rankingBox || !rankingMain || !rankingDetail || !previousPainel || !nextPainel) {
+    return;
+  }
+
+  var previousPositionSource = previousPainel.posicao_ranking !== null
+    && previousPainel.posicao_ranking !== undefined
+    && previousPainel.posicao_ranking !== ''
+      ? previousPainel.posicao_ranking
+      : previousPainel.posicaoRanking;
+  var nextPositionSource = nextPainel.posicao_ranking !== null
+    && nextPainel.posicao_ranking !== undefined
+    && nextPainel.posicao_ranking !== ''
+      ? nextPainel.posicao_ranking
+      : nextPainel.posicaoRanking;
+  var previousParticipantsSource = previousPainel.total_participantes !== null
+    && previousPainel.total_participantes !== undefined
+    && previousPainel.total_participantes !== ''
+      ? previousPainel.total_participantes
+      : previousPainel.totalParticipantes;
+  var nextParticipantsSource = nextPainel.total_participantes !== null
+    && nextPainel.total_participantes !== undefined
+    && nextPainel.total_participantes !== ''
+      ? nextPainel.total_participantes
+      : nextPainel.totalParticipantes;
+  var previousPosition = Number(previousPositionSource);
+  var nextPosition = Number(nextPositionSource);
+  var previousParticipants = Number(previousParticipantsSource);
+  var nextParticipants = Number(nextParticipantsSource);
+  var hasPreviousPosition = Number.isFinite(previousPosition) && previousPosition > 0;
+  var hasNextPosition = Number.isFinite(nextPosition) && nextPosition > 0;
+  var rankingBecameAvailable = !hasPreviousPosition && hasNextPosition;
+  var positionChanged = hasPreviousPosition && hasNextPosition && previousPosition !== nextPosition;
+  var participantsChanged = Number.isFinite(previousParticipants) && Number.isFinite(nextParticipants) && previousParticipants !== nextParticipants;
+  var synchronized = hasNextPosition || Number.isFinite(nextParticipants);
+
+  if (!positionChanged && !participantsChanged && !synchronized) {
+    return;
+  }
+
+  clearRankingPreviewFeedback();
+  void rankingBox.offsetWidth;
+
+  rankingBox.classList.add('ranking-preview-highlight');
+  rankingBox.setAttribute('data-sync-label', 'Sincronizado');
+  rankingMain.classList.add('ranking-preview-pulse');
+
+  if (positionChanged || rankingBecameAvailable) {
+    rankingBox.classList.add('ranking-preview-shift');
+    rankingMain.classList.add('ranking-preview-shift-text');
+    rankingDetail.classList.add('ranking-preview-shift-text');
+  }
+
+  rankingPreviewFeedbackTimer = window.setTimeout(function() {
+    clearRankingPreviewFeedback();
+  }, 1700);
+}
+
 function carregarPainel(triggerSource) {
   if (!currentUser || !currentUser.id_dgmb) {
     setTransientStatus('login-msg', 'Sua sessão expirou. Entre novamente.', 'error');
@@ -677,9 +764,13 @@ function carregarPainel(triggerSource) {
         triggerSource === 'manual' ? 2200 : 1600
       );
       var previousPainel = currentPainel;
+      var shouldPlayRankingPreviewFeedback = painelProgressFeedbackMode === 'activity-registered';
       currentPainel = res.data || {};
       renderPainel(currentPainel);
       playPainelProgressFeedback(previousPainel, currentPainel);
+      if (shouldPlayRankingPreviewFeedback) {
+        playRankingPreviewFeedback(previousPainel, currentPainel);
+      }
 
       if (painelReloadPending) {
         carregarPainel();
@@ -735,9 +826,19 @@ function renderPainel(p) {
 
   setTextById('frase-box', p.frase || 'Cada quilômetro conta. Continue no seu ritmo.');
 
-  const posicaoRanking = firstDefined([p.posicao_ranking, p.posicaoRanking]);
-  const totalParticipantes = firstDefined([p.total_participantes, p.totalParticipantes]);
-  const hasPosicaoRanking = isValidRankingPosition(posicaoRanking);
+  const posicaoRankingSource = p.posicao_ranking !== null
+    && p.posicao_ranking !== undefined
+    && p.posicao_ranking !== ''
+      ? p.posicao_ranking
+      : p.posicaoRanking;
+  const totalParticipantesSource = p.total_participantes !== null
+    && p.total_participantes !== undefined
+    && p.total_participantes !== ''
+      ? p.total_participantes
+      : p.totalParticipantes;
+  const posicaoRanking = Number(posicaoRankingSource);
+  const totalParticipantes = Number(totalParticipantesSource);
+  const hasPosicaoRanking = Number.isFinite(posicaoRanking) && posicaoRanking > 0;
   const posicaoRankingEl = document.getElementById('painel-posicao-ranking');
   const posicaoDetalheEl = document.getElementById('painel-posicao-detalhe');
 
@@ -762,20 +863,6 @@ function setTextById(id, text) {
   if (el) {
     el.innerText = text;
   }
-}
-
-function firstDefined(values) {
-  for (var i = 0; i < values.length; i++) {
-    if (values[i] !== null && values[i] !== undefined && values[i] !== '') {
-      return values[i];
-    }
-  }
-  return null;
-}
-
-function isValidRankingPosition(value) {
-  const numberValue = Number(value);
-  return Number.isFinite(numberValue) && numberValue > 0;
 }
 
 function renderAtividades(lista) {
@@ -1397,6 +1484,7 @@ function logoutUser() {
   activityMutationInProgress = false;
   painelLoadInProgress = false;
   painelReloadPending = false;
+  clearRankingPreviewFeedback();
   if (registroCardFeedbackTimer) {
     clearTimeout(registroCardFeedbackTimer);
     registroCardFeedbackTimer = null;
