@@ -313,7 +313,11 @@ function carregarPainel(triggerSource) {
         return;
       }
 
-      setPainelMsg('Painel pronto.', 'success', 1600);
+      setPainelMsg(
+        triggerSource === 'manual' ? 'Painel atualizado com sucesso.' : 'Painel pronto.',
+        'success',
+        triggerSource === 'manual' ? 2200 : 1600
+      );
       currentPainel = res.data || {};
       renderPainel(currentPainel);
 
