@@ -8,6 +8,9 @@ let loginInProgress = false;
 let painelLoadInProgress = false;
 let painelReloadPending = false;
 let painelLoadRequestId = 0;
+let rankingLoadInProgress = false;
+let phraseLoadInProgress = false;
+let activityMutationInProgress = false;
 const statusMessageTimers = {};
 
 function showScreen(name) {
@@ -183,6 +186,13 @@ function setRegistroMsg(message, variant, timeoutMs) {
   setTransientStatus('registro-msg', message, variant, timeoutMs);
 }
 
+function setRankingMsg(message, variant, timeoutMs) {
+  setTransientStatus('ranking-msg', message, variant, timeoutMs);
+  const el = document.getElementById('ranking-msg');
+  if (el && String(message || '').trim()) {
+    el.classList.add('msg-inline');
+  }
+}
 
 function setManualPainelRefreshDisabled(disabled) {
   const topBtn = document.getElementById('btn-meu-giro-top');
@@ -191,6 +201,38 @@ function setManualPainelRefreshDisabled(disabled) {
   if (topBtn) topBtn.disabled = !!disabled;
   if (homeBtn) homeBtn.disabled = !!disabled;
 }
+
+function setRankingLoadDisabled(disabled) {
+  const topBtn = document.getElementById('btn-ranking-top');
+  const painelBtn = document.getElementById('btn-ranking-painel');
+
+  if (topBtn) topBtn.disabled = !!disabled;
+  if (painelBtn) painelBtn.disabled = !!disabled;
+}
+
+function setPhraseButtonLoading(disabled) {
+  const btn = document.getElementById('btnOutraMensagem');
+  if (!btn) return;
+
+  btn.disabled = !!disabled;
+  btn.innerText = disabled ? 'Buscando...' : 'Outra mensagem';
+}
+
+function setActivityFormLocked(disabled) {
+  const cancelBtn = document.getElementById('btn-cancelar-edicao');
+  const dataInput = document.getElementById('data-atividade');
+  const kmInput = document.getElementById('km-atividade');
+  const quickButtons = document.querySelectorAll('.quick-km-btn');
+
+  if (cancelBtn) cancelBtn.disabled = !!disabled;
+  if (dataInput) dataInput.disabled = !!disabled;
+  if (kmInput) kmInput.disabled = !!disabled;
+
+  quickButtons.forEach(function(btn) {
+    btn.disabled = !!disabled;
+  });
+}
+
 function resetPainelVisualState() {
   currentPainel = null;
   renderPainel({
@@ -221,7 +263,9 @@ function carregarPainel(triggerSource) {
   const requestId = painelLoadRequestId;
 
   setManualPainelRefreshDisabled(true);
-  resetPainelVisualState();
+  if (!currentPainel) {
+    resetPainelVisualState();
+  }
   setPainelMsg(triggerSource === 'manual' ? 'Atualizando painel...' : 'Carregando painel...', 'loading');
 
   google.script.run
@@ -435,13 +479,25 @@ function salvarAtividade(forcarDuplicidade) {
     return;
   }
 
+  if (activityMutationInProgress || btn.disabled) {
+    setRegistroMsg('Processando registro...', 'loading');
+    return;
+  }
+
   if (!data || !km) {
     setRegistroMsg('Informe a data e os km.', 'error');
     return;
   }
 
+  activityMutationInProgress = true;
   setRegistroMsg('Registrando atividade...', 'loading');
-  const finishLoading = startLoadingState(btn, msg, 'Registrando...');
+  setActivityFormLocked(true);
+  const finishLoadingBase = startLoadingState(btn, msg, 'Registrando...');
+  const finishLoading = function(nextMessage) {
+    finishLoadingBase(nextMessage);
+    activityMutationInProgress = false;
+    setActivityFormLocked(false);
+  };
 
   try {
     google.script.run
@@ -508,7 +564,7 @@ function salvarEdicaoAtividade() {
     return;
   }
 
-  if (pendingEditSaveKey === editKey || btn.disabled) {
+  if (activityMutationInProgress || pendingEditSaveKey === editKey || btn.disabled) {
     setRegistroMsg('Salvando edição...', 'loading');
     return;
   }
@@ -519,15 +575,15 @@ function salvarEdicaoAtividade() {
   }
 
   pendingEditSaveKey = editKey;
-  const originalBtnText = btn.innerText;
-  btn.innerText = 'Salvando...';
-
+  activityMutationInProgress = true;
   setRegistroMsg('Salvando edição...', 'loading');
+  setActivityFormLocked(true);
   const finishLoadingBase = startLoadingState(btn, msg, 'Salvando edição...');
   const finishLoading = function(nextMessage) {
     finishLoadingBase(nextMessage);
     pendingEditSaveKey = '';
-    if (btn) btn.innerText = originalBtnText;
+    activityMutationInProgress = false;
+    setActivityFormLocked(false);
   };
 
   try {
@@ -638,12 +694,19 @@ function excluirAtividadeUI(item, btnExcluir) {
     return;
   }
 
+  if (activityMutationInProgress) {
+    setRegistroMsg('Aguarde a ação atual terminar.', 'loading');
+    return;
+  }
+
   const confirmar = confirm('Deseja excluir esta atividade?');
   if (!confirmar) {
     return;
   }
 
   pendingDeletionKeys.add(deletionKey);
+  activityMutationInProgress = true;
+  setActivityFormLocked(true);
   if (btnExcluir) {
     btnExcluir.disabled = true;
     btnExcluir.innerText = 'Excluindo...';
@@ -654,6 +717,8 @@ function excluirAtividadeUI(item, btnExcluir) {
   google.script.run
     .withSuccessHandler(function(res) {
       pendingDeletionKeys.delete(deletionKey);
+      activityMutationInProgress = false;
+      setActivityFormLocked(false);
 
       if (!res || !res.ok) {
         if (btnExcluir) {
@@ -670,6 +735,8 @@ function excluirAtividadeUI(item, btnExcluir) {
     })
     .withFailureHandler(function(err) {
       pendingDeletionKeys.delete(deletionKey);
+      activityMutationInProgress = false;
+      setActivityFormLocked(false);
       if (btnExcluir) {
         btnExcluir.disabled = false;
         btnExcluir.innerText = 'Excluir';
@@ -685,35 +752,64 @@ function excluirAtividadeUI(item, btnExcluir) {
 }
 
 function novaFrase() {
-  if (!currentUser || !currentUser.id_dgmb) return;
+  if (!currentUser || !currentUser.id_dgmb || phraseLoadInProgress) return;
+
+  phraseLoadInProgress = true;
+  setPhraseButtonLoading(true);
 
   google.script.run
     .withSuccessHandler(function(res) {
+      phraseLoadInProgress = false;
+      setPhraseButtonLoading(false);
       if (res && res.ok && res.data && res.data.frase) {
         setTextById('frase-box', res.data.frase);
       }
     })
     .withFailureHandler(function(err) {
+      phraseLoadInProgress = false;
+      setPhraseButtonLoading(false);
       console.error(err);
     })
     .getNovaFrase(currentUser.id_dgmb);
 }
 
-function carregarRanking() {
+function carregarRanking(triggerSource) {
   const idDgmb = currentUser && currentUser.id_dgmb ? String(currentUser.id_dgmb).trim() : '';
+
+  if (rankingLoadInProgress) {
+    if (triggerSource === 'manual') {
+      setPainelMsg('Carregando ranking...', 'loading');
+    }
+    setRankingMsg('Carregando ranking...', 'loading');
+    return;
+  }
+
+  rankingLoadInProgress = true;
+  setRankingLoadDisabled(true);
+  showScreen('ranking');
+  setRankingMsg('Carregando ranking...', 'loading');
+  const rankingBox = document.getElementById('ranking-lista');
+  if (rankingBox) {
+    rankingBox.innerHTML = '<div class="atividade atividade-empty"><p><strong>Carregando ranking...</strong> Aguarde um instante.</p></div>';
+  }
 
   google.script.run
     .withSuccessHandler(function(res) {
+      rankingLoadInProgress = false;
+      setRankingLoadDisabled(false);
+
       if (!res || !res.ok) {
-        alert((res && res.msg) ? res.msg : 'Erro ao carregar ranking.');
+        setRankingMsg((res && res.msg) ? res.msg : 'Erro ao carregar ranking.', 'error');
         return;
       }
 
+      setRankingMsg('Ranking atualizado.', 'success', 1400);
       renderRanking(res.data || []);
-      showScreen('ranking');
     })
     .withFailureHandler(function(err) {
-      alert('Erro ao carregar ranking.');
+      rankingLoadInProgress = false;
+      setRankingLoadDisabled(false);
+      setRankingMsg('Erro ao carregar ranking.', 'error');
       console.error(err);
     })
     .getRanking(idDgmb);
@@ -786,7 +882,7 @@ function openMeuGiro() {
 
 function openRankingPrivado() {
   if (currentUser && currentUser.id_dgmb) {
-    carregarRanking();
+    carregarRanking('manual');
     return;
   }
   const loginMsg = document.getElementById('login-msg');
@@ -797,6 +893,11 @@ function openRankingPrivado() {
 function logoutUser() {
   currentUser = null;
   currentPainel = null;
+  rankingLoadInProgress = false;
+  phraseLoadInProgress = false;
+  activityMutationInProgress = false;
+  painelLoadInProgress = false;
+  painelReloadPending = false;
 
   const painelIdInput = document.getElementById('painel-id-dgmb');
   if (painelIdInput) painelIdInput.value = '';
@@ -808,6 +909,11 @@ function logoutUser() {
   if (registroMsg) setRegistroMsg('');
 
   setPainelMsg('');
+  setRankingMsg('');
+  setManualPainelRefreshDisabled(false);
+  setRankingLoadDisabled(false);
+  setPhraseButtonLoading(false);
+  setActivityFormLocked(false);
 
   const cpfInput = document.getElementById('cpf');
   if (cpfInput) cpfInput.value = '';
