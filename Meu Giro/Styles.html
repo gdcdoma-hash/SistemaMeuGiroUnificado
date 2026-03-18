@@ -719,16 +719,70 @@
   }
 
   .painel-ranking-box {
+    position: relative;
     padding: 14px;
     border: 1px solid #e5e7eb;
     border-radius: 14px;
     background: #f9fafb;
+    overflow: hidden;
+    transition: box-shadow 0.22s ease, border-color 0.22s ease, transform 0.22s ease, background-color 0.22s ease;
+    will-change: transform, box-shadow;
   }
 
   .painel-ranking-main {
     font-weight: 700;
     line-height: 1.35;
     color: #111827;
+    transition: transform 0.22s ease, color 0.22s ease, opacity 0.22s ease;
+    will-change: transform, opacity;
+  }
+
+  .painel-ranking-sub {
+    transition: transform 0.22s ease, opacity 0.22s ease;
+    will-change: transform, opacity;
+  }
+
+  .painel-ranking-box::after {
+    content: attr(data-sync-label);
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: rgba(34, 197, 94, 0.12);
+    color: #15803d;
+    max-width: calc(100% - 24px);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    pointer-events: none;
+  }
+
+  .painel-ranking-box.ranking-preview-highlight {
+    border-color: rgba(59, 130, 246, 0.28);
+    background: linear-gradient(180deg, #f8fbff 0%, #f9fafb 100%);
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.12);
+  }
+
+  .painel-ranking-box.ranking-preview-highlight::after {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .painel-ranking-box.ranking-preview-shift {
+    animation: ranking-preview-shift-in 0.34s ease;
+  }
+
+  .painel-ranking-main.ranking-preview-pulse {
+    animation: ranking-position-pulse 0.72s ease;
+  }
+
+  .painel-ranking-main.ranking-preview-shift-text,
+  .painel-ranking-sub.ranking-preview-shift-text {
+    animation: ranking-shift-fade-in 0.42s ease;
   }
 
   .ritmo-card {
@@ -1018,6 +1072,41 @@
     }
     100% {
       background-color: #ffffff;
+    }
+  }
+
+  @keyframes ranking-position-pulse {
+    0% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.18);
+    }
+    45% {
+      transform: scale(1.04);
+      box-shadow: 0 0 0 6px rgba(59, 130, 246, 0);
+    }
+    100% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+    }
+  }
+
+  @keyframes ranking-shift-fade-in {
+    0% {
+      opacity: 0.7;
+      transform: translateY(4px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes ranking-preview-shift-in {
+    0% {
+      transform: translateY(4px);
+    }
+    100% {
+      transform: translateY(0);
     }
   }
 
