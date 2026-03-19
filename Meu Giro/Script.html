@@ -27,6 +27,7 @@ let pendingRecentActivityHighlight = null;
 let pendingTotalPedaladoFeedback = false;
 let rankingButtonFeedbackTimer = null;
 let lastRankingTriggerButton = null;
+let rankingBackNavigationFeedbackTimer = null;
 const statusMessageTimers = {};
 
 function syncGlobalBusyState() {
@@ -243,6 +244,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   setupRegistroSubmitProtection();
+  setupRankingBackNavigationFeedback();
 });
 
 function login() {
@@ -428,6 +430,57 @@ function showRankingLoadSuccessFeedback() {
     }
     rankingButtonFeedbackTimer = null;
   }, 1500);
+}
+
+function clearRankingBackNavigationFeedback() {
+  var button = document.getElementById('btn-ranking-voltar');
+
+  if (rankingBackNavigationFeedbackTimer) {
+    clearTimeout(rankingBackNavigationFeedbackTimer);
+    rankingBackNavigationFeedbackTimer = null;
+  }
+
+  if (!button) return;
+  button.classList.remove('is-pressed', 'tap-feedback');
+}
+
+function triggerRankingBackNavigationFeedback() {
+  var button = document.getElementById('btn-ranking-voltar');
+  if (!button || button.disabled) return;
+
+  clearRankingBackNavigationFeedback();
+  void button.offsetWidth;
+  button.classList.add('tap-feedback');
+
+  rankingBackNavigationFeedbackTimer = window.setTimeout(function() {
+    button.classList.remove('tap-feedback');
+    rankingBackNavigationFeedbackTimer = null;
+  }, 1020);
+}
+
+function setupRankingBackNavigationFeedback() {
+  var button = document.getElementById('btn-ranking-voltar');
+  if (!button || button.dataset.feedbackReady === 'true') return;
+
+  button.dataset.feedbackReady = 'true';
+
+  button.addEventListener('pointerdown', function(event) {
+    if (event.button !== undefined && event.button !== 0) return;
+    if (button.disabled) return;
+
+    button.classList.add('is-pressed');
+  });
+
+  ['pointerup', 'pointercancel', 'pointerleave', 'blur'].forEach(function(eventName) {
+    button.addEventListener(eventName, function() {
+      button.classList.remove('is-pressed');
+    });
+  });
+
+  button.addEventListener('click', function() {
+    button.classList.remove('is-pressed');
+    triggerRankingBackNavigationFeedback();
+  }, true);
 }
 
 function setPhraseButtonLoading(disabled) {

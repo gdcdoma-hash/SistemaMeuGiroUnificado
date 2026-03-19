@@ -374,6 +374,83 @@
     color: #111827;
   }
 
+  #btn-ranking-voltar {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    transform: translateZ(0);
+    transition: transform 140ms ease, box-shadow 220ms ease, background-color 220ms ease;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  #btn-ranking-voltar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at center, rgba(249, 115, 22, 0.24) 0%, rgba(249, 115, 22, 0.12) 34%, rgba(249, 115, 22, 0) 72%);
+    opacity: 0;
+    transform: scale(0.82);
+    pointer-events: none;
+  }
+
+  #btn-ranking-voltar.is-pressed,
+  #btn-ranking-voltar:active {
+    transform: scale(0.988);
+    box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.12), 0 6px 14px rgba(249, 115, 22, 0.08);
+  }
+
+  #btn-ranking-voltar.tap-feedback {
+    background: #f3f4f6;
+    box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.14), 0 8px 18px rgba(249, 115, 22, 0.1);
+    animation: ranking-back-button-pulse 1.02s ease-out;
+  }
+
+  #btn-ranking-voltar.tap-feedback::after {
+    animation: ranking-back-button-flash 1.02s ease-out;
+  }
+
+  @keyframes ranking-back-button-pulse {
+    0% {
+      transform: scale(0.988);
+    }
+
+    20% {
+      transform: scale(1);
+    }
+
+    55% {
+      transform: scale(1.01);
+    }
+
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes ranking-back-button-flash {
+    0% {
+      opacity: 0;
+      transform: scale(0.82);
+    }
+
+    24% {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    60% {
+      opacity: 0.38;
+      transform: scale(1.05);
+    }
+
+    100% {
+      opacity: 0;
+      transform: scale(1.1);
+    }
+  }
+
   .btn-main:disabled,
   .btn-secondary:disabled,
   .menu-btn:disabled {
