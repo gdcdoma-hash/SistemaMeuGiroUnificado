@@ -25,6 +25,8 @@ let totalPedaladoFeedbackTimer = null;
 let painelManualSuccessFeedbackTimer = null;
 let pendingRecentActivityHighlight = null;
 let pendingTotalPedaladoFeedback = false;
+let rankingButtonFeedbackTimer = null;
+let lastRankingTriggerButton = null;
 const statusMessageTimers = {};
 
 function syncGlobalBusyState() {
@@ -391,6 +393,41 @@ function setRankingLoadDisabled(disabled) {
 
   if (topBtn) topBtn.disabled = !!disabled;
   if (painelBtn) painelBtn.disabled = !!disabled;
+}
+
+function clearRankingButtonFeedback() {
+  if (rankingButtonFeedbackTimer) {
+    clearTimeout(rankingButtonFeedbackTimer);
+    rankingButtonFeedbackTimer = null;
+  }
+
+  document.querySelectorAll('.ranking-action-btn.ranking-load-success').forEach(function(btn) {
+    btn.classList.remove('ranking-load-success');
+  });
+}
+
+function markRankingTrigger(button) {
+  if (!(button instanceof HTMLElement)) return;
+
+  clearRankingButtonFeedback();
+  lastRankingTriggerButton = button;
+}
+
+function showRankingLoadSuccessFeedback() {
+  const button = lastRankingTriggerButton;
+  if (!(button instanceof HTMLElement)) return;
+
+  clearRankingButtonFeedback();
+  void button.offsetWidth;
+  button.classList.add('ranking-load-success');
+
+  rankingButtonFeedbackTimer = window.setTimeout(function() {
+    button.classList.remove('ranking-load-success');
+    if (lastRankingTriggerButton === button) {
+      lastRankingTriggerButton = null;
+    }
+    rankingButtonFeedbackTimer = null;
+  }, 1500);
 }
 
 function setPhraseButtonLoading(disabled) {
@@ -951,6 +988,8 @@ function playRankingPreviewFeedback(previousPainel, nextPainel) {
   }
 
   clearRankingPreviewFeedback();
+  clearRankingButtonFeedback();
+  lastRankingTriggerButton = null;
   void rankingBox.offsetWidth;
 
   rankingBox.classList.add('ranking-preview-highlight');
@@ -1662,6 +1701,7 @@ function carregarRanking(triggerSource) {
 
       setRankingMsg('Ranking geral atualizado com sucesso. Confira a lista abaixo.', 'success', 2600);
       renderRanking(res.data || []);
+      showRankingLoadSuccessFeedback();
     })
     .withFailureHandler(function(err) {
       rankingLoadInProgress = false;

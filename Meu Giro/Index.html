@@ -39,7 +39,7 @@
       <span class="menu-label">Meu Giro</span>
     </button>
 
-    <button id="btn-ranking-top" class="menu-btn menu-icon-btn" type="button" onclick="openRankingPrivado()">
+    <button id="btn-ranking-top" class="menu-btn menu-icon-btn ranking-action-btn" type="button" onclick="markRankingTrigger(this); openRankingPrivado()">
       <span class="menu-icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
           <path d="M8 21h8"></path>
@@ -254,7 +254,7 @@
       </div>
 
       <div class="card">
-        <button id="btn-ranking-painel" class="btn-main" onclick="carregarRanking('manual')">Ver ranking geral</button>
+        <button id="btn-ranking-painel" class="btn-main ranking-action-btn" onclick="markRankingTrigger(this); carregarRanking('manual')">Ver ranking geral</button>
       </div>
     </section>
 
