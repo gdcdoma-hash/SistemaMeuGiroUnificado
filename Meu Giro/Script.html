@@ -30,7 +30,9 @@ let pendingTotalPedaladoFeedback = false;
 let rankingButtonFeedbackTimer = null;
 let lastRankingTriggerButton = null;
 let rankingBackNavigationFeedbackTimer = null;
+let quickKmTapFeedbackTimer = null;
 let quickKmClearFeedbackTimer = null;
+let kmInputAddFeedbackTimer = null;
 let kmInputClearFeedbackTimer = null;
 const statusMessageTimers = {};
 
@@ -309,6 +311,7 @@ document.addEventListener('DOMContentLoaded', function() {
   setupCancelEditTouchFeedback();
   setupRankingBackNavigationFeedback();
   setupPhraseButtonTouchFeedback();
+  setupQuickKmShortcutFeedback();
   setupQuickKmClearFeedback();
 });
 
@@ -617,6 +620,85 @@ function setupPhraseButtonTouchFeedback() {
   btn.addEventListener('click', function() {
     btn.classList.remove('is-pressed');
   }, true);
+}
+
+function clearQuickKmShortcutFeedback(button) {
+  if (!button) return;
+
+  button.classList.remove('is-pressed', 'tap-feedback');
+}
+
+function clearAllQuickKmShortcutFeedback() {
+  document.querySelectorAll('.quick-km-shortcut').forEach(function(button) {
+    clearQuickKmShortcutFeedback(button);
+  });
+}
+
+function triggerQuickKmShortcutTapFeedback(button) {
+  if (!button || button.disabled) return;
+
+  if (quickKmTapFeedbackTimer) {
+    clearTimeout(quickKmTapFeedbackTimer);
+  }
+
+  clearAllQuickKmShortcutFeedback();
+  void button.offsetWidth;
+  button.classList.add('tap-feedback');
+
+  quickKmTapFeedbackTimer = window.setTimeout(function() {
+    button.classList.remove('tap-feedback');
+    quickKmTapFeedbackTimer = null;
+  }, 240);
+}
+
+function triggerKmInputAddFeedback() {
+  const input = document.getElementById('km-atividade');
+  if (!input) return;
+
+  if (kmInputAddFeedbackTimer) {
+    clearTimeout(kmInputAddFeedbackTimer);
+  }
+
+  input.classList.remove('km-add-feedback');
+  void input.offsetWidth;
+  input.classList.add('km-add-feedback');
+
+  kmInputAddFeedbackTimer = window.setTimeout(function() {
+    input.classList.remove('km-add-feedback');
+    kmInputAddFeedbackTimer = null;
+  }, 440);
+}
+
+function setupQuickKmShortcutFeedback() {
+  const buttons = document.querySelectorAll('.quick-km-shortcut');
+  if (!buttons.length) return;
+
+  buttons.forEach(function(button) {
+    if (button.dataset.touchFeedbackReady === 'true') return;
+
+    button.dataset.touchFeedbackReady = 'true';
+
+    button.addEventListener('pointerdown', function(event) {
+      if (event.button !== undefined && event.button !== 0) return;
+      if (button.disabled) return;
+
+      button.classList.add('is-pressed');
+    });
+
+    ['pointerup', 'pointercancel', 'pointerleave', 'blur'].forEach(function(eventName) {
+      button.addEventListener(eventName, function() {
+        button.classList.remove('is-pressed');
+      });
+    });
+
+    button.addEventListener('click', function() {
+      button.classList.remove('is-pressed');
+      triggerQuickKmShortcutTapFeedback(button);
+      window.setTimeout(function() {
+        triggerKmInputAddFeedback();
+      }, 0);
+    }, true);
+  });
 }
 
 function triggerQuickKmClearTapFeedback() {
