@@ -16,6 +16,7 @@ let activityMutationInProgress = false;
 let registroCardFeedbackTimer = null;
 let registroSubmitGuardActive = false;
 let registroTapFeedbackTimer = null;
+let cancelEditTapFeedbackTimer = null;
 let painelProgressFeedbackMode = '';
 let painelProgressFeedbackTimers = [];
 let painelProgressAnimationToken = 0;
@@ -69,6 +70,10 @@ function getRegistroSubmitButton() {
   return document.getElementById('btn-salvar');
 }
 
+function getCancelEditButton() {
+  return document.getElementById('btn-cancelar-edicao');
+}
+
 function releaseRegistroSubmitGuard() {
   const btn = getRegistroSubmitButton();
 
@@ -107,6 +112,39 @@ function setRegistroPressedState(active) {
   if (!btn || btn.disabled) return;
 
   btn.classList.toggle('is-pressed', !!active);
+}
+
+function releaseCancelEditTouchFeedback() {
+  const btn = getCancelEditButton();
+
+  if (cancelEditTapFeedbackTimer) {
+    clearTimeout(cancelEditTapFeedbackTimer);
+    cancelEditTapFeedbackTimer = null;
+  }
+
+  if (!btn) return;
+
+  btn.classList.remove('is-pressed', 'tap-feedback');
+}
+
+function triggerCancelEditTouchFeedback() {
+  const btn = getCancelEditButton();
+  if (!btn || btn.disabled) return;
+
+  btn.classList.remove('tap-feedback');
+  void btn.offsetWidth;
+  btn.classList.add('tap-feedback');
+
+  if (cancelEditTapFeedbackTimer) {
+    clearTimeout(cancelEditTapFeedbackTimer);
+  }
+
+  cancelEditTapFeedbackTimer = window.setTimeout(function() {
+    if (btn) {
+      btn.classList.remove('tap-feedback');
+    }
+    cancelEditTapFeedbackTimer = null;
+  }, 260);
 }
 
 function getRegistroBusyMessage() {
@@ -162,6 +200,27 @@ function setupRegistroSubmitProtection() {
 
     activateRegistroSubmitGuard();
   }, true);
+}
+
+function setupCancelEditTouchFeedback() {
+  const btn = getCancelEditButton();
+  if (!btn || btn.dataset.touchFeedbackReady === 'true') return;
+
+  btn.dataset.touchFeedbackReady = 'true';
+
+  btn.addEventListener('pointerdown', function(event) {
+    if (event.button !== undefined && event.button !== 0) return;
+    if (btn.disabled) return;
+
+    triggerCancelEditTouchFeedback();
+    btn.classList.add('is-pressed');
+  });
+
+  ['pointerup', 'pointercancel', 'pointerleave', 'blur'].forEach(function(eventName) {
+    btn.addEventListener(eventName, function() {
+      btn.classList.remove('is-pressed');
+    });
+  });
 }
 
 function startLoadingState(btn, msg, loadingText) {
@@ -245,6 +304,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   setupRegistroSubmitProtection();
+  setupCancelEditTouchFeedback();
   setupRankingBackNavigationFeedback();
   setupPhraseButtonTouchFeedback();
 });
@@ -630,7 +690,8 @@ function setRegistroCardState(state) {
     registroCardFeedbackTimer = null;
   }
 
-  card.classList.remove('is-loading', 'is-success');
+  card.classList.remove('is-loading', 'is-success', 'is-reset');
+  card.setAttribute('data-feedback-label', '');
 
   if (state === 'loading') {
     card.classList.add('is-loading');
@@ -638,11 +699,24 @@ function setRegistroCardState(state) {
   }
 
   if (state === 'success') {
+    card.setAttribute('data-feedback-label', '✓');
     card.classList.add('is-success');
     registroCardFeedbackTimer = setTimeout(function() {
       card.classList.remove('is-success');
+      card.setAttribute('data-feedback-label', '');
       registroCardFeedbackTimer = null;
     }, 1900);
+    return;
+  }
+
+  if (state === 'reset') {
+    card.setAttribute('data-feedback-label', 'Modo normal');
+    card.classList.add('is-reset');
+    registroCardFeedbackTimer = setTimeout(function() {
+      card.classList.remove('is-reset');
+      card.setAttribute('data-feedback-label', '');
+      registroCardFeedbackTimer = null;
+    }, 1200);
   }
 }
 
@@ -2000,6 +2074,7 @@ function clearKm() {
 
 function cancelarEdicaoAtividadeUI() {
   releaseRegistroSubmitGuard();
+  releaseCancelEditTouchFeedback();
   activeEditKey = '';
 
   if (currentPainel && Array.isArray(currentPainel.atividades)) {
@@ -2029,6 +2104,8 @@ function cancelarEdicaoAtividadeUI() {
 
   const registroMsg = document.getElementById('registro-msg');
   if (registroMsg) setRegistroMsg('');
+
+  setRegistroCardState('reset');
 }
 
 </script>
