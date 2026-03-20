@@ -11,6 +11,7 @@ let painelLoadRequestId = 0;
 let rankingLoadInProgress = false;
 let phraseLoadInProgress = false;
 let phraseFeedbackTimeout = null;
+let phraseTapFeedbackTimer = null;
 let activityMutationInProgress = false;
 let registroCardFeedbackTimer = null;
 let registroSubmitGuardActive = false;
@@ -245,6 +246,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   setupRegistroSubmitProtection();
   setupRankingBackNavigationFeedback();
+  setupPhraseButtonTouchFeedback();
 });
 
 function login() {
@@ -488,7 +490,70 @@ function setPhraseButtonLoading(disabled) {
   if (!btn) return;
 
   btn.disabled = !!disabled;
+  btn.classList.toggle('is-instant-loading', !!disabled);
+
+  if (disabled) {
+    btn.classList.remove('is-pressed');
+  }
+
   btn.innerText = disabled ? 'Buscando nova mensagem...' : 'Outra mensagem';
+}
+
+function clearPhraseButtonTouchFeedback() {
+  const btn = document.getElementById('btnOutraMensagem');
+
+  if (phraseTapFeedbackTimer) {
+    clearTimeout(phraseTapFeedbackTimer);
+    phraseTapFeedbackTimer = null;
+  }
+
+  if (!btn) return;
+  btn.classList.remove('is-pressed', 'tap-feedback');
+}
+
+function triggerPhraseButtonTouchFeedback() {
+  const btn = document.getElementById('btnOutraMensagem');
+  if (!btn || btn.disabled) return;
+
+  if (phraseTapFeedbackTimer) {
+    clearTimeout(phraseTapFeedbackTimer);
+  }
+
+  btn.classList.remove('tap-feedback');
+  void btn.offsetWidth;
+  btn.classList.add('tap-feedback');
+
+  phraseTapFeedbackTimer = window.setTimeout(function() {
+    btn.classList.remove('tap-feedback');
+    phraseTapFeedbackTimer = null;
+  }, 260);
+}
+
+function setupPhraseButtonTouchFeedback() {
+  const btn = document.getElementById('btnOutraMensagem');
+  if (!btn || btn.dataset.touchFeedbackReady === 'true') return;
+
+  btn.dataset.touchFeedbackReady = 'true';
+
+  btn.addEventListener('pointerdown', function(event) {
+    if (event.button !== undefined && event.button !== 0) return;
+    if (btn.disabled) return;
+
+    btn.classList.add('is-pressed');
+    triggerPhraseButtonTouchFeedback();
+  });
+
+  ['pointerup', 'pointercancel', 'pointerleave', 'blur'].forEach(function(eventName) {
+    btn.addEventListener(eventName, function() {
+      if (!phraseLoadInProgress) {
+        btn.classList.remove('is-pressed');
+      }
+    });
+  });
+
+  btn.addEventListener('click', function() {
+    btn.classList.remove('is-pressed');
+  }, true);
 }
 
 function setPhraseFeedback(message, variant) {
@@ -1877,6 +1942,7 @@ function logoutUser() {
   clearRecentActivityHighlight();
   pendingRecentActivityHighlight = null;
   clearRankingPreviewFeedback();
+  clearPhraseButtonTouchFeedback();
   if (registroCardFeedbackTimer) {
     clearTimeout(registroCardFeedbackTimer);
     registroCardFeedbackTimer = null;

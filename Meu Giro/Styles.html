@@ -310,6 +310,45 @@
     animation: registro-btn-ripple 240ms ease-out;
   }
 
+  #btnOutraMensagem {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    transform: translateZ(0);
+    transition: transform 120ms ease, box-shadow 180ms ease, filter 180ms ease;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  #btnOutraMensagem::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at center, rgba(249, 115, 22, 0.24) 0%, rgba(249, 115, 22, 0.12) 32%, rgba(249, 115, 22, 0) 70%);
+    opacity: 0;
+    transform: scale(0.76);
+    pointer-events: none;
+  }
+
+  #btnOutraMensagem.is-pressed,
+  #btnOutraMensagem:active {
+    transform: scale(0.985);
+    filter: brightness(0.98);
+  }
+
+  #btnOutraMensagem.tap-feedback {
+    box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.12), 0 8px 20px rgba(249, 115, 22, 0.12);
+  }
+
+  #btnOutraMensagem.tap-feedback::after {
+    animation: registro-btn-ripple 260ms ease-out;
+  }
+
+  #btnOutraMensagem.is-instant-loading {
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.16), 0 10px 24px rgba(249, 115, 22, 0.14);
+  }
+
   #btn-meu-giro-top,
   #btn-meu-giro-home,
   #btn-painel-retry {
