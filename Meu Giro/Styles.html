@@ -542,7 +542,47 @@
   }
 
   .quick-km-clear {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
     background: #ffffff;
+    transition: transform 140ms ease, box-shadow 180ms ease, background-color 180ms ease, border-color 180ms ease;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  .quick-km-clear::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at center, rgba(249, 115, 22, 0.18) 0%, rgba(249, 115, 22, 0.08) 34%, rgba(249, 115, 22, 0) 72%);
+    opacity: 0;
+    transform: scale(0.76);
+    pointer-events: none;
+  }
+
+  .quick-km-clear.is-pressed,
+  .quick-km-clear:active {
+    transform: scale(0.98);
+    border-color: rgba(249, 115, 22, 0.36);
+    background: #fff7ed;
+  }
+
+  .quick-km-clear.tap-feedback {
+    box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.14), 0 8px 18px rgba(249, 115, 22, 0.1);
+    background: #fff7ed;
+  }
+
+  .quick-km-clear.tap-feedback::after {
+    animation: registro-btn-ripple 240ms ease-out;
+  }
+
+  #km-atividade.km-clear-feedback {
+    border-color: rgba(249, 115, 22, 0.42);
+    background: #fff7ed;
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+    animation: km-input-clear-flash 520ms ease-out;
   }
 
   .form-acoes-atividade {
@@ -1966,6 +2006,23 @@
   @media (min-width: 721px) {
     .container {
       padding-top: 16px;
+    }
+  }
+
+  @keyframes km-input-clear-flash {
+    0% {
+      background: #fffbeb;
+      box-shadow: 0 0 0 0 rgba(249, 115, 22, 0);
+    }
+
+    28% {
+      background: #fff7ed;
+      box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.14);
+    }
+
+    100% {
+      background: #ffffff;
+      box-shadow: 0 0 0 0 rgba(249, 115, 22, 0);
     }
   }
 </style>
