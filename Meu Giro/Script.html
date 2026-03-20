@@ -30,6 +30,8 @@ let pendingTotalPedaladoFeedback = false;
 let rankingButtonFeedbackTimer = null;
 let lastRankingTriggerButton = null;
 let rankingBackNavigationFeedbackTimer = null;
+let quickKmClearFeedbackTimer = null;
+let kmInputClearFeedbackTimer = null;
 const statusMessageTimers = {};
 
 function syncGlobalBusyState() {
@@ -307,6 +309,7 @@ document.addEventListener('DOMContentLoaded', function() {
   setupCancelEditTouchFeedback();
   setupRankingBackNavigationFeedback();
   setupPhraseButtonTouchFeedback();
+  setupQuickKmClearFeedback();
 });
 
 function login() {
@@ -613,6 +616,70 @@ function setupPhraseButtonTouchFeedback() {
 
   btn.addEventListener('click', function() {
     btn.classList.remove('is-pressed');
+  }, true);
+}
+
+function triggerQuickKmClearTapFeedback() {
+  const button = document.querySelector('.quick-km-clear');
+  if (!button || button.disabled) return;
+
+  if (quickKmClearFeedbackTimer) {
+    clearTimeout(quickKmClearFeedbackTimer);
+  }
+
+  button.classList.remove('tap-feedback');
+  void button.offsetWidth;
+  button.classList.add('tap-feedback');
+
+  quickKmClearFeedbackTimer = window.setTimeout(function() {
+    button.classList.remove('tap-feedback');
+    quickKmClearFeedbackTimer = null;
+  }, 240);
+}
+
+function triggerKmInputClearFeedback() {
+  const input = document.getElementById('km-atividade');
+  if (!input) return;
+
+  if (kmInputClearFeedbackTimer) {
+    clearTimeout(kmInputClearFeedbackTimer);
+  }
+
+  input.classList.remove('km-clear-feedback');
+  void input.offsetWidth;
+  input.classList.add('km-clear-feedback');
+
+  kmInputClearFeedbackTimer = window.setTimeout(function() {
+    input.classList.remove('km-clear-feedback');
+    kmInputClearFeedbackTimer = null;
+  }, 520);
+}
+
+function setupQuickKmClearFeedback() {
+  const button = document.querySelector('.quick-km-clear');
+  if (!button || button.dataset.touchFeedbackReady === 'true') return;
+
+  button.dataset.touchFeedbackReady = 'true';
+
+  button.addEventListener('pointerdown', function(event) {
+    if (event.button !== undefined && event.button !== 0) return;
+    if (button.disabled) return;
+
+    button.classList.add('is-pressed');
+  });
+
+  ['pointerup', 'pointercancel', 'pointerleave', 'blur'].forEach(function(eventName) {
+    button.addEventListener(eventName, function() {
+      button.classList.remove('is-pressed');
+    });
+  });
+
+  button.addEventListener('click', function() {
+    button.classList.remove('is-pressed');
+    triggerQuickKmClearTapFeedback();
+    window.setTimeout(function() {
+      triggerKmInputClearFeedback();
+    }, 0);
   }, true);
 }
 
