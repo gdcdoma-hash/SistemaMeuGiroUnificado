@@ -1488,7 +1488,12 @@
   }
 
   .desafios-section-historico {
-    padding-top: 2px;
+    padding-top: 6px;
+  }
+
+  .desafios-section-historico .desafios-subtitle {
+    color: #4b5563;
+    font-size: 15px;
   }
 
   .desafios-subtitle {
@@ -1507,6 +1512,13 @@
 
   .desafio-resumo-card {
     gap: 10px;
+    border-left: 4px solid #e5e7eb;
+  }
+
+  .desafio-resumo-card.desafio-resumo-card-historico {
+    background: #f9fafb;
+    border-left-color: #d1d5db;
+    box-shadow: none;
   }
 
   .desafio-resumo-head {
@@ -1571,6 +1583,69 @@
     font-size: 15px;
     line-height: 1.35;
     color: #111827;
+  }
+
+  .desafio-progress-track {
+    height: 6px;
+    border-radius: 999px;
+    background: #e5e7eb;
+    overflow: hidden;
+  }
+
+  .desafio-progress-fill {
+    display: block;
+    height: 100%;
+    width: 0;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%);
+  }
+
+  .desafio-status-badge {
+    border: 1px solid transparent;
+  }
+
+  .desafio-status-ativo {
+    border-left-color: #2563eb;
+  }
+
+  .desafio-status-ativo .desafio-status-badge {
+    background: #dbeafe;
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+  }
+
+  .desafio-status-concluido {
+    border-left-color: #16a34a;
+  }
+
+  .desafio-status-concluido .desafio-status-badge {
+    background: #dcfce7;
+    color: #166534;
+    border-color: #bbf7d0;
+  }
+
+  .desafio-status-expirado {
+    border-left-color: #9ca3af;
+  }
+
+  .desafio-status-expirado .desafio-status-badge {
+    background: #f3f4f6;
+    color: #6b7280;
+    border-color: #e5e7eb;
+  }
+
+  .desafio-status-inapto {
+    border-left-color: #d97706;
+  }
+
+  .desafio-status-inapto .desafio-status-badge {
+    background: #fef3c7;
+    color: #92400e;
+    border-color: #fde68a;
+  }
+
+  .desafio-resumo-card-historico .desafio-status-badge {
+    opacity: 0.88;
   }
 
   .painel-ranking-main,
