@@ -547,7 +547,7 @@ function getOutraFraseMotivacional(idDgmb, fraseAtual) {
     var realizado = painelMG_toNumber_(desafioData.realizado);
 
     var progresso = painelMG_calcularProgresso_(meta, realizado);
-    var ritmo = painelMG_calcularRitmo_(meta, realizado);
+    var ritmo = painelMG_calcularRitmo_(meta, realizado, desafioData.periodo_inicio, desafioData.periodo_fim);
 
     var painelBaseFrase = painelMG_montarBaseFrase_({
       id_dgmb: pessoa.id_dgmb || id,
