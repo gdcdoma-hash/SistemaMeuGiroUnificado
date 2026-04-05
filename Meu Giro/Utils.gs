@@ -394,6 +394,7 @@ function buildPeriodoOficialPorAbaEId_(ss) {
   var idxId = getOptionalColumnIndex_(map, ['id_desafio', 'id desafio']);
   var idxInicio = getOptionalColumnIndex_(map, ['data_inicio', 'data início', 'inicio', 'início', 'dt_inicio']);
   var idxFim = getOptionalColumnIndex_(map, ['data_fim', 'data fim', 'fim', 'dt_fim']);
+  var idxNome = getOptionalColumnIndex_(map, ['nome_desafio', 'nome desafio', 'desafio', 'nome']);
 
   if (idxAba === -1) idxAba = 1;
 
@@ -402,9 +403,11 @@ function buildPeriodoOficialPorAbaEId_(ss) {
     var aba = normalizeText_(row[idxAba]);
     if (!aba) continue;
 
+    var nomeDesafio = idxNome > -1 ? normalizeText_(row[idxNome]) : '';
     var periodo = {
       inicio: idxInicio > -1 ? normalizarDataISO_(row[idxInicio]) : '',
-      fim: idxFim > -1 ? normalizarDataISO_(row[idxFim]) : ''
+      fim: idxFim > -1 ? normalizarDataISO_(row[idxFim]) : '',
+      nome_desafio: nomeDesafio || aba
     };
 
     out.byAba[aba] = periodo;
@@ -478,7 +481,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
       });
       var apto = validacao.valida && !inscricaoTemBloqueioMinimo_(statusDesafio);
 
-      var periodo = (idDesafio && periodos.byId[idDesafio]) || periodos.byAba[abaDesafio] || { inicio: '', fim: '' };
+      var periodo = (idDesafio && periodos.byId[idDesafio]) || periodos.byAba[abaDesafio] || { inicio: '', fim: '', nome_desafio: '' };
       var chave = [id, idDesafio, idItem].join('|');
       if (chaves[chave]) continue;
       chaves[chave] = true;
@@ -492,6 +495,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
         apto: apto,
         periodo_inicio: periodo.inicio || '',
         periodo_fim: periodo.fim || '',
+        nome_desafio: periodo.nome_desafio || abaDesafio || '',
         aba_desafio: abaDesafio
       });
     }
@@ -633,6 +637,7 @@ function atualizarMeuGiroResumo_(idDgmb) {
       id_dgmb: id,
       id_desafio: vinculo.id_desafio,
       id_item_estoque: vinculo.id_item_estoque,
+      nome_desafio: vinculo.nome_desafio || '',
       meta_km: linha[4],
       distancia_realizada: linha[5],
       percentual_concluido: linha[6],
