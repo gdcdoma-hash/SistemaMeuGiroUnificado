@@ -356,3 +356,289 @@ function firstFilledValue_(obj, keys) {
   }
   return '';
 }
+
+function extrairIdDesafioObservacao_(observacao) {
+  var texto = String(observacao || '');
+  var match = texto.match(/\[\s*ID_DESAFIO\s*:\s*([0-9]+)\s*\]/i);
+  return match ? String(match[1]).trim() : '';
+}
+
+function normalizarDataISO_(value) {
+  if (!value) return '';
+  if (Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value.getTime())) {
+    return Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  }
+  var s = String(value).trim();
+  if (!s) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+    return s.slice(6, 10) + '-' + s.slice(3, 5) + '-' + s.slice(0, 2);
+  }
+  var d = new Date(s);
+  if (!isNaN(d.getTime())) {
+    return Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  }
+  return '';
+}
+
+function buildPeriodoOficialPorAbaEId_(ss) {
+  var out = { byAba: {}, byId: {} };
+  var lista = ss.getSheetByName(SHEETS.LISTA_DESAFIOS || 'ListaDesafios');
+  if (!lista) return out;
+
+  var rows = lista.getDataRange().getValues();
+  if (!rows || rows.length < 2) return out;
+
+  var map = buildHeaderMap_(rows[0]);
+  var idxAba = getOptionalColumnIndex_(map, ['aba', 'aba desafio', 'abadesafio']);
+  var idxId = getOptionalColumnIndex_(map, ['id_desafio', 'id desafio']);
+  var idxInicio = getOptionalColumnIndex_(map, ['data_inicio', 'data início', 'inicio', 'início', 'dt_inicio']);
+  var idxFim = getOptionalColumnIndex_(map, ['data_fim', 'data fim', 'fim', 'dt_fim']);
+
+  if (idxAba === -1) idxAba = 1;
+
+  for (var i = 1; i < rows.length; i++) {
+    var row = rows[i];
+    var aba = normalizeText_(row[idxAba]);
+    if (!aba) continue;
+
+    var periodo = {
+      inicio: idxInicio > -1 ? normalizarDataISO_(row[idxInicio]) : '',
+      fim: idxFim > -1 ? normalizarDataISO_(row[idxFim]) : ''
+    };
+
+    out.byAba[aba] = periodo;
+
+    if (idxId > -1) {
+      var idDesafio = normalizeText_(row[idxId]);
+      if (idDesafio) out.byId[idDesafio] = periodo;
+    }
+  }
+
+  return out;
+}
+
+function obterVinculosDesafioUsuario_(idDgmb) {
+  var id = normalizeText_(idDgmb);
+  if (!id) return [];
+
+  var ss = getSpreadsheet_();
+  var periodos = buildPeriodoOficialPorAbaEId_(ss);
+  var abas = [];
+
+  for (var aba in periodos.byAba) {
+    if (Object.prototype.hasOwnProperty.call(periodos.byAba, aba)) {
+      abas.push(aba);
+    }
+  }
+  if (!abas.length) abas.push(SHEETS.DESAFIO);
+
+  var vinculos = [];
+  var chaves = {};
+
+  for (var a = 0; a < abas.length; a++) {
+    var abaDesafio = abas[a];
+    var sh = ss.getSheetByName(abaDesafio);
+    if (!sh) continue;
+
+    var values = sh.getDataRange().getValues();
+    if (!values || values.length < 2) continue;
+
+    var map = buildHeaderMap_(values[0]);
+    var idxId = getOptionalColumnIndex_(map, ['id_dgmb']);
+    if (idxId === -1) continue;
+
+    var idxMeta = getOptionalColumnIndex_(map, ['distancia_km', 'distancia km']);
+    var idxObs = getOptionalColumnIndex_(map, ['observacao', 'observação']);
+    var idxItem = getOptionalColumnIndex_(map, ['id_item_estoque', 'id item estoque']);
+    var idxStatusDesafio = getOptionalColumnIndex_(map, ['status_desafio', 'status desafio']);
+    var idxStatusPag = getOptionalColumnIndex_(map, ['status_pagamento', 'pagamento_status', 'pagamento', 'pix_status']);
+    var idxStatusInscricao = getOptionalColumnIndex_(map, ['status_inscricao', 'status inscrição', 'status', 'situacao', 'situação']);
+    var idxConfirmacao = getOptionalColumnIndex_(map, ['confirmacao', 'confirmação', 'confirmado', 'inscricao_confirmada']);
+
+    for (var i = 1; i < values.length; i++) {
+      var row = values[i];
+      var rowId = normalizeText_(row[idxId]);
+      if (rowId !== id) continue;
+
+      var observacao = idxObs > -1 ? row[idxObs] : '';
+      var idDesafio = extrairIdDesafioObservacao_(observacao);
+      var idItem = idxItem > -1 ? normalizeText_(row[idxItem]) : '';
+      var metaKm = idxMeta > -1 ? parseLocalizedNumber_(row[idxMeta]) : 0;
+
+      var statusInscricao = idxStatusInscricao > -1 ? normalizeText_(row[idxStatusInscricao]) : '';
+      var statusConfirmacao = idxConfirmacao > -1 ? normalizeText_(row[idxConfirmacao]) : '';
+      var statusPagamento = idxStatusPag > -1 ? normalizeText_(row[idxStatusPag]) : '';
+      var statusDesafio = idxStatusDesafio > -1 ? normalizeText_(row[idxStatusDesafio]) : '';
+
+      var validacao = validarInscricaoMinima_({
+        status_inscricao: statusInscricao,
+        status_confirmacao: statusConfirmacao,
+        status_pagamento: statusPagamento
+      });
+      var apto = validacao.valida && !inscricaoTemBloqueioMinimo_(statusDesafio);
+
+      var periodo = (idDesafio && periodos.byId[idDesafio]) || periodos.byAba[abaDesafio] || { inicio: '', fim: '' };
+      var chave = [id, idDesafio, idItem].join('|');
+      if (chaves[chave]) continue;
+      chaves[chave] = true;
+
+      vinculos.push({
+        id_dgmb: id,
+        id_desafio: idDesafio,
+        id_item_estoque: idItem,
+        meta_km: metaKm,
+        status_desafio: statusDesafio,
+        apto: apto,
+        periodo_inicio: periodo.inicio || '',
+        periodo_fim: periodo.fim || '',
+        aba_desafio: abaDesafio
+      });
+    }
+  }
+
+  return vinculos;
+}
+
+function obterRegistrosKmUsuario_(idDgmb) {
+  var id = normalizeText_(idDgmb);
+  if (!id) return [];
+
+  var registros = getAllObjects_(SHEETS.REGISTRO_KM);
+  var out = [];
+
+  for (var i = 0; i < registros.length; i++) {
+    var r = registros[i];
+    var rowId = normalizeText_(firstFilledValue_(r, ['ID_DGMB', 'id_dgmb']));
+    if (rowId !== id) continue;
+
+    out.push({
+      data_atividade: normalizarDataISO_(firstFilledValue_(r, ['Data_Atividade', 'Data', 'data_atividade', 'data'])),
+      km: parseLocalizedNumber_(firstFilledValue_(r, ['KM', 'km']))
+    });
+  }
+
+  return out;
+}
+
+function ensureMeuGiroResumoSheet_() {
+  var ss = getSpreadsheet_();
+  var sheetName = SHEETS.MEU_GIRO_RESUMO || 'MEU_GIRO_RESUMO';
+  var sh = ss.getSheetByName(sheetName);
+  var headers = [
+    'Timestamp_Atualizacao',
+    'ID_DGMB',
+    'ID_DESAFIO',
+    'id_item_estoque',
+    'Meta_KM',
+    'Distancia_Realizada',
+    'Percentual_Concluido',
+    'Status_Apuracao'
+  ];
+
+  if (!sh) {
+    sh = ss.insertSheet(sheetName);
+  }
+
+  var atual = sh.getRange(1, 1, 1, headers.length).getValues()[0];
+  var ok = true;
+  for (var i = 0; i < headers.length; i++) {
+    if (normalizeText_(atual[i]) !== headers[i]) {
+      ok = false;
+      break;
+    }
+  }
+  if (!ok) {
+    sh.getRange(1, 1, 1, headers.length).setValues([headers]);
+  }
+
+  return sh;
+}
+
+function atualizarMeuGiroResumo_(idDgmb) {
+  var id = normalizeText_(idDgmb);
+  if (!id) return [];
+
+  var vinculos = obterVinculosDesafioUsuario_(id);
+  var registros = obterRegistrosKmUsuario_(id);
+  var shResumo = ensureMeuGiroResumoSheet_();
+  var valoresResumo = shResumo.getDataRange().getValues();
+  var mapResumo = buildHeaderMap_(valoresResumo[0] || []);
+  var idxId = getOptionalColumnIndex_(mapResumo, ['id_dgmb']);
+  var idxDesafio = getOptionalColumnIndex_(mapResumo, ['id_desafio']);
+  var idxItem = getOptionalColumnIndex_(mapResumo, ['id_item_estoque', 'id item estoque']);
+  var linhasPorChave = {};
+
+  for (var i = 1; i < valoresResumo.length; i++) {
+    var row = valoresResumo[i];
+    if (normalizeText_(row[idxId]) !== id) continue;
+    var chaveExistente = [normalizeText_(row[idxId]), normalizeText_(row[idxDesafio]), normalizeText_(row[idxItem])].join('|');
+    linhasPorChave[chaveExistente] = i + 1;
+  }
+
+  var hoje = normalizarDataISO_(new Date());
+  var saida = [];
+
+  for (var v = 0; v < vinculos.length; v++) {
+    var vinculo = vinculos[v];
+    var chave = [id, vinculo.id_desafio, vinculo.id_item_estoque].join('|');
+    var inicio = vinculo.periodo_inicio;
+    var fim = vinculo.periodo_fim;
+    var apto = !!vinculo.apto && !!inicio && !!fim && !!vinculo.id_desafio;
+    var distancia = 0;
+
+    if (apto) {
+      for (var r = 0; r < registros.length; r++) {
+        var reg = registros[r];
+        if (!reg.data_atividade) continue;
+        if (reg.data_atividade >= inicio && reg.data_atividade <= fim) {
+          distancia += Number(reg.km || 0);
+        }
+      }
+    }
+
+    var meta = Number(vinculo.meta_km || 0);
+    var percentual = meta > 0 ? (distancia / meta) * 100 : 0;
+    var status = 'INAPTO';
+
+    var dentroDoPeriodo = hoje >= inicio && hoje <= fim;
+    if (apto) {
+      if (distancia >= meta && meta > 0) {
+        status = 'CONCLUIDO';
+      } else if (dentroDoPeriodo) {
+        status = 'ATIVO';
+      } else {
+        status = 'EXPIRADO';
+      }
+    }
+
+    var linha = [
+      new Date(),
+      id,
+      vinculo.id_desafio,
+      vinculo.id_item_estoque,
+      Math.round((meta + Number.EPSILON) * 10) / 10,
+      Math.round((distancia + Number.EPSILON) * 10) / 10,
+      Math.round((percentual + Number.EPSILON) * 10) / 10,
+      status
+    ];
+
+    if (linhasPorChave[chave]) {
+      shResumo.getRange(linhasPorChave[chave], 1, 1, linha.length).setValues([linha]);
+    } else {
+      shResumo.appendRow(linha);
+    }
+
+    saida.push({
+      id_dgmb: id,
+      id_desafio: vinculo.id_desafio,
+      id_item_estoque: vinculo.id_item_estoque,
+      meta_km: linha[4],
+      distancia_realizada: linha[5],
+      percentual_concluido: linha[6],
+      status_apuracao: status
+    });
+  }
+
+  return saida;
+}

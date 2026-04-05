@@ -6,7 +6,8 @@ function getPainelUsuario(idDgmb) {
     }
 
     var pessoa = buscarPessoaPainelMG_(id);
-    var desafio = buscarInscricaoPainelMG_(id);
+    var resumoDesafios = atualizarMeuGiroResumo_(id) || [];
+    var desafio = buscarInscricaoPainelMG_(id, resumoDesafios);
 
     if (!pessoa) {
       return { ok: false, code: 'USUARIO_NAO_ENCONTRADO', msg: 'Usuário não encontrado na base de pessoas para carregar o painel.' };
@@ -30,6 +31,7 @@ function getPainelUsuario(idDgmb) {
     }
 
     var desafioData = desafio.data;
+    var desafiosConsolidados = desafio.desafios || [];
 
     var meta = painelMG_toNumber_(desafioData.meta);
     var realizado = painelMG_toNumber_(desafioData.realizado);
@@ -98,6 +100,9 @@ function getPainelUsuario(idDgmb) {
         contexto_frase: contextoFrase || '',
 
         atividades: atividades,
+        desafios: desafiosConsolidados,
+        desafios_ativos: desafiosConsolidados.filter(function(d) { return d.status_apuracao === 'ATIVO'; }),
+        desafios_historico: desafiosConsolidados.filter(function(d) { return d.status_apuracao !== 'ATIVO'; }),
         totalPedalado: realizadoPainel,
         total_pedalado: realizadoPainel
       }
@@ -182,7 +187,7 @@ function buscarPessoaPainelMG_(idDgmb) {
   return null;
 }
 
-function buscarInscricaoPainelMG_(idDgmb) {
+function buscarInscricaoPainelMG_(idDgmb, resumoAtualizado) {
   var inscricao = obterDadosInscricaoUsuario_(idDgmb);
 
   if (!inscricao || inscricao.inscricao_valida === false) {
@@ -195,17 +200,36 @@ function buscarInscricaoPainelMG_(idDgmb) {
     };
   }
 
+  var resumo = resumoAtualizado && resumoAtualizado.length ? resumoAtualizado : [];
+  if (!resumo.length) {
+    try {
+      resumo = atualizarMeuGiroResumo_(idDgmb) || [];
+    } catch (e) {
+      resumo = [];
+    }
+  }
+
+  var desafioPrincipal = null;
+  for (var i = 0; i < resumo.length; i++) {
+    if (resumo[i].status_apuracao === 'ATIVO') {
+      desafioPrincipal = resumo[i];
+      break;
+    }
+  }
+  if (!desafioPrincipal && resumo.length) desafioPrincipal = resumo[0];
+
   return {
     ok: true,
     data: {
       id_dgmb: painelMG_norm_(inscricao.id_dgmb),
-      meta: inscricao.meta,
-      realizado: inscricao.distancia_realizada,
+      meta: desafioPrincipal ? desafioPrincipal.meta_km : inscricao.meta,
+      realizado: desafioPrincipal ? desafioPrincipal.distancia_realizada : inscricao.distancia_realizada,
       status_inscricao: painelMG_norm_(inscricao.status_inscricao),
       criterio_validacao: painelMG_norm_(inscricao.criterio_validacao),
       aba_desafio: painelMG_norm_(inscricao.aba_desafio),
       frase_incentivo: painelMG_norm_(inscricao.frase_incentivo)
-    }
+    },
+    desafios: resumo
   };
 }
 
