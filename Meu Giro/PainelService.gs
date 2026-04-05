@@ -38,7 +38,7 @@ function getPainelUsuario(idDgmb) {
     var realizadoPainel = painelMG_round1_(realizado);
 
     var progresso = painelMG_calcularProgresso_(meta, realizadoPainel);
-    var ritmo = painelMG_calcularRitmo_(meta, realizadoPainel);
+    var ritmo = painelMG_calcularRitmo_(meta, realizadoPainel, desafioData.periodo_inicio, desafioData.periodo_fim);
     var atividades = buscarAtividadesUsuario_(id);
     var rankingInfo = painelMG_calcularPosicaoRanking_(id);
 
@@ -218,6 +218,9 @@ function buscarInscricaoPainelMG_(idDgmb, resumoAtualizado) {
   }
   if (!desafioPrincipal && resumo.length) desafioPrincipal = resumo[0];
 
+  var vinculoPrincipal = painelMG_buscarVinculoPrincipal_(idDgmb, desafioPrincipal);
+  var periodoPorAba = painelMG_obterPeriodoOficialPorAba_(inscricao.aba_desafio);
+
   return {
     ok: true,
     data: {
@@ -227,7 +230,9 @@ function buscarInscricaoPainelMG_(idDgmb, resumoAtualizado) {
       status_inscricao: painelMG_norm_(inscricao.status_inscricao),
       criterio_validacao: painelMG_norm_(inscricao.criterio_validacao),
       aba_desafio: painelMG_norm_(inscricao.aba_desafio),
-      frase_incentivo: painelMG_norm_(inscricao.frase_incentivo)
+      frase_incentivo: painelMG_norm_(inscricao.frase_incentivo),
+      periodo_inicio: vinculoPrincipal.periodo_inicio || periodoPorAba.periodo_inicio,
+      periodo_fim: vinculoPrincipal.periodo_fim || periodoPorAba.periodo_fim
     },
     desafios: resumo
   };
@@ -243,11 +248,20 @@ function painelMG_calcularProgresso_(meta, realizado) {
   };
 }
 
-function painelMG_calcularRitmo_(meta, realizado) {
+function painelMG_calcularRitmo_(meta, realizado, periodoInicio, periodoFim) {
   var now = new Date();
-  var diaAtual = now.getDate();
-  var diasTotal = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  var inicio = painelMG_parseDataISO_(periodoInicio) || new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var fim = painelMG_parseDataISO_(periodoFim) || inicio;
 
+  if (fim.getTime() < inicio.getTime()) {
+    var swap = inicio;
+    inicio = fim;
+    fim = swap;
+  }
+
+  var msDia = 24 * 60 * 60 * 1000;
+  var diasTotal = Math.max(Math.floor((fim.getTime() - inicio.getTime()) / msDia) + 1, 1);
+  var diaAtual = Math.floor((now.getTime() - inicio.getTime()) / msDia) + 1;
   if (diaAtual < 1) diaAtual = 1;
   if (diaAtual > diasTotal) diaAtual = diasTotal;
 
@@ -280,6 +294,59 @@ function painelMG_calcularRitmo_(meta, realizado) {
     status: status,
     mensagem: mensagem
   };
+}
+
+
+function painelMG_buscarVinculoPrincipal_(idDgmb, desafioPrincipal) {
+  var vazio = { periodo_inicio: '', periodo_fim: '' };
+  try {
+    var vinculos = obterVinculosDesafioUsuario_(idDgmb) || [];
+    var idDesafioPrincipal = painelMG_norm_(desafioPrincipal && desafioPrincipal.id_desafio);
+    var idItemPrincipal = painelMG_norm_(desafioPrincipal && desafioPrincipal.id_item_estoque);
+
+    for (var i = 0; i < vinculos.length; i++) {
+      var v = vinculos[i] || {};
+      if (
+        painelMG_norm_(v.id_desafio) === idDesafioPrincipal &&
+        painelMG_norm_(v.id_item_estoque) === idItemPrincipal
+      ) {
+        return {
+          periodo_inicio: painelMG_norm_(v.periodo_inicio),
+          periodo_fim: painelMG_norm_(v.periodo_fim)
+        };
+      }
+    }
+  } catch (e) {}
+
+  return vazio;
+}
+
+function painelMG_parseDataISO_(valor) {
+  var texto = painelMG_norm_(valor);
+  if (!texto) return null;
+
+  var match = texto.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+
+
+function painelMG_obterPeriodoOficialPorAba_(abaDesafio) {
+  var vazio = { periodo_inicio: '', periodo_fim: '' };
+  var aba = painelMG_norm_(abaDesafio);
+  if (!aba) return vazio;
+
+  try {
+    var periodos = buildPeriodoOficialPorAbaEId_(getSpreadsheet_());
+    var periodo = (periodos && periodos.byAba && periodos.byAba[aba]) || {};
+    return {
+      periodo_inicio: painelMG_norm_(periodo.inicio),
+      periodo_fim: painelMG_norm_(periodo.fim)
+    };
+  } catch (e) {
+    return vazio;
+  }
 }
 
 function painelMG_calcularPosicaoRanking_(idDgmb) {
