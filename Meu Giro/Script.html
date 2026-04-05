@@ -1525,17 +1525,9 @@ function renderDesafiosPainel(painel) {
     });
   }
 
-  var principalRef = null;
-  if (desafiosAtivos.length) {
-    principalRef = desafiosAtivos[0];
-  } else if (desafiosFallback.length) {
-    principalRef = desafiosFallback[0];
-  }
-
   renderDesafiosAtivosCarrossel('desafios-ativos-lista', desafiosAtivos, {
-    emptyTitle: 'Você está em um desafio principal.',
-    emptyDescription: 'Assim que houver mais desafios ativos, eles aparecerão aqui.',
-    principalRef: principalRef
+    emptyTitle: 'Nenhum desafio ativo no momento.',
+    emptyDescription: 'Assim que houver desafios ativos, eles aparecerão aqui.'
   });
 
   renderDesafiosLista('desafios-historico-lista', desafiosHistorico, {
@@ -1553,11 +1545,6 @@ function renderDesafiosAtivosCarrossel(containerId, lista, options) {
   box.innerHTML = '';
 
   var itens = Array.isArray(lista) ? lista.slice() : [];
-  if (options.principalRef) {
-    itens = itens.filter(function(item) {
-      return !isMesmoDesafio(item, options.principalRef);
-    });
-  }
 
   desafiosAtivosCarouselItems = itens;
   desafiosAtivosCarouselIndex = Math.max(0, Math.min(desafiosAtivosCarouselIndex, Math.max(0, itens.length - 1)));
