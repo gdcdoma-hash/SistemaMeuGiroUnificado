@@ -61,6 +61,7 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
     sheet.appendRow(row);
 
     atualizarDistanciaRealizada_(idDgmb);
+    atualizarMeuGiroResumo_(idDgmb);
 
     return {
       ok:true,
@@ -224,6 +225,7 @@ function editarAtividade(payload) {
     sheet.getRange(linhaEncontrada, cols.idxKm + 1).setValue(novoKm);
 
     atualizarDistanciaRealizada_(idDgmb);
+    atualizarMeuGiroResumo_(idDgmb);
 
     return {
       ok: true,
@@ -331,6 +333,7 @@ function excluirAtividade(payload) {
 
     sheet.deleteRow(linhaEncontrada);
     atualizarDistanciaRealizada_(idDgmb);
+    atualizarMeuGiroResumo_(idDgmb);
 
     return {
       ok: true,
