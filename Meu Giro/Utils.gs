@@ -391,7 +391,12 @@ function buildPeriodoOficialPorAbaEId_(ss) {
 
   var map = buildHeaderMap_(rows[0]);
   var idxAba = getOptionalColumnIndex_(map, ['aba', 'aba desafio', 'abadesafio']);
-  var idxId = getOptionalColumnIndex_(map, ['id_desafio', 'id desafio']);
+  var idxId = getOptionalColumnIndex_(map, [
+    'id_desafio',
+    'id desafio',
+    'id_desafio_lista',
+    'id desafio lista'
+  ]);
   var idxInicio = getOptionalColumnIndex_(map, ['data_inicio', 'data início', 'inicio', 'início', 'dt_inicio']);
   var idxFim = getOptionalColumnIndex_(map, ['data_fim', 'data fim', 'fim', 'dt_fim']);
   var idxNome = getOptionalColumnIndex_(map, ['nome_desafio', 'nome desafio', 'desafio', 'nome']);
