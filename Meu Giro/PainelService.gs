@@ -37,10 +37,25 @@ function getPainelUsuario(idDgmb) {
     var realizado = painelMG_toNumber_(desafioData.realizado);
     var realizadoPainel = painelMG_round1_(realizado);
 
+    var desafioPrincipalPainel = null;
+    for (var idxResumo = 0; idxResumo < desafiosConsolidados.length; idxResumo++) {
+      if (desafiosConsolidados[idxResumo].status_apuracao === 'ATIVO') {
+        desafioPrincipalPainel = desafiosConsolidados[idxResumo];
+        break;
+      }
+    }
+    if (!desafioPrincipalPainel && desafiosConsolidados.length) {
+      desafioPrincipalPainel = desafiosConsolidados[0];
+    }
+
     var progresso = painelMG_calcularProgresso_(meta, realizadoPainel);
     var ritmo = painelMG_calcularRitmo_(meta, realizadoPainel, desafioData.periodo_inicio, desafioData.periodo_fim);
     var atividades = buscarAtividadesUsuario_(id);
-    var rankingInfo = painelMG_calcularPosicaoRanking_(id);
+    var rankingInfo = painelMG_calcularPosicaoRanking_(
+      id,
+      desafioPrincipalPainel && desafioPrincipalPainel.id_desafio,
+      desafioPrincipalPainel && desafioPrincipalPainel.id_item_estoque
+    );
 
     var frase = '';
     var contextoFrase = '';
@@ -349,102 +364,64 @@ function painelMG_obterPeriodoOficialPorAba_(abaDesafio) {
   }
 }
 
-function painelMG_calcularPosicaoRanking_(idDgmb) {
-  var pessoas = [];
+function painelMG_calcularPosicaoRanking_(idDgmb, idDesafio, idItemEstoque) {
+  var idUsuario = painelMG_norm_(idDgmb);
+  var desafioPrincipal = painelMG_norm_(idDesafio);
+  var itemPrincipal = painelMG_norm_(idItemEstoque);
+
+  if (!idUsuario || !desafioPrincipal || !itemPrincipal) {
+    return { posicao: 0, total: 0 };
+  }
+
+  var resumo = [];
   try {
-    pessoas = getAllObjects_(SHEETS.PESSOAS) || [];
+    resumo = getAllObjects_(SHEETS.MEU_GIRO_RESUMO) || [];
   } catch (e) {
-    pessoas = [];
+    resumo = [];
   }
 
-  var localizacao = {};
-  try {
-    localizacao = localizarAbaDesafioUsuario_(idDgmb) || {};
-  } catch (e) {
-    localizacao = {};
+  if (!resumo.length) {
+    return { posicao: 0, total: 0 };
   }
 
-  var abaDesafio = painelMG_norm_(localizacao.abaDesafio);
-  var desafio = [];
-
-  if (!abaDesafio) {
-    return {
-      posicao: 0,
-      total: 0
-    };
-  }
-
-  try {
-    desafio = getAllObjects_(abaDesafio);
-  } catch (e) {
-    return {
-      posicao: 0,
-      total: 0
-    };
-  }
-
-  if (!desafio || !desafio.length) {
-    return {
-      posicao: 0,
-      total: 0
-    };
-  }
-
-  var pessoasMap = {};
-
-  for (var i = 0; i < pessoas.length; i++) {
-    var p = pessoas[i];
-    var pid = painelMG_norm_(painelMG_firstFilled_(p, ['ID_DGMB', 'id_dgmb']));
-    if (!pid) continue;
-
-    pessoasMap[pid] = {
-      nome: painelMG_norm_(painelMG_firstFilled_(p, ['nome', 'Nome'])),
-      cidade_uf: painelMG_norm_(painelMG_firstFilled_(p, ['Cidade-UF', 'Cidade_UF', 'cidade_uf', 'cidade-uf']))
-    };
-  }
-
+  var statusValidos = { ATIVO: true, CONCLUIDO: true };
   var lista = [];
 
-  for (var j = 0; j < desafio.length; j++) {
-    var d = desafio[j];
-    var did = painelMG_norm_(painelMG_firstFilled_(d, ['ID_DGMB', 'id_dgmb']));
+  for (var i = 0; i < resumo.length; i++) {
+    var row = resumo[i] || {};
+    var did = painelMG_norm_(painelMG_firstFilled_(row, ['ID_DGMB', 'id_dgmb']));
+    var rowDesafio = painelMG_norm_(painelMG_firstFilled_(row, ['ID_DESAFIO', 'id_desafio']));
+    var rowItem = painelMG_norm_(painelMG_firstFilled_(row, ['id_item_estoque', 'id item estoque']));
+    var rowStatus = painelMG_norm_(painelMG_firstFilled_(row, ['Status_Apuracao', 'status_apuracao'])).toUpperCase();
+
     if (!did) continue;
-
-    var meta = painelMG_round1_(painelMG_toNumber_(painelMG_firstFilled_(d, ['Distancia_KM', 'distancia_km', 'Distancia KM'])));
-    var realizado = painelMG_round1_(painelMG_toNumber_(painelMG_firstFilled_(d, ['Distancia_Realizada', 'distancia_realizada', 'Distancia Realizada'])));
-    var restante = Math.max(meta - realizado, 0);
-    var percentual = meta > 0 ? (realizado / meta) * 100 : 0;
-
+    if (rowDesafio !== desafioPrincipal || rowItem !== itemPrincipal) continue;
+    if (!statusValidos[rowStatus]) continue;
 
     lista.push({
       id_dgmb: did,
-      nome: (pessoasMap[did] && pessoasMap[did].nome) || painelMG_norm_(painelMG_firstFilled_(d, ['Nome_Avatar', 'nome_avatar'])) || 'Participante',
-      percentual: painelMG_round1_(percentual),
-      restante: painelMG_round1_(restante),
-      realizado: painelMG_round1_(realizado)
+      distancia_realizada: painelMG_round1_(painelMG_toNumber_(painelMG_firstFilled_(row, ['Distancia_Realizada', 'distancia_realizada']))),
+      percentual_concluido: painelMG_round1_(painelMG_toNumber_(painelMG_firstFilled_(row, ['Percentual_Concluido', 'percentual_concluido'])))
     });
   }
 
+  if (!lista.length) {
+    return { posicao: 0, total: 0 };
+  }
+
   lista.sort(function(a, b) {
-    if (b.percentual !== a.percentual) return b.percentual - a.percentual;
-    if (a.restante !== b.restante) return a.restante - b.restante;
-    if (b.realizado !== a.realizado) return b.realizado - a.realizado;
-    return String(a.nome || '').localeCompare(String(b.nome || ''));
+    if (b.distancia_realizada !== a.distancia_realizada) return b.distancia_realizada - a.distancia_realizada;
+    if (b.percentual_concluido !== a.percentual_concluido) return b.percentual_concluido - a.percentual_concluido;
+    return String(a.id_dgmb || '').localeCompare(String(b.id_dgmb || ''));
   });
 
-  for (var k = 0; k < lista.length; k++) {
-    if (lista[k].id_dgmb === painelMG_norm_(idDgmb)) {
-      return {
-        posicao: k + 1,
-        total: lista.length
-      };
+  for (var j = 0; j < lista.length; j++) {
+    if (lista[j].id_dgmb === idUsuario) {
+      return { posicao: j + 1, total: lista.length };
     }
   }
 
-  return {
-    posicao: 0,
-    total: lista.length
-  };
+  return { posicao: 0, total: lista.length };
 }
 
 function painelMG_firstFilled_(obj, keys) {
