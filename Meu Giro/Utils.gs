@@ -567,6 +567,10 @@ function atualizarMeuGiroResumo_(idDgmb) {
   var idxId = getOptionalColumnIndex_(mapResumo, ['id_dgmb']);
   var idxDesafio = getOptionalColumnIndex_(mapResumo, ['id_desafio']);
   var idxItem = getOptionalColumnIndex_(mapResumo, ['id_item_estoque', 'id item estoque']);
+  var idxMetaResumo = getOptionalColumnIndex_(mapResumo, ['meta_km', 'meta km']);
+  var idxDistanciaResumo = getOptionalColumnIndex_(mapResumo, ['distancia_realizada', 'distancia realizada']);
+  var idxPercentualResumo = getOptionalColumnIndex_(mapResumo, ['percentual_concluido', 'percentual concluido', 'percentual concluído']);
+  var idxStatusResumo = getOptionalColumnIndex_(mapResumo, ['status_apuracao', 'status apuracao', 'status apuração']);
   var linhasPorChave = {};
 
   for (var i = 1; i < valoresResumo.length; i++) {
@@ -612,19 +616,33 @@ function atualizarMeuGiroResumo_(idDgmb) {
       }
     }
 
+    var metaArredondada = Math.round((meta + Number.EPSILON) * 10) / 10;
+    var distanciaArredondada = Math.round((distancia + Number.EPSILON) * 10) / 10;
+    var percentualArredondado = Math.round((percentual + Number.EPSILON) * 10) / 10;
+
     var linha = [
       new Date(),
       id,
       vinculo.id_desafio,
       vinculo.id_item_estoque,
-      Math.round((meta + Number.EPSILON) * 10) / 10,
-      Math.round((distancia + Number.EPSILON) * 10) / 10,
-      Math.round((percentual + Number.EPSILON) * 10) / 10,
+      metaArredondada,
+      distanciaArredondada,
+      percentualArredondado,
       status
     ];
 
     if (linhasPorChave[chave]) {
-      shResumo.getRange(linhasPorChave[chave], 1, 1, linha.length).setValues([linha]);
+      var numeroLinha = linhasPorChave[chave];
+      var rowAtual = valoresResumo[numeroLinha - 1] || [];
+      var houveMudanca =
+        (idxMetaResumo > -1 ? parseLocalizedNumber_(rowAtual[idxMetaResumo]) : 0) !== metaArredondada ||
+        (idxDistanciaResumo > -1 ? parseLocalizedNumber_(rowAtual[idxDistanciaResumo]) : 0) !== distanciaArredondada ||
+        (idxPercentualResumo > -1 ? parseLocalizedNumber_(rowAtual[idxPercentualResumo]) : 0) !== percentualArredondado ||
+        normalizeText_(idxStatusResumo > -1 ? rowAtual[idxStatusResumo] : '') !== status;
+
+      if (houveMudanca) {
+        shResumo.getRange(numeroLinha, 1, 1, linha.length).setValues([linha]);
+      }
     } else {
       shResumo.appendRow(linha);
     }
@@ -644,4 +662,67 @@ function atualizarMeuGiroResumo_(idDgmb) {
   }
 
   return saida;
+}
+
+function atualizarMeuGiroResumoEmLote_() {
+  var ss = getSpreadsheet_();
+  var abaDesafio = SHEETS.DESAFIO || 'dgmbDesafios';
+  var sh = ss.getSheetByName(abaDesafio);
+
+  if (!sh) {
+    return { total_ids: 0, atualizados: 0, ids: [] };
+  }
+
+  var values = sh.getDataRange().getValues();
+  if (!values || values.length < 2) {
+    return { total_ids: 0, atualizados: 0, ids: [] };
+  }
+
+  var map = buildHeaderMap_(values[0]);
+  var idxId = getOptionalColumnIndex_(map, ['id_dgmb']);
+  if (idxId === -1) {
+    return { total_ids: 0, atualizados: 0, ids: [] };
+  }
+
+  var idxStatusDesafio = getOptionalColumnIndex_(map, ['status_desafio', 'status desafio']);
+  var idxStatusPag = getOptionalColumnIndex_(map, ['status_pagamento', 'pagamento_status', 'pagamento', 'pix_status']);
+  var idxStatusInscricao = getOptionalColumnIndex_(map, ['status_inscricao', 'status inscrição', 'status', 'situacao', 'situação']);
+  var idxConfirmacao = getOptionalColumnIndex_(map, ['confirmacao', 'confirmação', 'confirmado', 'inscricao_confirmada']);
+  var ids = [];
+  var idsMap = {};
+
+  for (var i = 1; i < values.length; i++) {
+    var row = values[i];
+    var id = normalizeText_(row[idxId]);
+    if (!id || idsMap[id]) continue;
+
+    var statusInscricao = idxStatusInscricao > -1 ? normalizeText_(row[idxStatusInscricao]) : '';
+    var statusConfirmacao = idxConfirmacao > -1 ? normalizeText_(row[idxConfirmacao]) : '';
+    var statusPagamento = idxStatusPag > -1 ? normalizeText_(row[idxStatusPag]) : '';
+    var statusDesafio = idxStatusDesafio > -1 ? normalizeText_(row[idxStatusDesafio]) : '';
+    var validacao = validarInscricaoMinima_({
+      status_inscricao: statusInscricao,
+      status_confirmacao: statusConfirmacao,
+      status_pagamento: statusPagamento
+    });
+    var apto = validacao.valida && !inscricaoTemBloqueioMinimo_(statusDesafio);
+    if (!apto) continue;
+
+    idsMap[id] = true;
+    ids.push(id);
+  }
+
+  for (var j = 0; j < ids.length; j++) {
+    atualizarMeuGiroResumo_(ids[j]);
+  }
+
+  return {
+    total_ids: ids.length,
+    atualizados: ids.length,
+    ids: ids
+  };
+}
+
+function atualizarMeuGiroResumoEmLote() {
+  return atualizarMeuGiroResumoEmLote_();
 }
