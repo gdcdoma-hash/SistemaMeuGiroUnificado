@@ -2548,6 +2548,7 @@ function renderRanking(lista) {
   if (!box) return;
 
   box.innerHTML = '';
+  const currentUserId = currentUser && currentUser.id_dgmb ? String(currentUser.id_dgmb).trim() : '';
 
   if (!Array.isArray(lista) || !lista.length) {
     renderRankingState('empty', 'Ainda não há participantes com km registrado.', 'Assim que as primeiras quilometragens forem lançadas, o ranking do desafio aparecerá aqui.');
@@ -2556,10 +2557,12 @@ function renderRanking(lista) {
 
   lista.forEach(function(item, index) {
     item = item || {};
+    const itemId = item.id_dgmb ? String(item.id_dgmb).trim() : '';
+    const isCurrentUser = !!currentUserId && !!itemId && currentUserId === itemId;
     const div = document.createElement('div');
-    div.className = 'atividade ranking-item';
+    div.className = 'atividade ranking-item' + (isCurrentUser ? ' ranking-item-self' : '');
     div.innerHTML =
-      '<strong>' + (index + 1) + '. ' + escapeHtml(item.nome || '') + ' - ' + escapeHtml(item.cidade_uf || '') + '</strong>' +
+      '<strong>' + (index + 1) + '. ' + escapeHtml(item.nome || '') + ' - ' + escapeHtml(item.cidade_uf || '') + (isCurrentUser ? ' <span class="ranking-item-self-badge">Você</span>' : '') + '</strong>' +
       '<p>' + formatNumber(item.realizado) + ' de ' + formatNumber(item.meta) + ' km</p>' +
       '<p>Faltam ' + formatNumber(item.restante) + ' km</p>';
     box.appendChild(div);
