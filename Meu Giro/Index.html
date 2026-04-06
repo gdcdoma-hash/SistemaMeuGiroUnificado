@@ -278,6 +278,12 @@
       <div class="card">
         <h2 id="ranking-screen-title">Ranking do desafio em foco</h2>
         <p id="ranking-screen-subtitle">Desafio: -</p>
+        <div class="ranking-desafio-selector-wrap">
+          <label for="ranking-desafio-select">Desafio</label>
+          <select id="ranking-desafio-select" class="ranking-desafio-select" onchange="onRankingDesafioSelectorChange(this.value)">
+            <option value="">Selecione um desafio</option>
+          </select>
+        </div>
         <p>O ranking é apenas para acompanhamento. O verdadeiro desafio é superar você mesmo.</p>
         <div id="ranking-msg" class="msg status-msg" aria-live="polite"></div>
         <div id="ranking-lista" class="lista"></div>
