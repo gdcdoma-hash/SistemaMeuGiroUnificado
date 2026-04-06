@@ -270,13 +270,14 @@
       </div>
 
       <div class="card">
-        <button id="btn-ranking-painel" class="btn-main ranking-action-btn" onclick="markRankingTrigger(this); carregarRanking('manual')">Ver ranking geral</button>
+        <button id="btn-ranking-painel" class="btn-main ranking-action-btn" onclick="markRankingTrigger(this); carregarRanking('manual')">Ver ranking do desafio</button>
       </div>
     </section>
 
     <section id="screen-ranking" class="screen">
       <div class="card">
-        <h2>Ranking geral</h2>
+        <h2 id="ranking-screen-title">Ranking do desafio em foco</h2>
+        <p id="ranking-screen-subtitle">Desafio: -</p>
         <p>O ranking é apenas para acompanhamento. O verdadeiro desafio é superar você mesmo.</p>
         <div id="ranking-msg" class="msg status-msg" aria-live="polite"></div>
         <div id="ranking-lista" class="lista"></div>

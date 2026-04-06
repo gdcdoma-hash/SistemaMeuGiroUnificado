@@ -2474,12 +2474,14 @@ function novaFrase() {
 
 function carregarRanking(triggerSource) {
   const idDgmb = currentUser && currentUser.id_dgmb ? String(currentUser.id_dgmb).trim() : '';
+  const desafioAtual = getDesafioEmFocoAtual();
+  atualizarCabecalhoTelaRanking(desafioAtual);
 
   if (rankingLoadInProgress) {
     if (triggerSource === 'manual') {
-      setPainelMsg('Atualizando ranking geral...', 'loading');
+      setPainelMsg('Atualizando ranking do desafio em foco...', 'loading');
     }
-    setRankingMsg('Atualizando ranking geral...', 'loading');
+    setRankingMsg('Atualizando ranking do desafio em foco...', 'loading');
     return;
   }
 
@@ -2487,8 +2489,8 @@ function carregarRanking(triggerSource) {
   syncGlobalBusyState();
   setRankingLoadDisabled(true);
   showScreen('ranking');
-  setRankingMsg('Atualizando ranking geral...', 'loading');
-  renderRankingState('loading', 'Atualizando ranking geral', 'Estamos preparando a lista com os participantes e as quilometragens registradas.');
+  setRankingMsg('Atualizando ranking do desafio em foco...', 'loading');
+  renderRankingState('loading', 'Atualizando ranking do desafio em foco', 'Estamos preparando a lista com os participantes e as quilometragens registradas.');
 
   google.script.run
     .withSuccessHandler(function(res) {
@@ -2502,7 +2504,7 @@ function carregarRanking(triggerSource) {
         return;
       }
 
-      setRankingMsg('Ranking geral atualizado com sucesso. Confira a lista abaixo.', 'success', 2600);
+      setRankingMsg('Ranking do desafio atualizado com sucesso. Confira a lista abaixo.', 'success', 2600);
       renderRanking(res.data || []);
       showRankingLoadSuccessFeedback();
     })
@@ -2533,7 +2535,7 @@ function renderRankingState(variant, title, description) {
       '<div class="ranking-state-label">' + (
         safeVariant === 'loading' ? 'Atualizando' :
         safeVariant === 'error' ? 'Atenção' :
-        'Ranking geral'
+        'Ranking do desafio'
       ) + '</div>' +
       '<strong>' + safeTitle + '</strong>' +
       '<p>' + safeDescription + '</p>' +
@@ -2548,20 +2550,41 @@ function renderRanking(lista) {
   box.innerHTML = '';
 
   if (!Array.isArray(lista) || !lista.length) {
-    renderRankingState('empty', 'Ainda não há participantes com km registrado.', 'Assim que as primeiras quilometragens forem lançadas, o ranking geral aparecerá aqui.');
+    renderRankingState('empty', 'Ainda não há participantes com km registrado.', 'Assim que as primeiras quilometragens forem lançadas, o ranking do desafio aparecerá aqui.');
     return;
   }
 
   lista.forEach(function(item, index) {
     item = item || {};
     const div = document.createElement('div');
-    div.className = 'atividade';
+    div.className = 'atividade ranking-item';
     div.innerHTML =
-      '<strong>' + (index + 1) + '. ' + escapeHtml(item.nome || '') + ' - ' + escapeHtml(item.cidade_uf || '') + '</strong><br>' +
-      formatNumber(item.realizado) + ' de ' + formatNumber(item.meta) + ' km<br>' +
-      'Faltam ' + formatNumber(item.restante) + ' km';
+      '<strong>' + (index + 1) + '. ' + escapeHtml(item.nome || '') + ' - ' + escapeHtml(item.cidade_uf || '') + '</strong>' +
+      '<p>' + formatNumber(item.realizado) + ' de ' + formatNumber(item.meta) + ' km</p>' +
+      '<p>Faltam ' + formatNumber(item.restante) + ' km</p>';
     box.appendChild(div);
   });
+}
+
+function getDesafioEmFocoAtual() {
+  if (!Array.isArray(desafiosAtivosCarouselItems) || !desafiosAtivosCarouselItems.length) return null;
+  return desafiosAtivosCarouselItems[desafiosAtivosCarouselIndex] || null;
+}
+
+function atualizarCabecalhoTelaRanking(desafioAtual) {
+  var titulo = document.getElementById('ranking-screen-title');
+  var subtitulo = document.getElementById('ranking-screen-subtitle');
+  var nomeDesafio = getDesafioTitulo(desafioAtual || {});
+
+  if (titulo) {
+    titulo.innerText = 'Ranking do desafio em foco';
+  }
+
+  if (subtitulo) {
+    subtitulo.innerText = desafioAtual
+      ? 'Desafio: ' + nomeDesafio
+      : 'Desafio: -';
+  }
 }
 
 function formatDateBR(value) {
