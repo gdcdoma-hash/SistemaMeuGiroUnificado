@@ -1838,6 +1838,7 @@ function renderDesafiosAtivosCarrossel(containerId, lista, options) {
         '<strong>' + escapeHtml(titulo) + '</strong>' +
         '<p>' + escapeHtml(descricao) + '</p>' +
       '</div>';
+    atualizarSeletorDesafioRanking();
     return;
   }
 
@@ -1854,6 +1855,8 @@ function renderDesafiosAtivosCarrossel(containerId, lista, options) {
       '<button type="button" class="desafios-carousel-btn" onclick="navegarDesafioAtivo(1)" ' + (desafiosAtivosCarouselIndex >= (itens.length - 1) ? 'disabled' : '') + ' aria-label="Próximo desafio">→</button>';
     box.appendChild(controls);
   }
+
+  atualizarSeletorDesafioRanking();
 }
 
 function navegarDesafioAtivo(delta) {
@@ -1866,6 +1869,53 @@ function navegarDesafioAtivo(delta) {
   salvarDesafioEmFocoNaSessao(desafioEmFocoKey);
   renderDesafiosAtivosCarrossel('desafios-ativos-lista', desafiosAtivosCarouselItems, {});
   sincronizarPainelComDesafioEmFoco();
+}
+
+function atualizarSeletorDesafioRanking() {
+  var select = document.getElementById('ranking-desafio-select');
+  if (!select) return;
+
+  var itens = Array.isArray(desafiosAtivosCarouselItems) ? desafiosAtivosCarouselItems : [];
+  select.innerHTML = '';
+
+  if (!itens.length) {
+    var emptyOption = document.createElement('option');
+    emptyOption.value = '';
+    emptyOption.innerText = 'Sem desafios ativos';
+    select.appendChild(emptyOption);
+    select.disabled = true;
+    return;
+  }
+
+  select.disabled = false;
+
+  itens.forEach(function(item, index) {
+    var option = document.createElement('option');
+    option.value = String(index);
+    option.innerText = getDesafioTitulo(item || {});
+    select.appendChild(option);
+  });
+
+  select.value = String(desafiosAtivosCarouselIndex);
+}
+
+function onRankingDesafioSelectorChange(value) {
+  var total = Array.isArray(desafiosAtivosCarouselItems) ? desafiosAtivosCarouselItems.length : 0;
+  if (!total) return;
+
+  var indiceSelecionado = Number(value);
+  if (!Number.isInteger(indiceSelecionado)) return;
+
+  var novoIndice = Math.max(0, Math.min(total - 1, indiceSelecionado));
+  if (novoIndice === desafiosAtivosCarouselIndex) return;
+
+  desafiosAtivosCarouselIndex = novoIndice;
+  desafioEmFocoKey = getDesafioKey(desafiosAtivosCarouselItems[desafiosAtivosCarouselIndex]);
+  salvarDesafioEmFocoNaSessao(desafioEmFocoKey);
+
+  renderDesafiosAtivosCarrossel('desafios-ativos-lista', desafiosAtivosCarouselItems, {});
+  sincronizarPainelComDesafioEmFoco();
+  carregarRanking('manual');
 }
 
 function renderDesafiosLista(containerId, lista, options) {
@@ -2575,6 +2625,8 @@ function getDesafioEmFocoAtual() {
 }
 
 function atualizarCabecalhoTelaRanking(desafioAtual) {
+  atualizarSeletorDesafioRanking();
+
   var titulo = document.getElementById('ranking-screen-title');
   var subtitulo = document.getElementById('ranking-screen-subtitle');
   var nomeDesafio = getDesafioTitulo(desafioAtual || {});
