@@ -1887,7 +1887,7 @@ function atualizarSeletorDesafioRanking() {
     return;
   }
 
-  select.disabled = false;
+  select.disabled = itens.length <= 1;
 
   itens.forEach(function(item, index) {
     var option = document.createElement('option');
@@ -1896,17 +1896,35 @@ function atualizarSeletorDesafioRanking() {
     select.appendChild(option);
   });
 
-  select.value = String(desafiosAtivosCarouselIndex);
+  var indiceSeguro = Math.max(0, Math.min(itens.length - 1, Number(desafiosAtivosCarouselIndex) || 0));
+  if (indiceSeguro !== desafiosAtivosCarouselIndex) {
+    desafiosAtivosCarouselIndex = indiceSeguro;
+    desafioEmFocoKey = getDesafioKey(itens[indiceSeguro]);
+    salvarDesafioEmFocoNaSessao(desafioEmFocoKey);
+  }
+
+  select.value = String(indiceSeguro);
 }
 
 function onRankingDesafioSelectorChange(value) {
   var total = Array.isArray(desafiosAtivosCarouselItems) ? desafiosAtivosCarouselItems.length : 0;
-  if (!total) return;
+  if (!total) {
+    atualizarSeletorDesafioRanking();
+    return;
+  }
 
   var indiceSelecionado = Number(value);
-  if (!Number.isInteger(indiceSelecionado)) return;
+  if (!Number.isInteger(indiceSelecionado)) {
+    atualizarSeletorDesafioRanking();
+    return;
+  }
 
-  var novoIndice = Math.max(0, Math.min(total - 1, indiceSelecionado));
+  if (indiceSelecionado < 0 || indiceSelecionado >= total) {
+    atualizarSeletorDesafioRanking();
+    return;
+  }
+
+  var novoIndice = indiceSelecionado;
   if (novoIndice === desafiosAtivosCarouselIndex) return;
 
   desafiosAtivosCarouselIndex = novoIndice;
