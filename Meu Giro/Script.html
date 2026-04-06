@@ -38,6 +38,7 @@ let desafiosAtivosCarouselItems = [];
 let desafiosAtivosCarouselIndex = 0;
 let desafioEmFocoKey = '';
 const DESAFIO_CARROSSEL_SESSION_KEY = 'meuGiro.desafioEmFocoKey';
+const LOGIN_SESSION_STORAGE_KEY = 'meuGiro.loginSession';
 const statusMessageTimers = {};
 
 function syncGlobalBusyState() {
@@ -288,6 +289,61 @@ function setTransientStatus(elementId, message, variant, timeoutMs) {
   }
 }
 
+function persistirSessaoLogin(user) {
+  var id = String(user && user.id_dgmb || '').trim();
+  if (!id) return;
+
+  try {
+    localStorage.setItem(LOGIN_SESSION_STORAGE_KEY, JSON.stringify({ id_dgmb: id }));
+  } catch (err) {
+    console.warn('Não foi possível persistir a sessão de login.', err);
+  }
+}
+
+function limparSessaoLoginPersistida() {
+  try {
+    localStorage.removeItem(LOGIN_SESSION_STORAGE_KEY);
+  } catch (err) {
+    console.warn('Não foi possível limpar a sessão persistida.', err);
+  }
+}
+
+function recuperarSessaoLoginPersistida() {
+  try {
+    var raw = localStorage.getItem(LOGIN_SESSION_STORAGE_KEY);
+    if (!raw) return null;
+
+    var parsed = JSON.parse(raw);
+    var id = String(parsed && parsed.id_dgmb || '').trim();
+    return id ? { id_dgmb: id } : null;
+  } catch (err) {
+    console.warn('Não foi possível recuperar a sessão persistida.', err);
+    return null;
+  }
+}
+
+function tentarRestaurarSessaoPersistida() {
+  var sessao = recuperarSessaoLoginPersistida();
+  if (!sessao || !sessao.id_dgmb) return false;
+
+  currentUser = {
+    id_dgmb: sessao.id_dgmb,
+    nome: '',
+    cidade_uf: ''
+  };
+
+  showScreen('painel');
+  carregarPainel('restored');
+  return true;
+}
+
+function tratarFalhaRestauracaoSessao() {
+  limparSessaoLoginPersistida();
+  currentUser = null;
+  showScreen('login');
+  setTransientStatus('login-msg', 'Sua sessão expirou. Entre novamente.', 'error');
+}
+
 function applyCpfMask(value) {
   const digits = onlyDigits(value).slice(0, 11);
   if (digits.length <= 3) return digits;
@@ -317,6 +373,7 @@ document.addEventListener('DOMContentLoaded', function() {
   setupPhraseButtonTouchFeedback();
   setupQuickKmShortcutFeedback();
   setupQuickKmClearFeedback();
+  tentarRestaurarSessaoPersistida();
 });
 
 function login() {
@@ -368,6 +425,7 @@ function login() {
 
         setTransientStatus('login-msg', '');
 
+        persistirSessaoLogin(currentUser);
         showScreen('painel');
         carregarPainel();
       })
@@ -1391,6 +1449,12 @@ function carregarPainel(triggerSource) {
       setManualPainelRefreshDisabled(false);
 
       if (!res || !res.ok) {
+        if (triggerSource === 'restored') {
+          painelReloadPending = false;
+          tratarFalhaRestauracaoSessao();
+          return;
+        }
+
         setPainelMsg((res && res.msg) ? res.msg : 'Erro ao carregar painel. Tente novamente.', 'error');
         painelReloadPending = false;
         return;
@@ -1430,6 +1494,14 @@ function carregarPainel(triggerSource) {
       painelLoadInProgress = false;
       syncGlobalBusyState();
       setManualPainelRefreshDisabled(false);
+
+      if (triggerSource === 'restored') {
+        painelReloadPending = false;
+        console.error(err);
+        tratarFalhaRestauracaoSessao();
+        return;
+      }
+
       setPainelMsg('Erro de conexão ao atualizar painel.', 'error');
       console.error(err);
       painelReloadPending = false;
@@ -1620,6 +1692,29 @@ function montarPainelContextual(basePainel, desafio) {
   };
 }
 
+function atualizarContextoVisualRanking(desafioAtual) {
+  var nomeDesafio = getDesafioTitulo(desafioAtual || {});
+  var titulo = document.getElementById('painel-ranking-context-title');
+  var subtitulo = document.getElementById('painel-ranking-context-subtitle');
+  var dica = document.getElementById('painel-ranking-context-tip');
+
+  if (titulo) {
+    titulo.innerText = desafioAtual
+      ? 'Ranking do desafio em foco'
+      : 'Ranking do desafio atual';
+  }
+
+  if (subtitulo) {
+    subtitulo.innerText = desafioAtual
+      ? 'Desafio em foco: ' + nomeDesafio
+      : 'Selecione um desafio ativo no carrossel para ver o ranking correspondente.';
+  }
+
+  if (dica) {
+    dica.innerText = 'Troque o desafio no carrossel para ver outro ranking.';
+  }
+}
+
 function sincronizarPainelComDesafioEmFoco() {
   var painel = currentPainel || {};
   var desafioAtual = null;
@@ -1630,6 +1725,7 @@ function sincronizarPainelComDesafioEmFoco() {
   }
 
   var contexto = montarPainelContextual(painel, desafioAtual);
+  atualizarContextoVisualRanking(desafioAtual);
 
   setTextById('meta-km', formatNumber(contexto.meta));
   setTextById('realizado-km', formatNumber(contexto.realizado));
@@ -2521,6 +2617,7 @@ function openRankingPrivado() {
 }
 
 function logoutUser() {
+  limparSessaoLoginPersistida();
   currentUser = null;
   currentPainel = null;
   rankingLoadInProgress = false;
