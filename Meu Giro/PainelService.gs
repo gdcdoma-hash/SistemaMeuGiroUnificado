@@ -370,8 +370,9 @@ function painelMG_calcularPosicaoRanking_(idDgmb, idDesafio, idItemEstoque) {
   var idUsuario = painelMG_norm_(idDgmb);
   var desafioPrincipal = painelMG_norm_(idDesafio);
   var itemPrincipal = painelMG_norm_(idItemEstoque);
+  var grupoBasePrincipal = painelMG_extrairGrupoBaseDesafio_(itemPrincipal);
 
-  if (!idUsuario || !desafioPrincipal || !itemPrincipal) {
+  if (!idUsuario || !desafioPrincipal || !grupoBasePrincipal) {
     return { posicao: 0, total: 0 };
   }
 
@@ -394,10 +395,11 @@ function painelMG_calcularPosicaoRanking_(idDgmb, idDesafio, idItemEstoque) {
     var did = painelMG_norm_(painelMG_firstFilled_(row, ['ID_DGMB', 'id_dgmb']));
     var rowDesafio = painelMG_norm_(painelMG_firstFilled_(row, ['ID_DESAFIO', 'id_desafio']));
     var rowItem = painelMG_norm_(painelMG_firstFilled_(row, ['id_item_estoque', 'id item estoque']));
+    var rowGrupoBase = painelMG_extrairGrupoBaseDesafio_(rowItem);
     var rowStatus = painelMG_norm_(painelMG_firstFilled_(row, ['Status_Apuracao', 'status_apuracao'])).toUpperCase();
 
     if (!did) continue;
-    if (rowDesafio !== desafioPrincipal || rowItem !== itemPrincipal) continue;
+    if (rowDesafio !== desafioPrincipal || rowGrupoBase !== grupoBasePrincipal) continue;
     if (!statusValidos[rowStatus]) continue;
 
     lista.push({
@@ -424,6 +426,14 @@ function painelMG_calcularPosicaoRanking_(idDgmb, idDesafio, idItemEstoque) {
   }
 
   return { posicao: 0, total: lista.length };
+}
+
+function painelMG_extrairGrupoBaseDesafio_(idItemEstoque) {
+  var item = painelMG_norm_(idItemEstoque);
+  if (!item) return '';
+
+  var semKm = item.replace(/_[0-9]+(?:[.,][0-9]+)?$/g, '');
+  return painelMG_norm_(semKm || item);
 }
 
 function painelMG_montarRankingPorDesafio_(idDgmb, desafios) {
