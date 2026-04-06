@@ -37,6 +37,7 @@ let kmInputClearFeedbackTimer = null;
 let desafiosAtivosCarouselItems = [];
 let desafiosAtivosCarouselIndex = 0;
 let desafioEmFocoKey = '';
+const DESAFIO_CARROSSEL_SESSION_KEY = 'meuGiro.desafioEmFocoKey';
 const statusMessageTimers = {};
 
 function syncGlobalBusyState() {
@@ -1459,6 +1460,57 @@ function getDesafioKey(desafio) {
   return idDesafio + '|' + idItem;
 }
 
+function salvarDesafioEmFocoNaSessao(chave) {
+  var valor = String(chave || '').trim();
+  try {
+    if (!valor) {
+      sessionStorage.removeItem(DESAFIO_CARROSSEL_SESSION_KEY);
+      return;
+    }
+    sessionStorage.setItem(DESAFIO_CARROSSEL_SESSION_KEY, valor);
+  } catch (err) {
+    console.warn('Não foi possível salvar o desafio em foco na sessão.', err);
+  }
+}
+
+function carregarDesafioEmFocoDaSessao() {
+  try {
+    return String(sessionStorage.getItem(DESAFIO_CARROSSEL_SESSION_KEY) || '').trim();
+  } catch (err) {
+    console.warn('Não foi possível recuperar o desafio em foco da sessão.', err);
+    return '';
+  }
+}
+
+function escolherIndiceDesafioMaisRelevante(itens) {
+  var lista = Array.isArray(itens) ? itens : [];
+  if (!lista.length) return -1;
+
+  var melhorIndice = 0;
+  for (var i = 1; i < lista.length; i++) {
+    if (compararRelevanciaDesafio(lista[i], lista[melhorIndice]) < 0) {
+      melhorIndice = i;
+    }
+  }
+  return melhorIndice;
+}
+
+function compararRelevanciaDesafio(a, b) {
+  var percentualA = toFiniteNumber(a && a.percentual_concluido, 0);
+  var percentualB = toFiniteNumber(b && b.percentual_concluido, 0);
+  if (percentualA !== percentualB) {
+    return percentualB - percentualA;
+  }
+
+  var distanciaA = toFiniteNumber(a && a.distancia_realizada, 0);
+  var distanciaB = toFiniteNumber(b && b.distancia_realizada, 0);
+  if (distanciaA !== distanciaB) {
+    return distanciaB - distanciaA;
+  }
+
+  return 0;
+}
+
 function parseIsoDateLocal(value) {
   var s = String(value || '').trim();
   var match = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -1660,10 +1712,11 @@ function renderDesafiosAtivosCarrossel(containerId, lista, options) {
 
   var itens = Array.isArray(lista) ? lista.slice() : [];
   var indexFromFocus = -1;
+  var desafioMemorizado = String(desafioEmFocoKey || carregarDesafioEmFocoDaSessao() || '').trim();
 
-  if (desafioEmFocoKey) {
+  if (desafioMemorizado) {
     for (var i = 0; i < itens.length; i++) {
-      if (getDesafioKey(itens[i]) === desafioEmFocoKey) {
+      if (getDesafioKey(itens[i]) === desafioMemorizado) {
         indexFromFocus = i;
         break;
       }
@@ -1674,7 +1727,10 @@ function renderDesafiosAtivosCarrossel(containerId, lista, options) {
   if (indexFromFocus >= 0) {
     desafiosAtivosCarouselIndex = indexFromFocus;
   } else {
-    desafiosAtivosCarouselIndex = Math.max(0, Math.min(desafiosAtivosCarouselIndex, Math.max(0, itens.length - 1)));
+    var indiceMaisRelevante = escolherIndiceDesafioMaisRelevante(itens);
+    desafiosAtivosCarouselIndex = indiceMaisRelevante >= 0
+      ? indiceMaisRelevante
+      : Math.max(0, Math.min(desafiosAtivosCarouselIndex, Math.max(0, itens.length - 1)));
   }
 
   if (!itens.length) {
@@ -1689,6 +1745,8 @@ function renderDesafiosAtivosCarrossel(containerId, lista, options) {
     return;
   }
 
+  desafioEmFocoKey = getDesafioKey(itens[desafiosAtivosCarouselIndex]);
+  salvarDesafioEmFocoNaSessao(desafioEmFocoKey);
   box.appendChild(buildDesafioCard(itens[desafiosAtivosCarouselIndex], { isHistorico: false }));
 
   if (itens.length > 1) {
@@ -1709,6 +1767,7 @@ function navegarDesafioAtivo(delta) {
   var proximoIndice = desafiosAtivosCarouselIndex + Number(delta || 0);
   desafiosAtivosCarouselIndex = Math.max(0, Math.min(total - 1, proximoIndice));
   desafioEmFocoKey = getDesafioKey(desafiosAtivosCarouselItems[desafiosAtivosCarouselIndex]);
+  salvarDesafioEmFocoNaSessao(desafioEmFocoKey);
   renderDesafiosAtivosCarrossel('desafios-ativos-lista', desafiosAtivosCarouselItems, {});
   sincronizarPainelComDesafioEmFoco();
 }
