@@ -56,6 +56,7 @@ function getPainelUsuario(idDgmb) {
       desafioPrincipalPainel && desafioPrincipalPainel.id_desafio,
       desafioPrincipalPainel && desafioPrincipalPainel.id_item_estoque
     );
+    var rankingPorDesafio = painelMG_montarRankingPorDesafio_(id, desafiosConsolidados);
 
     var frase = '';
     var contextoFrase = '';
@@ -109,6 +110,7 @@ function getPainelUsuario(idDgmb) {
         total_participantes: rankingInfo.total,
         posicaoRanking: rankingInfo.posicao,
         totalParticipantes: rankingInfo.total,
+        ranking_por_desafio: rankingPorDesafio,
 
         frase: frase || desafioData.frase_incentivo || 'Cada quilômetro conta. Continue no seu ritmo.',
         frase_motivacional: frase || desafioData.frase_incentivo || 'Cada quilômetro conta. Continue no seu ritmo.',
@@ -423,6 +425,26 @@ function painelMG_calcularPosicaoRanking_(idDgmb, idDesafio, idItemEstoque) {
 
   return { posicao: 0, total: lista.length };
 }
+
+function painelMG_montarRankingPorDesafio_(idDgmb, desafios) {
+  var out = {};
+  var lista = Array.isArray(desafios) ? desafios : [];
+
+  for (var i = 0; i < lista.length; i++) {
+    var item = lista[i] || {};
+    var idDesafio = painelMG_norm_(item.id_desafio);
+    var idItem = painelMG_norm_(item.id_item_estoque);
+    if (!idDesafio || !idItem) continue;
+
+    var chave = [idDesafio, idItem].join('|');
+    if (out[chave]) continue;
+
+    out[chave] = painelMG_calcularPosicaoRanking_(idDgmb, idDesafio, idItem);
+  }
+
+  return out;
+}
+
 
 function painelMG_firstFilled_(obj, keys) {
   for (var i = 0; i < keys.length; i++) {

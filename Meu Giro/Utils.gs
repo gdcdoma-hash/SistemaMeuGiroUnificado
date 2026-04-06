@@ -637,7 +637,9 @@ function atualizarMeuGiroResumo_(idDgmb) {
       meta_km: linha[4],
       distancia_realizada: linha[5],
       percentual_concluido: linha[6],
-      status_apuracao: status
+      status_apuracao: status,
+      periodo_inicio: inicio || '',
+      periodo_fim: fim || ''
     });
   }
 

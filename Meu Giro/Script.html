@@ -36,6 +36,7 @@ let kmInputAddFeedbackTimer = null;
 let kmInputClearFeedbackTimer = null;
 let desafiosAtivosCarouselItems = [];
 let desafiosAtivosCarouselIndex = 0;
+let desafioEmFocoKey = '';
 const statusMessageTimers = {};
 
 function syncGlobalBusyState() {
@@ -1444,45 +1445,160 @@ function renderPainel(p) {
     idHidden.value = String(p.id_dgmb || (currentUser && currentUser.id_dgmb) || '').trim();
   }
 
-  setTextById('meta-km', formatNumber(p.meta));
-  setTextById('realizado-km', formatNumber(p.realizado));
-  setTextById('restante-km', formatNumber(p.restante));
+  setTextById('frase-box', p.frase || 'Cada quilômetro conta. Continue no seu ritmo.');
+  renderDesafiosPainel(p || {});
+  sincronizarPainelComDesafioEmFoco();
+  setTextById('total-pedalado', formatNumber(p.totalPedalado || p.realizado || 0));
+}
 
-  setTextById('progress-text',
-    formatNumber(p.realizado) + ' km de ' + formatNumber(p.meta) + ' km');
+function getDesafioKey(desafio) {
+  if (!desafio) return '';
+  var idDesafio = String(desafio.id_desafio || '').trim();
+  var idItem = String(desafio.id_item_estoque || '').trim();
+  if (!idDesafio || !idItem) return '';
+  return idDesafio + '|' + idItem;
+}
 
-  setTextById('progress-percent', formatNumber(p.percentual) + '%');
+function parseIsoDateLocal(value) {
+  var s = String(value || '').trim();
+  var match = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+
+function calcularRitmoDesafio(meta, realizado, periodoInicio, periodoFim) {
+  var now = new Date();
+  var inicio = parseIsoDateLocal(periodoInicio) || new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var fim = parseIsoDateLocal(periodoFim) || inicio;
+
+  if (fim.getTime() < inicio.getTime()) {
+    var swap = inicio;
+    inicio = fim;
+    fim = swap;
+  }
+
+  var msDia = 24 * 60 * 60 * 1000;
+  var diasTotal = Math.max(Math.floor((fim.getTime() - inicio.getTime()) / msDia) + 1, 1);
+  var diaAtual = Math.floor((now.getTime() - inicio.getTime()) / msDia) + 1;
+
+  if (diaAtual < 1) diaAtual = 1;
+  if (diaAtual > diasTotal) diaAtual = diasTotal;
+
+  var diasRestantes = Math.max(diasTotal - diaAtual, 0);
+  var kmIdealPorDia = meta > 0 ? meta / diasTotal : 0;
+  var kmIdealHoje = kmIdealPorDia * diaAtual;
+  var restante = Math.max(meta - realizado, 0);
+  var kmPorDiaRestante = diasRestantes > 0 ? restante / diasRestantes : restante;
+
+  var diferenca = realizado - kmIdealHoje;
+  var tolerancia = Math.max(2, meta * 0.01);
+  var status = 'Você está à frente da meta.';
+  var mensagem = 'Seu progresso está acima do ritmo esperado para este momento do desafio.';
+
+  if (diferenca < -tolerancia) {
+    status = 'Você está um pouco abaixo do ritmo.';
+    mensagem = 'Alguns pedais extras podem ajudar a recuperar o ritmo do desafio.';
+  }
+
+  return {
+    diaAtual: diaAtual,
+    diasRestantes: diasRestantes,
+    kmIdealAtual: kmIdealHoje,
+    kmPorDiaRestante: kmPorDiaRestante,
+    ritmo_status: status,
+    ritmo_mensagem: mensagem
+  };
+}
+
+function calcularProgressoDesafio(meta, realizado) {
+  var restante = Math.max(meta - realizado, 0);
+  var percentual = meta > 0 ? (realizado / meta) * 100 : 0;
+
+  return {
+    restante: restante,
+    percentual: Math.max(0, Math.min(100, percentual))
+  };
+}
+
+function filtrarAtividadesPorPeriodoDesafio(atividades, desafio) {
+  var lista = Array.isArray(atividades) ? atividades : [];
+  var inicio = String(desafio && desafio.periodo_inicio || '').trim();
+  var fim = String(desafio && desafio.periodo_fim || '').trim();
+
+  if (!inicio || !fim) return lista;
+
+  return lista.filter(function(item) {
+    var data = String(item && item.data || '').trim();
+    return !!data && data >= inicio && data <= fim;
+  });
+}
+
+function montarPainelContextual(basePainel, desafio) {
+  var painel = basePainel || {};
+  var desafioAtual = desafio || null;
+  var meta = toFiniteNumber(desafioAtual && desafioAtual.meta_km, toFiniteNumber(painel.meta, 0));
+  var realizado = toFiniteNumber(desafioAtual && desafioAtual.distancia_realizada, toFiniteNumber(painel.realizado, 0));
+  var progresso = calcularProgressoDesafio(meta, realizado);
+  var ritmo = calcularRitmoDesafio(
+    meta,
+    realizado,
+    desafioAtual && desafioAtual.periodo_inicio ? desafioAtual.periodo_inicio : painel.periodo_inicio,
+    desafioAtual && desafioAtual.periodo_fim ? desafioAtual.periodo_fim : painel.periodo_fim
+  );
+
+  var rankingPorDesafio = painel.ranking_por_desafio || {};
+  var rankingDesafio = rankingPorDesafio[getDesafioKey(desafioAtual)] || {};
+  var posicaoRanking = rankingDesafio.posicao !== undefined ? rankingDesafio.posicao : painel.posicao_ranking;
+  var totalParticipantes = rankingDesafio.total !== undefined ? rankingDesafio.total : painel.total_participantes;
+
+  return {
+    meta: meta,
+    realizado: realizado,
+    restante: progresso.restante,
+    percentual: progresso.percentual,
+    diaAtual: ritmo.diaAtual,
+    diasRestantes: ritmo.diasRestantes,
+    kmIdealAtual: ritmo.kmIdealAtual,
+    kmPorDiaRestante: ritmo.kmPorDiaRestante,
+    ritmo_status: ritmo.ritmo_status,
+    ritmo_mensagem: ritmo.ritmo_mensagem,
+    posicao_ranking: posicaoRanking,
+    total_participantes: totalParticipantes,
+    atividades: filtrarAtividadesPorPeriodoDesafio(painel.atividades || [], desafioAtual)
+  };
+}
+
+function sincronizarPainelComDesafioEmFoco() {
+  var painel = currentPainel || {};
+  var desafioAtual = null;
+
+  if (Array.isArray(desafiosAtivosCarouselItems) && desafiosAtivosCarouselItems.length) {
+    desafioAtual = desafiosAtivosCarouselItems[desafiosAtivosCarouselIndex] || null;
+    desafioEmFocoKey = getDesafioKey(desafioAtual);
+  }
+
+  var contexto = montarPainelContextual(painel, desafioAtual);
+
+  setTextById('meta-km', formatNumber(contexto.meta));
+  setTextById('realizado-km', formatNumber(contexto.realizado));
+  setTextById('restante-km', formatNumber(contexto.restante));
+  setTextById('progress-text', formatNumber(contexto.realizado) + ' km de ' + formatNumber(contexto.meta) + ' km');
+  setTextById('progress-percent', formatNumber(contexto.percentual) + '%');
 
   const bar = document.getElementById('progress-bar');
   if (bar) {
-    bar.style.width = Math.max(0, Math.min(100, toFiniteNumber(p.percentual, 0))) + '%';
+    bar.style.width = Math.max(0, Math.min(100, toFiniteNumber(contexto.percentual, 0))) + '%';
   }
 
-  setTextById('ritmo-dia', 'Dia ' + formatNumber(p.diaAtual) + ' do desafio.');
+  setTextById('ritmo-dia', 'Dia ' + formatNumber(contexto.diaAtual) + ' do desafio.');
+  setTextById('ritmo-ideal', formatNumber(contexto.kmIdealAtual) + ' km');
+  setTextById('ritmo-atual', 'Você tem ' + formatNumber(contexto.realizado) + ' km.');
+  setTextById('ritmo-restante', formatNumber(contexto.diasRestantes) + ' dias');
+  setTextById('ritmo-meta', formatNumber(contexto.kmPorDiaRestante) + ' km/dia');
+  renderRitmoAgora(contexto);
 
-  setTextById('ritmo-ideal', formatNumber(p.kmIdealAtual) + ' km');
-
-  setTextById('ritmo-atual', 'Você tem ' + formatNumber(p.realizado) + ' km.');
-
-  setTextById('ritmo-restante', formatNumber(p.diasRestantes) + ' dias');
-
-  setTextById('ritmo-meta', formatNumber(p.kmPorDiaRestante) + ' km/dia');
-
-  setTextById('frase-box', p.frase || 'Cada quilômetro conta. Continue no seu ritmo.');
-  renderRitmoAgora(p || {});
-
-  const posicaoRankingSource = p.posicao_ranking !== null
-    && p.posicao_ranking !== undefined
-    && p.posicao_ranking !== ''
-      ? p.posicao_ranking
-      : p.posicaoRanking;
-  const totalParticipantesSource = p.total_participantes !== null
-    && p.total_participantes !== undefined
-    && p.total_participantes !== ''
-      ? p.total_participantes
-      : p.totalParticipantes;
-  const posicaoRanking = Number(posicaoRankingSource);
-  const totalParticipantes = Number(totalParticipantesSource);
+  const posicaoRanking = Number(contexto.posicao_ranking);
+  const totalParticipantes = Number(contexto.total_participantes);
   const hasPosicaoRanking = Number.isFinite(posicaoRanking) && posicaoRanking > 0;
   const posicaoRankingEl = document.getElementById('painel-posicao-ranking');
   const posicaoDetalheEl = document.getElementById('painel-posicao-detalhe');
@@ -1499,9 +1615,7 @@ function renderPainel(p) {
       : 'Disponível quando houver base de comparação.';
   }
 
-  renderDesafiosPainel(p || {});
-  renderAtividades(p.atividades || []);
-  setTextById('total-pedalado', formatNumber(p.totalPedalado || p.realizado || 0));
+  renderAtividades(contexto.atividades || []);
 }
 
 function setTextById(id, text) {
@@ -1545,11 +1659,26 @@ function renderDesafiosAtivosCarrossel(containerId, lista, options) {
   box.innerHTML = '';
 
   var itens = Array.isArray(lista) ? lista.slice() : [];
+  var indexFromFocus = -1;
+
+  if (desafioEmFocoKey) {
+    for (var i = 0; i < itens.length; i++) {
+      if (getDesafioKey(itens[i]) === desafioEmFocoKey) {
+        indexFromFocus = i;
+        break;
+      }
+    }
+  }
 
   desafiosAtivosCarouselItems = itens;
-  desafiosAtivosCarouselIndex = Math.max(0, Math.min(desafiosAtivosCarouselIndex, Math.max(0, itens.length - 1)));
+  if (indexFromFocus >= 0) {
+    desafiosAtivosCarouselIndex = indexFromFocus;
+  } else {
+    desafiosAtivosCarouselIndex = Math.max(0, Math.min(desafiosAtivosCarouselIndex, Math.max(0, itens.length - 1)));
+  }
 
   if (!itens.length) {
+    desafioEmFocoKey = '';
     var titulo = options.emptyTitle || 'Nenhum desafio para exibir.';
     var descricao = options.emptyDescription || 'Novos desafios serão exibidos aqui assim que estiverem disponíveis.';
     box.innerHTML =
@@ -1579,7 +1708,9 @@ function navegarDesafioAtivo(delta) {
 
   var proximoIndice = desafiosAtivosCarouselIndex + Number(delta || 0);
   desafiosAtivosCarouselIndex = Math.max(0, Math.min(total - 1, proximoIndice));
+  desafioEmFocoKey = getDesafioKey(desafiosAtivosCarouselItems[desafiosAtivosCarouselIndex]);
   renderDesafiosAtivosCarrossel('desafios-ativos-lista', desafiosAtivosCarouselItems, {});
+  sincronizarPainelComDesafioEmFoco();
 }
 
 function renderDesafiosLista(containerId, lista, options) {
@@ -2063,7 +2194,7 @@ function iniciarEdicaoAtividadeUI(item) {
   if (registroMsg) setRegistroMsg('Editando atividade.');
 
   if (currentPainel && Array.isArray(currentPainel.atividades)) {
-    renderAtividades(currentPainel.atividades);
+    sincronizarPainelComDesafioEmFoco();
   }
 }
 
@@ -2404,7 +2535,7 @@ function cancelarEdicaoAtividadeUI() {
   activeEditKey = '';
 
   if (currentPainel && Array.isArray(currentPainel.atividades)) {
-    renderAtividades(currentPainel.atividades);
+    sincronizarPainelComDesafioEmFoco();
   }
 
   const idInput = document.getElementById('atividade-id');
