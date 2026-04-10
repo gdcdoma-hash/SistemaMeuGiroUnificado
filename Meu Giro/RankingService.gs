@@ -1,6 +1,8 @@
-function getRanking(idDgmb) {
+function getRanking(idDgmb, idDesafio, idItemEstoque) {
   try {
     var idUsuario = rankingMG_norm_(idDgmb);
+    var desafioSolicitado = rankingMG_norm_(idDesafio);
+    var itemSolicitado = rankingMG_norm_(idItemEstoque);
     if (!idUsuario) {
       return { ok: false, msg: 'ID do usuário não informado.' };
     }
@@ -28,6 +30,11 @@ function getRanking(idDgmb) {
       var statusRef = rankingMG_norm_(rankingMG_firstFilled_(rowRef, ['Status_Apuracao', 'status_apuracao'])).toUpperCase();
       if (!statusValidos[statusRef]) continue;
 
+      var rowDesafioRef = rankingMG_norm_(rankingMG_firstFilled_(rowRef, ['ID_DESAFIO', 'id_desafio']));
+      var rowItemRef = rankingMG_norm_(rankingMG_firstFilled_(rowRef, ['id_item_estoque', 'id item estoque']));
+      if (desafioSolicitado && rowDesafioRef !== desafioSolicitado) continue;
+      if (desafioSolicitado && itemSolicitado && rowItemRef !== itemSolicitado) continue;
+
       if (statusRef === 'ATIVO') {
         referencia = rowRef;
         break;
@@ -49,7 +56,7 @@ function getRanking(idDgmb) {
     var itemPrincipal = rankingMG_norm_(rankingMG_firstFilled_(referencia, ['id_item_estoque', 'id item estoque']));
     var grupoBasePrincipal = rankingMG_extrairGrupoBaseDesafio_(itemPrincipal);
 
-    if (!desafioPrincipal || !grupoBasePrincipal) {
+    if (!desafioPrincipal) {
       return {
         ok: true,
         data: [],
@@ -72,7 +79,8 @@ function getRanking(idDgmb) {
       var rowGrupoBase = rankingMG_extrairGrupoBaseDesafio_(rowItem);
       var rowStatus = rankingMG_norm_(rankingMG_firstFilled_(row, ['Status_Apuracao', 'status_apuracao'])).toUpperCase();
 
-      if (rowDesafio !== desafioPrincipal || rowGrupoBase !== grupoBasePrincipal) continue;
+      if (rowDesafio !== desafioPrincipal) continue;
+      if (grupoBasePrincipal && rowGrupoBase !== grupoBasePrincipal) continue;
       if (!statusValidos[rowStatus]) continue;
 
       var meta = rankingMG_round1_(rankingMG_toNumber_(rankingMG_firstFilled_(row, [
