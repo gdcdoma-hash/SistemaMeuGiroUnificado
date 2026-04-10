@@ -392,6 +392,7 @@ function buildPeriodoOficialPorAbaEId_(ss) {
   var map = buildHeaderMap_(rows[0]);
   var idxAba = getOptionalColumnIndex_(map, ['aba', 'aba desafio', 'abadesafio']);
   var idxId = getOptionalColumnIndex_(map, [
+    'id',
     'id_desafio',
     'id desafio',
     'id_desafio_lista',
@@ -401,7 +402,14 @@ function buildPeriodoOficialPorAbaEId_(ss) {
   ]);
   var idxInicio = getOptionalColumnIndex_(map, ['data_inicio', 'data início', 'inicio', 'início', 'dt_inicio']);
   var idxFim = getOptionalColumnIndex_(map, ['data_fim', 'data fim', 'fim', 'dt_fim']);
-  var idxNome = getOptionalColumnIndex_(map, ['nome_desafio', 'nome desafio', 'desafio', 'nome']);
+  var idxNome = getOptionalColumnIndex_(map, [
+    'nome_desafio',
+    'nome desafio',
+    'nome_desafio_lista',
+    'nome desafio lista',
+    'desafio',
+    'nome'
+  ]);
 
   if (idxAba === -1) idxAba = 1;
 
@@ -437,8 +445,21 @@ function buildMapaStatusDesafioListaPorId_(ss) {
   if (!rows || rows.length < 2) return out;
 
   var map = buildHeaderMap_(rows[0]);
-  var idxId = getOptionalColumnIndex_(map, ['id_desafio', 'id desafio', 'id']);
-  var idxStatus = getOptionalColumnIndex_(map, ['status', 'situacao', 'situação']);
+  var idxId = getOptionalColumnIndex_(map, [
+    'id_desafio_lista',
+    'id desafio lista',
+    'id_desafio',
+    'id desafio',
+    'id'
+  ]);
+  var idxStatus = getOptionalColumnIndex_(map, [
+    'status',
+    'status_desafio',
+    'status desafio',
+    'status_lista',
+    'situacao',
+    'situação'
+  ]);
   if (idxId === -1 || idxStatus === -1) return out;
 
   out.possuiColunaId = true;
