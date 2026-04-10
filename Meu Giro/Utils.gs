@@ -428,12 +428,37 @@ function buildPeriodoOficialPorAbaEId_(ss) {
   return out;
 }
 
+function buildMapaStatusDesafioListaPorId_(ss) {
+  var out = { byId: {}, possuiColunaId: false };
+  var lista = ss.getSheetByName(SHEETS.LISTA_DESAFIOS || 'ListaDesafios');
+  if (!lista) return out;
+
+  var rows = lista.getDataRange().getValues();
+  if (!rows || rows.length < 2) return out;
+
+  var map = buildHeaderMap_(rows[0]);
+  var idxId = getOptionalColumnIndex_(map, ['id_desafio', 'id desafio', 'id']);
+  var idxStatus = getOptionalColumnIndex_(map, ['status', 'situacao', 'situação']);
+  if (idxId === -1 || idxStatus === -1) return out;
+
+  out.possuiColunaId = true;
+
+  for (var i = 1; i < rows.length; i++) {
+    var idDesafio = normalizeText_(rows[i][idxId]);
+    if (!idDesafio) continue;
+    out.byId[idDesafio] = normalizeText_(rows[i][idxStatus]).toLowerCase();
+  }
+
+  return out;
+}
+
 function obterVinculosDesafioUsuario_(idDgmb) {
   var id = normalizeText_(idDgmb);
   if (!id) return [];
 
   var ss = getSpreadsheet_();
   var periodos = buildPeriodoOficialPorAbaEId_(ss);
+  var statusListaDesafios = buildMapaStatusDesafioListaPorId_(ss);
   var abaDesafio = SHEETS.DESAFIO || 'dgmbDesafios';
   var sh = ss.getSheetByName(abaDesafio);
   if (!sh) return [];
@@ -448,6 +473,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
   var idxMeta = getOptionalColumnIndex_(map, ['distancia_km', 'distancia km']);
   var idxObs = getOptionalColumnIndex_(map, ['observacao', 'observação']);
   var idxItem = getOptionalColumnIndex_(map, ['id_item_estoque', 'id item estoque']);
+  var idxTipoDesafio = getOptionalColumnIndex_(map, ['tipo_do_desafio', 'tipo do desafio', 'tipo_desafio', 'tipo desafio']);
   var idxStatusDesafio = getOptionalColumnIndex_(map, ['status_desafio', 'status desafio']);
   var idxStatusPag = getOptionalColumnIndex_(map, ['status_pagamento', 'pagamento_status', 'pagamento', 'pix_status']);
   var idxStatusInscricao = getOptionalColumnIndex_(map, ['status_inscricao', 'status inscrição', 'status', 'situacao', 'situação']);
@@ -464,6 +490,9 @@ function obterVinculosDesafioUsuario_(idDgmb) {
     var observacao = idxObs > -1 ? row[idxObs] : '';
     var idDesafio = extrairIdDesafioObservacao_(observacao);
     var idItem = idxItem > -1 ? normalizeText_(row[idxItem]) : '';
+    var tipoDesafio = idxTipoDesafio > -1 ? normalizeText_(row[idxTipoDesafio]) : '';
+    var tipoSemAcento = tipoDesafio.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    var ehNormal = tipoSemAcento === 'normal';
     var metaKm = idxMeta > -1 ? parseLocalizedNumber_(row[idxMeta]) : 0;
 
     var statusInscricao = idxStatusInscricao > -1 ? normalizeText_(row[idxStatusInscricao]) : '';
@@ -476,9 +505,18 @@ function obterVinculosDesafioUsuario_(idDgmb) {
       status_confirmacao: statusConfirmacao,
       status_pagamento: statusPagamento
     });
-    var apto = validacao.valida && !inscricaoTemBloqueioMinimo_(statusDesafio);
+    var aptoBase = validacao.valida && !inscricaoTemBloqueioMinimo_(statusDesafio);
+    var desafioAtivoNaLista = !statusListaDesafios.possuiColunaId
+      ? !!idDesafio
+      : statusListaDesafios.byId[idDesafio] === 'ativo';
+    // Desafio normal não depende de item de estoque; repescagem mantém fluxo atual.
+    var apto = ehNormal
+      ? aptoBase && !!idDesafio && metaKm > 0 && desafioAtivoNaLista
+      : aptoBase;
 
-    var periodo = (idDesafio && periodos.byId[idDesafio]) || periodos.byAba[abaDesafio] || { inicio: '', fim: '', nome_desafio: '' };
+    var periodo = ehNormal
+      ? (idDesafio && periodos.byId[idDesafio]) || { inicio: '', fim: '', nome_desafio: '' }
+      : (idDesafio && periodos.byId[idDesafio]) || periodos.byAba[abaDesafio] || { inicio: '', fim: '', nome_desafio: '' };
     var chave = [id, idDesafio, idItem].join('|');
     if (chaves[chave]) continue;
     chaves[chave] = true;
