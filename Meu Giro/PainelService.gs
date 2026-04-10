@@ -372,7 +372,7 @@ function painelMG_calcularPosicaoRanking_(idDgmb, idDesafio, idItemEstoque) {
   var itemPrincipal = painelMG_norm_(idItemEstoque);
   var grupoBasePrincipal = painelMG_extrairGrupoBaseDesafio_(itemPrincipal);
 
-  if (!idUsuario || !desafioPrincipal || !grupoBasePrincipal) {
+  if (!idUsuario || !desafioPrincipal) {
     return { posicao: 0, total: 0 };
   }
 
@@ -399,7 +399,8 @@ function painelMG_calcularPosicaoRanking_(idDgmb, idDesafio, idItemEstoque) {
     var rowStatus = painelMG_norm_(painelMG_firstFilled_(row, ['Status_Apuracao', 'status_apuracao'])).toUpperCase();
 
     if (!did) continue;
-    if (rowDesafio !== desafioPrincipal || rowGrupoBase !== grupoBasePrincipal) continue;
+    if (rowDesafio !== desafioPrincipal) continue;
+    if (grupoBasePrincipal && rowGrupoBase !== grupoBasePrincipal) continue;
     if (!statusValidos[rowStatus]) continue;
 
     lista.push({
@@ -444,9 +445,9 @@ function painelMG_montarRankingPorDesafio_(idDgmb, desafios) {
     var item = lista[i] || {};
     var idDesafio = painelMG_norm_(item.id_desafio);
     var idItem = painelMG_norm_(item.id_item_estoque);
-    if (!idDesafio || !idItem) continue;
+    if (!idDesafio) continue;
 
-    var chave = [idDesafio, idItem].join('|');
+    var chave = idItem ? [idDesafio, idItem].join('|') : idDesafio;
     if (out[chave]) continue;
 
     out[chave] = painelMG_calcularPosicaoRanking_(idDgmb, idDesafio, idItem);

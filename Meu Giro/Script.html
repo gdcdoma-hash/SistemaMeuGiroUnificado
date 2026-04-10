@@ -1528,8 +1528,8 @@ function getDesafioKey(desafio) {
   if (!desafio) return '';
   var idDesafio = String(desafio.id_desafio || '').trim();
   var idItem = String(desafio.id_item_estoque || '').trim();
-  if (!idDesafio || !idItem) return '';
-  return idDesafio + '|' + idItem;
+  if (!idDesafio) return '';
+  return idItem ? (idDesafio + '|' + idItem) : idDesafio;
 }
 
 function salvarDesafioEmFocoNaSessao(chave) {
@@ -1823,10 +1823,15 @@ function renderDesafiosAtivosCarrossel(containerId, lista, options) {
   if (indexFromFocus >= 0) {
     desafiosAtivosCarouselIndex = indexFromFocus;
   } else {
-    var indiceMaisRelevante = escolherIndiceDesafioMaisRelevante(itens);
-    desafiosAtivosCarouselIndex = indiceMaisRelevante >= 0
-      ? indiceMaisRelevante
-      : Math.max(0, Math.min(desafiosAtivosCarouselIndex, Math.max(0, itens.length - 1)));
+    var indiceAtual = Number(desafiosAtivosCarouselIndex);
+    if (Number.isInteger(indiceAtual) && indiceAtual >= 0 && indiceAtual < itens.length) {
+      desafiosAtivosCarouselIndex = indiceAtual;
+    } else {
+      var indiceMaisRelevante = escolherIndiceDesafioMaisRelevante(itens);
+      desafiosAtivosCarouselIndex = indiceMaisRelevante >= 0
+        ? indiceMaisRelevante
+        : Math.max(0, Math.min(indiceAtual, Math.max(0, itens.length - 1)));
+    }
   }
 
   if (!itens.length) {
@@ -2584,7 +2589,11 @@ function carregarRanking(triggerSource) {
       renderRankingState('error', 'Não foi possível carregar o ranking.', 'Confira sua conexão e tente novamente em instantes.');
       console.error(err);
     })
-    .getRanking(idDgmb);
+    .getRanking(
+      idDgmb,
+      desafioAtual && desafioAtual.id_desafio,
+      desafioAtual && desafioAtual.id_item_estoque
+    );
 }
 
 function renderRankingState(variant, title, description) {
