@@ -451,13 +451,26 @@ function painelMG_montarRankingPorDesafio_(idDgmb, desafios) {
     var idItem = painelMG_norm_(item.id_item_estoque);
     if (!idDesafio) continue;
 
-    var chave = idItem ? [idDesafio, idItem].join('|') : idDesafio;
+    var chave = painelMG_chaveDesafioPainel_(item);
     if (out[chave]) continue;
 
     out[chave] = painelMG_calcularPosicaoRanking_(idDgmb, idDesafio, idItem);
   }
 
   return out;
+}
+
+function painelMG_chaveDesafioPainel_(desafio) {
+  var item = desafio || {};
+  var idDesafio = painelMG_norm_(item.id_desafio);
+  var idItem = painelMG_norm_(item.id_item_estoque);
+  var inicio = painelMG_norm_(item.periodo_inicio);
+  var fim = painelMG_norm_(item.periodo_fim);
+
+  if (!idDesafio) return '';
+  if (idItem) return [idDesafio, idItem].join('|');
+  if (inicio || fim) return [idDesafio, inicio, fim].join('|');
+  return idDesafio;
 }
 
 
