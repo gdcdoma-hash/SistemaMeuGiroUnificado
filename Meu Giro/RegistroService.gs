@@ -1,5 +1,5 @@
 function registrarAtividade(idDgmb, dataAtividade, km, force) {
-  var lock = LockService.getDocumentLock();
+  var lock = LockService.getScriptLock();
   try {
     lock.waitLock(30000);
 
@@ -160,7 +160,7 @@ function atualizarDistanciaRealizada_(idDgmb){
 }
 
 function editarAtividade(payload) {
-  var lock = LockService.getDocumentLock();
+  var lock = LockService.getScriptLock();
   try {
     lock.waitLock(30000);
     payload = payload || {};
@@ -325,7 +325,7 @@ function kmsIguaisEdicao_(a, b) {
 }
 
 function excluirAtividade(payload) {
-  var lock = LockService.getDocumentLock();
+  var lock = LockService.getScriptLock();
   try {
     lock.waitLock(30000);
     payload = payload || {};
