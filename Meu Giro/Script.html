@@ -9,6 +9,8 @@ let painelLoadInProgress = false;
 let painelReloadPending = false;
 let painelLoadRequestId = 0;
 let rankingLoadInProgress = false;
+let rankingReloadPending = false;
+let rankingLoadRequestId = 0;
 let phraseLoadInProgress = false;
 let phraseFeedbackTimeout = null;
 let phraseTapFeedbackTimer = null;
@@ -641,9 +643,20 @@ function syncPainelErrorState(message, variant) {
 function setRankingLoadDisabled(disabled) {
   const topBtn = document.getElementById('btn-ranking-top');
   const painelBtn = document.getElementById('btn-ranking-painel');
+  const desafioSelect = document.getElementById('ranking-desafio-select');
 
   if (topBtn) topBtn.disabled = !!disabled;
   if (painelBtn) painelBtn.disabled = !!disabled;
+  if (desafioSelect) {
+    if (disabled) {
+      desafioSelect.setAttribute('data-prev-disabled', desafioSelect.disabled ? 'true' : 'false');
+      desafioSelect.disabled = true;
+    } else {
+      const prevDisabled = desafioSelect.getAttribute('data-prev-disabled') === 'true';
+      desafioSelect.disabled = prevDisabled;
+      desafioSelect.removeAttribute('data-prev-disabled');
+    }
+  }
 }
 
 function clearRankingButtonFeedback() {
@@ -1542,6 +1555,12 @@ function carregarPainel(triggerSource) {
       ? 'Atualização em andamento...'
       : 'Atualizando painel...',
       'loading');
+    return;
+  }
+
+  if (activityMutationInProgress) {
+    painelReloadPending = true;
+    setPainelMsg('Aguarde a operação atual terminar para atualizar o painel.', 'loading');
     return;
   }
 
@@ -2782,8 +2801,10 @@ function carregarRanking(triggerSource) {
   const idDgmb = currentUser && currentUser.id_dgmb ? String(currentUser.id_dgmb).trim() : '';
   const desafioAtual = getDesafioEmFocoAtual();
   atualizarCabecalhoTelaRanking(desafioAtual);
+  const desafioRequestKey = getDesafioKey(desafioAtual);
 
   if (rankingLoadInProgress) {
+    rankingReloadPending = true;
     if (triggerSource === 'manual') {
       setPainelMsg('Atualizando ranking do desafio em foco...', 'loading');
     }
@@ -2792,6 +2813,9 @@ function carregarRanking(triggerSource) {
   }
 
   rankingLoadInProgress = true;
+  rankingReloadPending = false;
+  rankingLoadRequestId += 1;
+  const requestId = rankingLoadRequestId;
   syncGlobalBusyState();
   setRankingLoadDisabled(true);
   showScreen('ranking');
@@ -2802,6 +2826,10 @@ function carregarRanking(triggerSource) {
     google.script.run
       .withSuccessHandler(function(res) {
         try {
+          if (requestId !== rankingLoadRequestId) {
+            return;
+          }
+
           if (!res || !res.ok) {
             setRankingMsg((res && res.msg) ? res.msg : 'Erro ao carregar ranking.', 'error');
             renderRankingState('error', 'Não foi possível carregar o ranking.', 'Tente novamente em instantes para atualizar a classificação.');
@@ -2816,18 +2844,30 @@ function carregarRanking(triggerSource) {
           renderRankingState('error', 'Não foi possível carregar o ranking.', 'Tente novamente em instantes para atualizar a classificação.');
           console.error(errSuccess);
         } finally {
+          if (requestId !== rankingLoadRequestId) {
+            return;
+          }
           rankingLoadInProgress = false;
           syncGlobalBusyState();
           setRankingLoadDisabled(false);
+          if (rankingReloadPending || desafioRequestKey !== getDesafioKey(getDesafioEmFocoAtual())) {
+            carregarRanking('manual');
+          }
         }
       })
       .withFailureHandler(function(err) {
+        if (requestId !== rankingLoadRequestId) {
+          return;
+        }
         rankingLoadInProgress = false;
         syncGlobalBusyState();
         setRankingLoadDisabled(false);
         setRankingMsg('Erro ao carregar ranking.', 'error');
         renderRankingState('error', 'Não foi possível carregar o ranking.', 'Confira sua conexão e tente novamente em instantes.');
         console.error(err);
+        if (rankingReloadPending || desafioRequestKey !== getDesafioKey(getDesafioEmFocoAtual())) {
+          carregarRanking('manual');
+        }
       })
       .getRanking(
         idDgmb,
@@ -2835,12 +2875,18 @@ function carregarRanking(triggerSource) {
         desafioAtual && desafioAtual.id_item_estoque
       );
   } catch (errRun) {
+    if (requestId !== rankingLoadRequestId) {
+      return;
+    }
     rankingLoadInProgress = false;
     syncGlobalBusyState();
     setRankingLoadDisabled(false);
     setRankingMsg('Erro ao carregar ranking.', 'error');
     renderRankingState('error', 'Não foi possível carregar o ranking.', 'Confira sua conexão e tente novamente em instantes.');
     console.error(errRun);
+    if (rankingReloadPending || desafioRequestKey !== getDesafioKey(getDesafioEmFocoAtual())) {
+      carregarRanking('manual');
+    }
   }
 }
 
@@ -2973,6 +3019,7 @@ function logoutUser() {
   currentUser = null;
   currentPainel = null;
   rankingLoadInProgress = false;
+  rankingReloadPending = false;
   phraseLoadInProgress = false;
   activityMutationInProgress = false;
   painelLoadInProgress = false;
