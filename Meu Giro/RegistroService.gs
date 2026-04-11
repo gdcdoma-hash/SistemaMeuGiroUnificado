@@ -1,5 +1,7 @@
 function registrarAtividade(idDgmb, dataAtividade, km, force) {
+  var lock = LockService.getDocumentLock();
   try {
+    lock.waitLock(30000);
 
     idDgmb = String(idDgmb || '').trim();
     dataAtividade = String(dataAtividade || '').trim();
@@ -60,8 +62,16 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
 
     sheet.appendRow(row);
 
-    atualizarDistanciaRealizada_(idDgmb);
-    atualizarMeuGiroResumo_(idDgmb);
+    try {
+      atualizarDistanciaRealizada_(idDgmb);
+      atualizarMeuGiroResumo_(idDgmb);
+    } catch (syncErr) {
+      var linhaInserida = localizarLinhaAtividade_(sheet.getDataRange().getValues(), cols, idDgmb, activityId, '');
+      if (linhaInserida > -1) {
+        sheet.deleteRow(linhaInserida);
+      }
+      throw syncErr;
+    }
 
     return {
       ok:true,
@@ -77,6 +87,10 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
       msg:'Erro interno ao registrar atividade na aba REGISTRO_KM.'
     };
 
+  } finally {
+    try {
+      lock.releaseLock();
+    } catch (e) {}
   }
 }
 
@@ -146,7 +160,9 @@ function atualizarDistanciaRealizada_(idDgmb){
 }
 
 function editarAtividade(payload) {
+  var lock = LockService.getDocumentLock();
   try {
+    lock.waitLock(30000);
     payload = payload || {};
 
     var idDgmb = String(payload.id_dgmb || '').trim();
@@ -222,11 +238,20 @@ function editarAtividade(payload) {
       }
     }
 
+    var valorDataOriginal = dados[linhaEncontrada - 1][cols.idxData];
+    var valorKmOriginal = dados[linhaEncontrada - 1][cols.idxKm];
+
     sheet.getRange(linhaEncontrada, cols.idxData + 1).setValue(novaDataAtividade);
     sheet.getRange(linhaEncontrada, cols.idxKm + 1).setValue(novoKm);
 
-    atualizarDistanciaRealizada_(idDgmb);
-    atualizarMeuGiroResumo_(idDgmb);
+    try {
+      atualizarDistanciaRealizada_(idDgmb);
+      atualizarMeuGiroResumo_(idDgmb);
+    } catch (syncErr) {
+      sheet.getRange(linhaEncontrada, cols.idxData + 1).setValue(valorDataOriginal);
+      sheet.getRange(linhaEncontrada, cols.idxKm + 1).setValue(valorKmOriginal);
+      throw syncErr;
+    }
 
     return {
       ok: true,
@@ -240,6 +265,10 @@ function editarAtividade(payload) {
       code: 'EDITAR_ATIVIDADE_EXCEPTION',
       msg: 'Erro interno ao editar atividade na aba REGISTRO_KM.'
     };
+  } finally {
+    try {
+      lock.releaseLock();
+    } catch (e) {}
   }
 }
 
@@ -296,7 +325,9 @@ function kmsIguaisEdicao_(a, b) {
 }
 
 function excluirAtividade(payload) {
+  var lock = LockService.getDocumentLock();
   try {
+    lock.waitLock(30000);
     payload = payload || {};
 
     var idDgmb = String(payload.id_dgmb || '').trim();
@@ -334,9 +365,17 @@ function excluirAtividade(payload) {
       };
     }
 
+    var linhaOriginal = dados[linhaEncontrada - 1];
     sheet.deleteRow(linhaEncontrada);
-    atualizarDistanciaRealizada_(idDgmb);
-    atualizarMeuGiroResumo_(idDgmb);
+
+    try {
+      atualizarDistanciaRealizada_(idDgmb);
+      atualizarMeuGiroResumo_(idDgmb);
+    } catch (syncErr) {
+      sheet.insertRowBefore(linhaEncontrada);
+      sheet.getRange(linhaEncontrada, 1, 1, linhaOriginal.length).setValues([linhaOriginal]);
+      throw syncErr;
+    }
 
     return {
       ok: true,
@@ -350,6 +389,10 @@ function excluirAtividade(payload) {
       code: 'EXCLUSAO_ATIVIDADE_ERROR',
       msg: 'Erro interno ao excluir atividade na aba REGISTRO_KM.'
     };
+  } finally {
+    try {
+      lock.releaseLock();
+    } catch (e) {}
   }
 }
 
