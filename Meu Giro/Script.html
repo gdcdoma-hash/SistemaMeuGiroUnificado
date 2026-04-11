@@ -2419,26 +2419,42 @@ function getGoogleScriptErrorMessage(err, fallback) {
 
   if (typeof err === 'string') {
     const text = err.trim();
-    if (text) return text;
+    if (text) return 'string: ' + text;
+    return fallbackText;
   }
 
   if (err && typeof err === 'object') {
-    const keys = ['message', 'msg', 'details', 'error'];
-    for (var i = 0; i < keys.length; i++) {
-      const value = err[keys[i]];
+    const parts = [];
+
+    parts.push('type=' + typeof err);
+
+    const fields = ['name', 'message', 'msg', 'details', 'error', 'stack'];
+    for (var i = 0; i < fields.length; i++) {
+      const key = fields[i];
+      const value = err[key];
       if (value === undefined || value === null) continue;
       const text = String(value).trim();
-      if (text && text !== '[object Object]' && text.toLowerCase() !== 'undefined') {
-        return text;
-      }
+      if (!text || text === '[object Object]' || text.toLowerCase() === 'undefined') continue;
+      parts.push(key + '=' + text);
     }
+
+    try {
+      const keys = Object.keys(err);
+      if (keys && keys.length) {
+        parts.push('keys=' + keys.join(','));
+      }
+    } catch (keysErr) {}
 
     try {
       const serialized = JSON.stringify(err);
       if (serialized && serialized !== '{}' && serialized !== '[]') {
-        return String(serialized);
+        parts.push('json=' + serialized);
       }
     } catch (jsonErr) {}
+
+    if (parts.length) {
+      return parts.join(' | ');
+    }
   }
 
   return fallbackText;
