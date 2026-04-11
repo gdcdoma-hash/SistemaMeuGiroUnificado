@@ -2418,7 +2418,7 @@ function toFiniteNumber(value, fallback) {
   return Number.isFinite(n) ? n : Number(fallback || 0);
 }
 
-function salvarAtividade(forcarDuplicidade) {
+async function salvarAtividade(forcarDuplicidade) {
   const idHidden = document.getElementById('painel-id-dgmb');
   const idDgmb = idHidden && idHidden.value
     ? String(idHidden.value).trim()
@@ -2474,53 +2474,52 @@ function salvarAtividade(forcarDuplicidade) {
     }
   };
 
+  let nextMessage = '';
   try {
-    google.script.run
-      .withSuccessHandler(function(res) {
-        finishLoading();
+    const res = await new Promise(function(resolve, reject) {
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .registrarAtividade(idDgmb, data, km, !!forcarDuplicidade);
+    });
 
-        if (!res || !res.ok) {
-          if (res && res.code === 'DUPLICIDADE' && !forcarDuplicidade) {
-            const confirmar = confirm('Você já registrou uma atividade com esse valor hoje. Deseja continuar?');
-            if (confirmar) {
-              salvarAtividade(true);
-            } else {
-              setRegistroMsg('Registro cancelado.');
-            }
-            return;
-          }
-
-          setRegistroMsg((res && res.msg) ? res.msg : 'Não foi possível registrar a atividade.', 'error');
-          return;
+    if (!res || !res.ok) {
+      if (res && res.code === 'DUPLICIDADE' && !forcarDuplicidade) {
+        const confirmar = confirm('Você já registrou uma atividade com esse valor hoje. Deseja continuar?');
+        if (confirmar) {
+          salvarAtividade(true);
+        } else {
+          setRegistroMsg('Registro cancelado.');
         }
+        return;
+      }
 
-        cancelarEdicaoAtividadeUI();
-        setRegistroCardState('success');
-        setRegistroMsg('Atividade registrada.', 'success', 1800);
-        renderAtividadesState('loading', 'Atualizando atividades registradas...', 'Aplicando seu novo pedal na lista.');
-        queueRecentActivityHighlight({
-          data: data,
-          km: km,
-          label: 'Novo'
-        });
-        pendingTotalPedaladoFeedback = true;
-        painelProgressFeedbackMode = 'activity-registered';
-        carregarPainel();
-      })
-      .withFailureHandler(function(err) {
-        finishLoading();
-        setRegistroMsg('Erro ao registrar atividade.', 'error');
-        console.error(err);
-      })
-      .registrarAtividade(idDgmb, data, km, !!forcarDuplicidade);
+      setRegistroMsg((res && res.msg) ? res.msg : 'Não foi possível registrar a atividade.', 'error');
+      return;
+    }
+
+    cancelarEdicaoAtividadeUI();
+    setRegistroCardState('success');
+    setRegistroMsg('Atividade registrada.', 'success', 1800);
+    renderAtividadesState('loading', 'Atualizando atividades registradas...', 'Aplicando seu novo pedal na lista.');
+    queueRecentActivityHighlight({
+      data: data,
+      km: km,
+      label: 'Novo'
+    });
+    pendingTotalPedaladoFeedback = true;
+    painelProgressFeedbackMode = 'activity-registered';
+    carregarPainel();
+    nextMessage = 'success';
   } catch (err) {
-    finishLoading();
     setRegistroMsg('Erro ao registrar atividade.', 'error');
     console.error(err);
+  } finally {
+    finishLoading(nextMessage);
   }
 }
 
-function salvarEdicaoAtividade() {
+async function salvarEdicaoAtividade() {
   const idHidden = document.getElementById('painel-id-dgmb');
   const idDgmb = idHidden && idHidden.value
     ? String(idHidden.value).trim()
@@ -2583,46 +2582,45 @@ function salvarEdicaoAtividade() {
     }
   };
 
+  let nextMessage = '';
   try {
-    google.script.run
-      .withSuccessHandler(function(res) {
-        finishLoading();
-
-        if (!res || !res.ok) {
-          setRegistroMsg((res && res.msg) ? res.msg : 'Não foi possível salvar a edição.', 'error');
-          return;
-        }
-
-        cancelarEdicaoAtividadeUI();
-        setRegistroCardState('success');
-        setRegistroMsg('Edição salva.', 'success', 1800);
-        renderAtividadesState('loading', 'Atualizando atividades registradas...', 'Aplicando a edição na lista.');
-        queueRecentActivityHighlight({
-          key: editKey,
-          data: data,
-          km: km,
-          label: 'Agora'
+    const res = await new Promise(function(resolve, reject) {
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .editarAtividade({
+          id_dgmb: idDgmb,
+          activity_id: activityId,
+          chave_edicao: chaveEdicao,
+          data_atividade: data,
+          km: km
         });
-        pendingTotalPedaladoFeedback = true;
-        painelProgressFeedbackMode = 'activity-registered';
-        carregarPainel();
-      })
-      .withFailureHandler(function(err) {
-        finishLoading();
-        setRegistroMsg('Erro ao salvar edição.', 'error');
-        console.error(err);
-      })
-      .editarAtividade({
-        id_dgmb: idDgmb,
-        activity_id: activityId,
-        chave_edicao: chaveEdicao,
-        data_atividade: data,
-        km: km
-      });
+    });
+
+    if (!res || !res.ok) {
+      setRegistroMsg((res && res.msg) ? res.msg : 'Não foi possível salvar a edição.', 'error');
+      return;
+    }
+
+    cancelarEdicaoAtividadeUI();
+    setRegistroCardState('success');
+    setRegistroMsg('Edição salva.', 'success', 1800);
+    renderAtividadesState('loading', 'Atualizando atividades registradas...', 'Aplicando a edição na lista.');
+    queueRecentActivityHighlight({
+      key: editKey,
+      data: data,
+      km: km,
+      label: 'Agora'
+    });
+    pendingTotalPedaladoFeedback = true;
+    painelProgressFeedbackMode = 'activity-registered';
+    carregarPainel();
+    nextMessage = 'success';
   } catch (err) {
-    finishLoading();
     setRegistroMsg('Erro ao salvar edição.', 'error');
     console.error(err);
+  } finally {
+    finishLoading(nextMessage);
   }
 }
 function iniciarEdicaoAtividadeUI(item) {
@@ -2677,7 +2675,7 @@ function iniciarEdicaoAtividadeUI(item) {
   }
 }
 
-function excluirAtividadeUI(item, btnExcluir) {
+async function excluirAtividadeUI(item, btnExcluir) {
   item = item || {};
 
   const activityId = String(item.activity_id || '').trim();
@@ -2723,47 +2721,46 @@ function excluirAtividadeUI(item, btnExcluir) {
 
   setRegistroMsg('');
 
-  google.script.run
-    .withSuccessHandler(function(res) {
-      pendingDeletionKeys.delete(deletionKey);
-      activityMutationInProgress = false;
-      syncGlobalBusyState();
-      setRegistroCardState('');
-      setActivityFormLocked(false);
-
-      if (!res || !res.ok) {
-        if (btnExcluir) {
-          btnExcluir.disabled = false;
-          btnExcluir.innerText = 'Excluir';
-        }
-        setRegistroMsg((res && res.msg) ? res.msg : 'Não foi possível excluir.', 'error');
-        return;
-      }
-
-      cancelarEdicaoAtividadeUI();
-      setRegistroCardState('success');
-      setRegistroMsg('Atividade excluída.', 'success', 1800);
-      renderAtividadesState('loading', 'Atualizando atividades registradas...', 'Removendo a atividade da lista para mostrar a versão mais recente.');
-      carregarPainel();
-    })
-    .withFailureHandler(function(err) {
-      pendingDeletionKeys.delete(deletionKey);
-      activityMutationInProgress = false;
-      syncGlobalBusyState();
-      setRegistroCardState('');
-      setActivityFormLocked(false);
-      if (btnExcluir) {
-        btnExcluir.disabled = false;
-        btnExcluir.innerText = 'Excluir';
-      }
-      setRegistroMsg('Erro ao excluir atividade.', 'error');
-      console.error(err);
-    })
-    .excluirAtividade({
-      id_dgmb: idDgmb,
-      activity_id: activityId,
-      chave_edicao: chaveEdicao
+  let removedWithSuccess = false;
+  try {
+    const res = await new Promise(function(resolve, reject) {
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .excluirAtividade({
+          id_dgmb: idDgmb,
+          activity_id: activityId,
+          chave_edicao: chaveEdicao
+        });
     });
+
+    if (!res || !res.ok) {
+      setRegistroMsg((res && res.msg) ? res.msg : 'Não foi possível excluir.', 'error');
+      return;
+    }
+
+    cancelarEdicaoAtividadeUI();
+    setRegistroCardState('success');
+    setRegistroMsg('Atividade excluída.', 'success', 1800);
+    renderAtividadesState('loading', 'Atualizando atividades registradas...', 'Removendo a atividade da lista para mostrar a versão mais recente.');
+    carregarPainel();
+    removedWithSuccess = true;
+  } catch (err) {
+    setRegistroMsg('Erro ao excluir atividade.', 'error');
+    console.error(err);
+  } finally {
+    pendingDeletionKeys.delete(deletionKey);
+    activityMutationInProgress = false;
+    syncGlobalBusyState();
+    setActivityFormLocked(false);
+    if (!removedWithSuccess) {
+      setRegistroCardState('');
+    }
+    if (btnExcluir) {
+      btnExcluir.disabled = false;
+      btnExcluir.innerText = 'Excluir';
+    }
+  }
 }
 
 function novaFrase() {
