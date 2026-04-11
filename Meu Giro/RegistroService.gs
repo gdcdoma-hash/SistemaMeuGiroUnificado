@@ -69,12 +69,12 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
     };
 
   } catch(err) {
+    Logger.log('registrarAtividade erro: ' + (err && err.stack ? err.stack : err));
 
     return {
       ok:false,
       code:'REGISTRAR_ATIVIDADE_EXCEPTION',
-      msg:err && err.message ? err.message : 'Erro interno ao registrar atividade na aba REGISTRO_KM.',
-      debug:String(err && err.stack ? err.stack : err)
+      msg:'Erro interno ao registrar atividade na aba REGISTRO_KM.'
     };
 
   }
@@ -234,11 +234,11 @@ function editarAtividade(payload) {
     };
 
   } catch (err) {
+    Logger.log('editarAtividade erro: ' + (err && err.stack ? err.stack : err));
     return {
       ok: false,
       code: 'EDITAR_ATIVIDADE_EXCEPTION',
-      msg: err && err.message ? err.message : 'Erro interno ao editar atividade na aba REGISTRO_KM.',
-      debug: String(err && err.stack ? err.stack : err)
+      msg: 'Erro interno ao editar atividade na aba REGISTRO_KM.'
     };
   }
 }
@@ -344,10 +344,11 @@ function excluirAtividade(payload) {
     };
 
   } catch (err) {
+    Logger.log('excluirAtividade erro: ' + (err && err.stack ? err.stack : err));
     return {
       ok: false,
       code: 'EXCLUSAO_ATIVIDADE_ERROR',
-      msg: err && err.message ? err.message : 'Erro interno ao excluir atividade na aba REGISTRO_KM.'
+      msg: 'Erro interno ao excluir atividade na aba REGISTRO_KM.'
     };
   }
 }
