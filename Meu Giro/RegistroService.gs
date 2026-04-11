@@ -3,7 +3,7 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
 
     idDgmb = String(idDgmb || '').trim();
     dataAtividade = String(dataAtividade || '').trim();
-    km = Number(String(km || '').replace(',', '.'));
+    km = parseKmInputSeguro_(km);
 
     if (!idDgmb) {
       return { ok:false, code:'ID_OBRIGATORIO', msg:'ID do atleta é obrigatório.' };
@@ -152,7 +152,7 @@ function editarAtividade(payload) {
     var activityId = String(payload.activity_id || '').trim();
     var chaveEdicao = String(payload.chave_edicao || '').trim();
     var novaDataAtividade = String(payload.data_atividade || '').trim();
-    var novoKm = Number(String(payload.km || '').replace(',', '.'));
+    var novoKm = parseKmInputSeguro_(payload.km);
 
     if (!idDgmb) {
       return {
@@ -239,6 +239,17 @@ function editarAtividade(payload) {
       msg: err && err.message ? err.message : 'Erro interno ao editar atividade na aba REGISTRO_KM.'
     };
   }
+}
+
+function parseKmInputSeguro_(value) {
+  var text = String(value === null || value === undefined ? '' : value).trim();
+  if (!text) return NaN;
+
+  text = text.replace(/\s+/g, '');
+  if (!/^\d+(?:[.,]\d+)?$/.test(text)) return NaN;
+
+  var parsed = parseLocalizedNumber_(text);
+  return isFinite(parsed) ? parsed : NaN;
 }
 
 function normalizarTimestampEdicao_(valor) {
