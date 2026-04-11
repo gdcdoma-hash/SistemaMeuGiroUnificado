@@ -2465,6 +2465,29 @@ function toFiniteNumber(value, fallback) {
   return Number.isFinite(n) ? n : Number(fallback || 0);
 }
 
+function isValidActivityDate(value) {
+  const parsed = parseIsoDateLocal(value);
+  if (!parsed) return false;
+
+  const match = String(value || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return false;
+
+  return parsed.getFullYear() === Number(match[1])
+    && (parsed.getMonth() + 1) === Number(match[2])
+    && parsed.getDate() === Number(match[3]);
+}
+
+function parseValidActivityKm(value) {
+  const raw = String(value || '').trim();
+  const sanitized = sanitizeKmInputValue(raw);
+  if (!sanitized || sanitized !== raw) return null;
+  if (!/^\d+(?:[.,]\d+)?$/.test(sanitized)) return null;
+
+  const numeric = Number(sanitized.replace(',', '.'));
+  if (!Number.isFinite(numeric) || numeric <= 0) return null;
+  return numeric;
+}
+
 async function salvarAtividade(forcarDuplicidade) {
   const idHidden = document.getElementById('painel-id-dgmb');
   const idDgmb = idHidden && idHidden.value
@@ -2501,6 +2524,18 @@ async function salvarAtividade(forcarDuplicidade) {
   if (!data || !km) {
     releaseRegistroSubmitGuard();
     setRegistroMsg('Informe a data e os km.', 'error');
+    return;
+  }
+
+  if (!isValidActivityDate(data)) {
+    releaseRegistroSubmitGuard();
+    setRegistroMsg('Informe uma data válida.', 'error');
+    return;
+  }
+
+  if (parseValidActivityKm(km) === null) {
+    releaseRegistroSubmitGuard();
+    setRegistroMsg('Informe um KM válido maior que zero.', 'error');
     return;
   }
 
@@ -2614,6 +2649,18 @@ async function salvarEdicaoAtividade() {
   if (!data || !km) {
     releaseRegistroSubmitGuard();
     setRegistroMsg('Informe a data e os km.', 'error');
+    return;
+  }
+
+  if (!isValidActivityDate(data)) {
+    releaseRegistroSubmitGuard();
+    setRegistroMsg('Informe uma data válida.', 'error');
+    return;
+  }
+
+  if (parseValidActivityKm(km) === null) {
+    releaseRegistroSubmitGuard();
+    setRegistroMsg('Informe um KM válido maior que zero.', 'error');
     return;
   }
 
