@@ -195,7 +195,7 @@ function getRegistroBusyMessage() {
   const handler = saveBtn ? String(saveBtn.getAttribute('onclick') || '') : '';
   return handler.indexOf('salvarEdicaoAtividade') !== -1
     ? 'Salvando edição...'
-    : 'Processando registro...';
+    : 'Aguarde, concluindo a ação atual...';
 }
 
 function activateRegistroSubmitGuard() {
@@ -2494,7 +2494,7 @@ async function salvarAtividade(forcarDuplicidade) {
 
   if (activityMutationInProgress || btn.disabled) {
     setRegistroPressedState(false);
-    setRegistroMsg('Processando registro...', 'loading');
+    setRegistroMsg('Aguarde, concluindo a ação atual...', 'loading');
     return;
   }
 
@@ -2534,11 +2534,11 @@ async function salvarAtividade(forcarDuplicidade) {
     if (!res || !res.ok) {
       nextMessage = 'error';
       if (res && res.code === 'DUPLICIDADE' && !forcarDuplicidade) {
-        const confirmar = confirm('Você já registrou uma atividade com esse valor hoje. Deseja continuar?');
+        const confirmar = confirm('Você já registrou esse mesmo valor hoje. Deseja registrar mesmo assim?');
         if (confirmar) {
           salvarAtividade(true);
         } else {
-          setRegistroMsg('Registro cancelado.');
+          setRegistroMsg('Registro não confirmado. Nenhuma alteração foi feita.');
         }
         return;
       }
@@ -2549,7 +2549,7 @@ async function salvarAtividade(forcarDuplicidade) {
 
     cancelarEdicaoAtividadeUI();
     setRegistroCardState('success');
-    setRegistroMsg('Atividade registrada.', 'success', 1800);
+    setRegistroMsg('Atividade registrada com sucesso.', 'success', 1800);
     renderAtividadesState('loading', 'Atualizando atividades registradas...', 'Aplicando seu novo pedal na lista.');
     queueRecentActivityHighlight({
       data: data,
@@ -2562,7 +2562,7 @@ async function salvarAtividade(forcarDuplicidade) {
     nextMessage = 'success';
   } catch (err) {
     nextMessage = 'error';
-    const errMsg = getGoogleScriptErrorMessage(err, 'Erro ao registrar atividade.');
+    const errMsg = getGoogleScriptErrorMessage(err, 'Não foi possível registrar a atividade.');
     setRegistroMsg(errMsg, 'error');
     console.error(err);
   } finally {
@@ -2660,7 +2660,7 @@ async function salvarEdicaoAtividade() {
 
     cancelarEdicaoAtividadeUI();
     setRegistroCardState('success');
-    setRegistroMsg('Edição salva.', 'success', 1800);
+    setRegistroMsg('Edição salva com sucesso.', 'success', 1800);
     renderAtividadesState('loading', 'Atualizando atividades registradas...', 'Aplicando a edição na lista.');
     queueRecentActivityHighlight({
       key: editKey,
@@ -2674,7 +2674,7 @@ async function salvarEdicaoAtividade() {
     nextMessage = 'success';
   } catch (err) {
     nextMessage = 'error';
-    const errMsg = getGoogleScriptErrorMessage(err, 'Erro ao salvar edição.');
+    const errMsg = getGoogleScriptErrorMessage(err, 'Não foi possível salvar a edição.');
     setRegistroMsg(errMsg, 'error');
     console.error(err);
   } finally {
@@ -2697,12 +2697,12 @@ function iniciarEdicaoAtividadeUI(item) {
 
   const registroMsg = document.getElementById('registro-msg');
   if (activeEditKey && activeEditKey !== editKey) {
-    if (registroMsg) setRegistroMsg('Finalize ou cancele a edição atual.', 'error');
+    if (registroMsg) setRegistroMsg('Você já está editando outra atividade. Salve ou cancele para continuar.', 'error');
     return;
   }
 
   if (activeEditKey === editKey) {
-    if (registroMsg) setRegistroMsg('Esta atividade já está em edição.');
+    if (registroMsg) setRegistroMsg('Esta atividade já está em edição. Ajuste os campos e toque em "Salvar edição".');
     return;
   }
 
@@ -2729,7 +2729,7 @@ function iniciarEdicaoAtividadeUI(item) {
     saveBtn.setAttribute('onclick', 'salvarEdicaoAtividade()');
   }
 
-  if (registroMsg) setRegistroMsg('Editando atividade.');
+  if (registroMsg) setRegistroMsg('Editando atividade. Ajuste os campos e toque em "Salvar edição".');
 
   if (currentPainel && Array.isArray(currentPainel.atividades)) {
     sincronizarPainelComDesafioEmFoco();
@@ -2761,11 +2761,11 @@ async function excluirAtividadeUI(item, btnExcluir) {
   }
 
   if (activityMutationInProgress) {
-    setRegistroMsg('Aguarde a ação atual terminar.', 'loading');
+    setRegistroMsg('Aguarde a conclusão da ação atual para continuar.', 'loading');
     return;
   }
 
-  const confirmar = confirm('Deseja excluir esta atividade?');
+  const confirmar = confirm('Confirma a exclusão desta atividade? Essa ação não pode ser desfeita.');
   if (!confirmar) {
     return;
   }
@@ -2803,12 +2803,12 @@ async function excluirAtividadeUI(item, btnExcluir) {
 
     cancelarEdicaoAtividadeUI();
     setRegistroCardState('success');
-    setRegistroMsg('Atividade excluída.', 'success', 1800);
+    setRegistroMsg('Atividade excluída com sucesso.', 'success', 1800);
     renderAtividadesState('loading', 'Atualizando atividades registradas...', 'Removendo a atividade da lista para mostrar a versão mais recente.');
     shouldReloadPainel = true;
     removedWithSuccess = true;
   } catch (err) {
-    setRegistroMsg('Erro ao excluir atividade.', 'error');
+    setRegistroMsg('Não foi possível excluir a atividade.', 'error');
     console.error(err);
   } finally {
     pendingDeletionKeys.delete(deletionKey);
