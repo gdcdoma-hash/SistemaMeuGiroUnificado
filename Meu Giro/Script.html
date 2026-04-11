@@ -1812,14 +1812,14 @@ function renderDesafiosPainel(painel) {
     return isDesafioAtivo_(item);
   });
   var desafiosHistorico = normalizarListaDesafiosPainel_(painel.desafios_historico).filter(function(item) {
-    return !isDesafioAtivo_(item);
+    return isDesafioHistoricoElegivel_(item);
   });
   var desafiosFallback = normalizarListaDesafiosPainel_(painel.desafios);
 
   if (desafiosFallback.length) {
     if (!desafiosAtivos.length && !desafiosHistorico.length) {
       desafiosAtivos = desafiosFallback.filter(function(item) { return isDesafioAtivo_(item); });
-      desafiosHistorico = desafiosFallback.filter(function(item) { return !isDesafioAtivo_(item); });
+      desafiosHistorico = desafiosFallback.filter(function(item) { return isDesafioHistoricoElegivel_(item); });
     } else {
       var chavesAtivos = mapearChavesDesafiosBase_(desafiosAtivos);
       var chavesHistorico = mapearChavesDesafiosBase_(desafiosHistorico);
@@ -1830,7 +1830,7 @@ function renderDesafiosPainel(painel) {
         if (isDesafioAtivo_(item)) {
           desafiosAtivos.push(item);
           chavesAtivos[chave] = true;
-        } else {
+        } else if (isDesafioHistoricoElegivel_(item)) {
           desafiosHistorico.push(item);
           chavesHistorico[chave] = true;
         }
@@ -1844,6 +1844,8 @@ function renderDesafiosPainel(painel) {
       return !ativosMap[getDesafioBaseKey_(item)];
     });
   }
+
+  desafiosHistorico.sort(compareDesafioHistorico_);
 
   renderDesafiosAtivosCarrossel('desafios-ativos-lista', desafiosAtivos, {
     emptyTitle: 'Nenhum desafio ativo no momento.',
@@ -2114,6 +2116,32 @@ function mapearChavesDesafiosBase_(lista) {
 
 function isDesafioAtivo_(desafio) {
   return String((desafio && desafio.status_apuracao) || '').trim().toUpperCase() === 'ATIVO';
+}
+
+function isDesafioHistoricoElegivel_(desafio) {
+  var status = String((desafio && desafio.status_apuracao) || '').trim().toUpperCase();
+  var statusHistorico = {
+    CONCLUIDO: true,
+    EXPIRADO: true,
+    CANCELADO: true,
+    DESISTENTE: true,
+    ENCERRADO: true
+  };
+  return !!statusHistorico[status];
+}
+
+function compareDesafioHistorico_(a, b) {
+  var fimA = String((a && a.periodo_fim) || '').trim();
+  var fimB = String((b && b.periodo_fim) || '').trim();
+  if (fimA !== fimB) return fimB.localeCompare(fimA);
+
+  var inicioA = String((a && a.periodo_inicio) || '').trim();
+  var inicioB = String((b && b.periodo_inicio) || '').trim();
+  if (inicioA !== inicioB) return inicioB.localeCompare(inicioA);
+
+  var nomeA = String((a && (a.nome_desafio || a.nome || a.titulo)) || '').trim();
+  var nomeB = String((b && (b.nome_desafio || b.nome || b.titulo)) || '').trim();
+  return nomeA.localeCompare(nomeB);
 }
 
 function isMesmoDesafio(a, b) {

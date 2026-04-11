@@ -119,11 +119,11 @@ function getPainelUsuario(idDgmb) {
         atividades: atividades,
         desafios: desafiosConsolidados,
         desafios_ativos: desafiosConsolidados.filter(function(d) {
-          return painelMG_norm_(d && d.status_apuracao).toUpperCase() === 'ATIVO';
+          return painelMG_isStatusAtivo_(d && d.status_apuracao);
         }),
         desafios_historico: desafiosConsolidados.filter(function(d) {
-          return painelMG_norm_(d && d.status_apuracao).toUpperCase() !== 'ATIVO';
-        }),
+          return painelMG_isStatusHistorico_(d && d.status_apuracao);
+        }).sort(painelMG_compareHistoricoDesafios_),
         totalPedalado: realizadoPainel,
         total_pedalado: realizadoPainel
       }
@@ -514,6 +514,38 @@ function painelMG_normalizarDataAtividade_(value) {
 
 function painelMG_norm_(value) {
   return String(value || '').trim();
+}
+
+function painelMG_normalizarStatus_(status) {
+  return painelMG_norm_(status).toUpperCase();
+}
+
+function painelMG_isStatusAtivo_(status) {
+  return painelMG_normalizarStatus_(status) === 'ATIVO';
+}
+
+function painelMG_isStatusHistorico_(status) {
+  var normalizado = painelMG_normalizarStatus_(status);
+  var statusFinais = {
+    CONCLUIDO: true,
+    EXPIRADO: true,
+    CANCELADO: true,
+    DESISTENTE: true,
+    ENCERRADO: true
+  };
+  return !!statusFinais[normalizado];
+}
+
+function painelMG_compareHistoricoDesafios_(a, b) {
+  var fimA = painelMG_normalizarDataISO_(a && a.periodo_fim);
+  var fimB = painelMG_normalizarDataISO_(b && b.periodo_fim);
+  if (fimA !== fimB) return String(fimB || '').localeCompare(String(fimA || ''));
+
+  var inicioA = painelMG_normalizarDataISO_(a && a.periodo_inicio);
+  var inicioB = painelMG_normalizarDataISO_(b && b.periodo_inicio);
+  if (inicioA !== inicioB) return String(inicioB || '').localeCompare(String(inicioA || ''));
+
+  return String((a && a.nome_desafio) || '').localeCompare(String((b && b.nome_desafio) || ''));
 }
 
 function painelMG_toNumber_(value) {
