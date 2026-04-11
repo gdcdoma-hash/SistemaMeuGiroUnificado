@@ -4,7 +4,7 @@ function getRanking(idDgmb, idDesafio, idItemEstoque) {
     var desafioSolicitado = rankingMG_norm_(idDesafio);
     var itemSolicitado = rankingMG_norm_(idItemEstoque);
     if (!idUsuario) {
-      return { ok: false, msg: 'ID do usuário não informado.' };
+      return { ok: false, data: [], total: 0, msg: 'ID do usuário não informado.' };
     }
 
     var pessoas = getAllObjects_(SHEETS.PESSOAS);
@@ -133,6 +133,8 @@ function getRanking(idDgmb, idDesafio, idItemEstoque) {
   } catch (err) {
     return {
       ok: false,
+      data: [],
+      total: 0,
       msg: err && err.message ? err.message : 'Erro ao carregar ranking.'
     };
   }
