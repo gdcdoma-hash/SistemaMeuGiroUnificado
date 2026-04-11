@@ -75,6 +75,29 @@ function readInputValue(inputEl) {
   return String((inputEl && inputEl.value) || '').trim();
 }
 
+function sanitizeKmInputValue(value) {
+  var cleaned = String(value || '')
+    .replace(/\s+/g, '')
+    .replace(/[^0-9.,]/g, '');
+  var out = '';
+  var sepUsed = false;
+
+  for (var i = 0; i < cleaned.length; i++) {
+    var ch = cleaned.charAt(i);
+    if (/\d/.test(ch)) {
+      out += ch;
+      continue;
+    }
+
+    if ((ch === '.' || ch === ',') && !sepUsed && out.length > 0) {
+      out += ch;
+      sepUsed = true;
+    }
+  }
+
+  return out;
+}
+
 function getRegistroSubmitButton() {
   return document.getElementById('btn-salvar');
 }
@@ -354,6 +377,7 @@ function applyCpfMask(value) {
 
 document.addEventListener('DOMContentLoaded', function() {
   const cpfInput = document.getElementById('cpf');
+  const kmInput = document.getElementById('km-atividade');
   const params = new URLSearchParams(window.location.search);
   const cpfPrefill = onlyDigits(params.get('cpf') || '');
 
@@ -364,6 +388,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     cpfInput.addEventListener('input', function(e) {
       e.target.value = applyCpfMask(e.target.value);
+    });
+  }
+
+  if (kmInput) {
+    kmInput.addEventListener('input', function(e) {
+      e.target.value = sanitizeKmInputValue(e.target.value);
     });
   }
 
@@ -2779,6 +2809,7 @@ function addKm(value) {
   const input = document.getElementById('km-atividade');
   if (!input) return;
 
+  input.value = sanitizeKmInputValue(input.value);
   const current = toFiniteNumber(readInputValue(input).replace(',', '.'), 0);
   const next = current + toFiniteNumber(value, 0);
   input.value = formatNumber(next);
