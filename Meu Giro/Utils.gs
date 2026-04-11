@@ -374,11 +374,30 @@ function normalizarDataISO_(value) {
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
     return s.slice(6, 10) + '-' + s.slice(3, 5) + '-' + s.slice(0, 2);
   }
+  if (/^\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}(?::\d{2})?$/.test(s)) {
+    return s.slice(6, 10) + '-' + s.slice(3, 5) + '-' + s.slice(0, 2);
+  }
   var d = new Date(s);
   if (!isNaN(d.getTime())) {
     return Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd');
   }
   return '';
+}
+
+function isDataIsoValida_(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || '').trim());
+}
+
+function atividadeDentroPeriodoOficial_(dataAtividadeIso, periodoInicioIso, periodoFimIso) {
+  var dataAtividade = String(dataAtividadeIso || '').trim();
+  var inicio = String(periodoInicioIso || '').trim();
+  var fim = String(periodoFimIso || '').trim();
+
+  if (!isDataIsoValida_(dataAtividade) || !isDataIsoValida_(inicio) || !isDataIsoValida_(fim)) {
+    return false;
+  }
+
+  return dataAtividade >= inicio && dataAtividade <= fim;
 }
 
 function buildPeriodoOficialPorAbaEId_(ss) {
@@ -653,8 +672,7 @@ function atualizarMeuGiroResumo_(idDgmb) {
     if (apto) {
       for (var r = 0; r < registros.length; r++) {
         var reg = registros[r];
-        if (!reg.data_atividade) continue;
-        if (reg.data_atividade >= inicio && reg.data_atividade <= fim) {
+        if (atividadeDentroPeriodoOficial_(reg.data_atividade, inicio, fim)) {
           distancia += Number(reg.km || 0);
         }
       }
