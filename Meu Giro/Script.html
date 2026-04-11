@@ -1804,16 +1804,40 @@ function setTextById(id, text) {
 }
 
 function renderDesafiosPainel(painel) {
-  var desafiosAtivos = Array.isArray(painel.desafios_ativos) ? painel.desafios_ativos : [];
-  var desafiosHistorico = Array.isArray(painel.desafios_historico) ? painel.desafios_historico : [];
-  var desafiosFallback = Array.isArray(painel.desafios) ? painel.desafios : [];
+  var desafiosAtivos = normalizarListaDesafiosPainel_(painel.desafios_ativos).filter(function(item) {
+    return isDesafioAtivo_(item);
+  });
+  var desafiosHistorico = normalizarListaDesafiosPainel_(painel.desafios_historico).filter(function(item) {
+    return !isDesafioAtivo_(item);
+  });
+  var desafiosFallback = normalizarListaDesafiosPainel_(painel.desafios);
 
-  if (!desafiosAtivos.length && !desafiosHistorico.length && desafiosFallback.length) {
-    desafiosAtivos = desafiosFallback.filter(function(item) {
-      return String((item && item.status_apuracao) || '').toUpperCase() === 'ATIVO';
-    });
-    desafiosHistorico = desafiosFallback.filter(function(item) {
-      return String((item && item.status_apuracao) || '').toUpperCase() !== 'ATIVO';
+  if (desafiosFallback.length) {
+    if (!desafiosAtivos.length && !desafiosHistorico.length) {
+      desafiosAtivos = desafiosFallback.filter(function(item) { return isDesafioAtivo_(item); });
+      desafiosHistorico = desafiosFallback.filter(function(item) { return !isDesafioAtivo_(item); });
+    } else {
+      var chavesAtivos = mapearChavesDesafios_(desafiosAtivos);
+      var chavesHistorico = mapearChavesDesafios_(desafiosHistorico);
+      desafiosFallback.forEach(function(item) {
+        var chave = getDesafioIdentityKey_(item);
+        if (!chave) return;
+        if (chavesAtivos[chave] || chavesHistorico[chave]) return;
+        if (isDesafioAtivo_(item)) {
+          desafiosAtivos.push(item);
+          chavesAtivos[chave] = true;
+        } else {
+          desafiosHistorico.push(item);
+          chavesHistorico[chave] = true;
+        }
+      });
+    }
+  }
+
+  if (desafiosAtivos.length && desafiosHistorico.length) {
+    var ativosMap = mapearChavesDesafios_(desafiosAtivos);
+    desafiosHistorico = desafiosHistorico.filter(function(item) {
+      return !ativosMap[getDesafioIdentityKey_(item)];
     });
   }
 
@@ -1866,6 +1890,7 @@ function renderDesafiosAtivosCarrossel(containerId, lista, options) {
 
   if (!itens.length) {
     desafioEmFocoKey = '';
+    salvarDesafioEmFocoNaSessao('');
     var titulo = options.emptyTitle || 'Nenhum desafio para exibir.';
     var descricao = options.emptyDescription || 'Novos desafios serão exibidos aqui assim que estiverem disponíveis.';
     box.innerHTML =
@@ -2042,6 +2067,45 @@ function getDesafioStatusClass(status) {
   if (normalizado === 'EXPIRADO') return 'desafio-status-expirado';
   if (normalizado === 'INAPTO') return 'desafio-status-inapto';
   return 'desafio-status-neutro';
+}
+
+function normalizarListaDesafiosPainel_(lista) {
+  if (!Array.isArray(lista) || !lista.length) return [];
+  var out = [];
+  var vistos = {};
+  for (var i = 0; i < lista.length; i++) {
+    var item = lista[i];
+    var chave = getDesafioIdentityKey_(item);
+    if (!chave || vistos[chave]) continue;
+    vistos[chave] = true;
+    out.push(item);
+  }
+  return out;
+}
+
+function mapearChavesDesafios_(lista) {
+  var map = {};
+  var itens = Array.isArray(lista) ? lista : [];
+  for (var i = 0; i < itens.length; i++) {
+    var chave = getDesafioIdentityKey_(itens[i]);
+    if (chave) map[chave] = true;
+  }
+  return map;
+}
+
+function getDesafioIdentityKey_(desafio) {
+  if (!desafio) return '';
+  var idDesafio = String(desafio.id_desafio || '').trim();
+  var idItem = String(desafio.id_item_estoque || '').trim();
+  var inicio = String(desafio.periodo_inicio || '').trim();
+  var fim = String(desafio.periodo_fim || '').trim();
+  var status = String(desafio.status_apuracao || '').trim().toUpperCase();
+  if (!idDesafio && !idItem) return '';
+  return [idDesafio, idItem, inicio, fim, status].join('|');
+}
+
+function isDesafioAtivo_(desafio) {
+  return String((desafio && desafio.status_apuracao) || '').trim().toUpperCase() === 'ATIVO';
 }
 
 function isMesmoDesafio(a, b) {
