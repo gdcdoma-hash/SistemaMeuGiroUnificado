@@ -118,8 +118,12 @@ function getPainelUsuario(idDgmb) {
 
         atividades: atividades,
         desafios: desafiosConsolidados,
-        desafios_ativos: desafiosConsolidados.filter(function(d) { return d.status_apuracao === 'ATIVO'; }),
-        desafios_historico: desafiosConsolidados.filter(function(d) { return d.status_apuracao !== 'ATIVO'; }),
+        desafios_ativos: desafiosConsolidados.filter(function(d) {
+          return painelMG_norm_(d && d.status_apuracao).toUpperCase() === 'ATIVO';
+        }),
+        desafios_historico: desafiosConsolidados.filter(function(d) {
+          return painelMG_norm_(d && d.status_apuracao).toUpperCase() !== 'ATIVO';
+        }),
         totalPedalado: realizadoPainel,
         total_pedalado: realizadoPainel
       }
