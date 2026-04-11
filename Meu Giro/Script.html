@@ -39,6 +39,12 @@ let desafiosAtivosCarouselIndex = 0;
 let desafioEmFocoKey = '';
 const DESAFIO_CARROSSEL_SESSION_KEY = 'meuGiro.desafioEmFocoKey';
 const LOGIN_SESSION_STORAGE_KEY = 'meuGiro.loginSession';
+const PAINEL_STATE_STORAGE_KEY = 'meuGiro.painelState';
+const TELAS_RELEVANTES_SESSAO = {
+  painel: true,
+  ranking: true
+};
+let telaPrivadaRestaurada = 'painel';
 const statusMessageTimers = {};
 
 function syncGlobalBusyState() {
@@ -64,6 +70,9 @@ function showScreen(name) {
   if (target) {
     target.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    persistirEstadoPainel({
+      tela: String(name || '').trim()
+    });
   }
 }
 
@@ -315,9 +324,15 @@ function setTransientStatus(elementId, message, variant, timeoutMs) {
 function persistirSessaoLogin(user) {
   var id = String(user && user.id_dgmb || '').trim();
   if (!id) return;
+  var nome = String(user && user.nome || '').trim();
+  var cidadeUf = String(user && user.cidade_uf || '').trim();
 
   try {
-    localStorage.setItem(LOGIN_SESSION_STORAGE_KEY, JSON.stringify({ id_dgmb: id }));
+    localStorage.setItem(LOGIN_SESSION_STORAGE_KEY, JSON.stringify({
+      id_dgmb: id,
+      nome: nome,
+      cidade_uf: cidadeUf
+    }));
   } catch (err) {
     console.warn('Não foi possível persistir a sessão de login.', err);
   }
@@ -338,9 +353,74 @@ function recuperarSessaoLoginPersistida() {
 
     var parsed = JSON.parse(raw);
     var id = String(parsed && parsed.id_dgmb || '').trim();
-    return id ? { id_dgmb: id } : null;
+    if (!id) return null;
+
+    return {
+      id_dgmb: id,
+      nome: String(parsed && parsed.nome || '').trim(),
+      cidade_uf: String(parsed && parsed.cidade_uf || '').trim()
+    };
   } catch (err) {
     console.warn('Não foi possível recuperar a sessão persistida.', err);
+    return null;
+  }
+}
+
+function persistirEstadoPainel(partialState) {
+  try {
+    var stateAtual = recuperarEstadoPainelPersistido() || {};
+    var partial = partialState || {};
+    var proximoEstado = {
+      tela: stateAtual.tela || 'painel',
+      desafio_em_foco: stateAtual.desafio_em_foco || ''
+    };
+    var tela = String(partial.tela || '').trim();
+    var desafio = String(partial.desafio_em_foco || '').trim();
+
+    if (tela) {
+      proximoEstado.tela = tela;
+    }
+    if (partial.hasOwnProperty('desafio_em_foco')) {
+      proximoEstado.desafio_em_foco = desafio;
+    }
+
+    if (!TELAS_RELEVANTES_SESSAO[proximoEstado.tela]) {
+      proximoEstado.tela = 'painel';
+    }
+
+    localStorage.setItem(PAINEL_STATE_STORAGE_KEY, JSON.stringify(proximoEstado));
+  } catch (err) {
+    console.warn('Não foi possível persistir o estado do painel.', err);
+  }
+}
+
+function limparEstadoPainelPersistido() {
+  try {
+    localStorage.removeItem(PAINEL_STATE_STORAGE_KEY);
+  } catch (err) {
+    console.warn('Não foi possível limpar o estado persistido do painel.', err);
+  }
+}
+
+function recuperarEstadoPainelPersistido() {
+  try {
+    var raw = localStorage.getItem(PAINEL_STATE_STORAGE_KEY);
+    if (!raw) return null;
+
+    var parsed = JSON.parse(raw);
+    var tela = String(parsed && parsed.tela || '').trim();
+    var desafio = String(parsed && parsed.desafio_em_foco || '').trim();
+
+    if (!TELAS_RELEVANTES_SESSAO[tela]) {
+      tela = 'painel';
+    }
+
+    return {
+      tela: tela || 'painel',
+      desafio_em_foco: desafio
+    };
+  } catch (err) {
+    console.warn('Não foi possível recuperar o estado persistido do painel.', err);
     return null;
   }
 }
@@ -348,11 +428,19 @@ function recuperarSessaoLoginPersistida() {
 function tentarRestaurarSessaoPersistida() {
   var sessao = recuperarSessaoLoginPersistida();
   if (!sessao || !sessao.id_dgmb) return false;
+  var estadoPainel = recuperarEstadoPainelPersistido();
+  telaPrivadaRestaurada = estadoPainel && estadoPainel.tela ? estadoPainel.tela : 'painel';
+
+  if (estadoPainel && estadoPainel.desafio_em_foco) {
+    desafioEmFocoKey = String(estadoPainel.desafio_em_foco).trim();
+  } else {
+    desafioEmFocoKey = String(carregarDesafioEmFocoDaSessao() || '').trim();
+  }
 
   currentUser = {
     id_dgmb: sessao.id_dgmb,
-    nome: '',
-    cidade_uf: ''
+    nome: sessao.nome || '',
+    cidade_uf: sessao.cidade_uf || ''
   };
 
   showScreen('painel');
@@ -362,6 +450,7 @@ function tentarRestaurarSessaoPersistida() {
 
 function tratarFalhaRestauracaoSessao() {
   limparSessaoLoginPersistida();
+  limparEstadoPainelPersistido();
   currentUser = null;
   showScreen('login');
   setTransientStatus('login-msg', 'Sua sessão expirou. Entre novamente.', 'error');
@@ -1502,6 +1591,11 @@ function carregarPainel(triggerSource) {
       var shouldPlayRankingPreviewFeedback = painelProgressFeedbackMode === 'activity-registered';
       var shouldPlayRitmoAgoraFeedback = painelProgressFeedbackMode === 'activity-registered';
       currentPainel = res.data || {};
+      if (currentPainel && currentUser) {
+        currentUser.nome = String(currentPainel.nome || currentUser.nome || '').trim();
+        currentUser.cidade_uf = String(currentPainel.cidade_uf || currentUser.cidade_uf || '').trim();
+        persistirSessaoLogin(currentUser);
+      }
       renderPainel(currentPainel);
       playTotalPedaladoFeedback(previousPainel, currentPainel);
       playPainelProgressFeedback(previousPainel, currentPainel);
@@ -1514,6 +1608,8 @@ function carregarPainel(triggerSource) {
 
       if (painelReloadPending) {
         carregarPainel();
+      } else if (triggerSource === 'restored' && telaPrivadaRestaurada === 'ranking') {
+        carregarRanking('restored');
       }
     })
     .withFailureHandler(function(err) {
@@ -1571,9 +1667,13 @@ function salvarDesafioEmFocoNaSessao(chave) {
   try {
     if (!valor) {
       sessionStorage.removeItem(DESAFIO_CARROSSEL_SESSION_KEY);
+      localStorage.removeItem(DESAFIO_CARROSSEL_SESSION_KEY);
+      persistirEstadoPainel({ desafio_em_foco: '' });
       return;
     }
     sessionStorage.setItem(DESAFIO_CARROSSEL_SESSION_KEY, valor);
+    localStorage.setItem(DESAFIO_CARROSSEL_SESSION_KEY, valor);
+    persistirEstadoPainel({ desafio_em_foco: valor });
   } catch (err) {
     console.warn('Não foi possível salvar o desafio em foco na sessão.', err);
   }
@@ -1581,7 +1681,10 @@ function salvarDesafioEmFocoNaSessao(chave) {
 
 function carregarDesafioEmFocoDaSessao() {
   try {
-    return String(sessionStorage.getItem(DESAFIO_CARROSSEL_SESSION_KEY) || '').trim();
+    var valorSessao = String(sessionStorage.getItem(DESAFIO_CARROSSEL_SESSION_KEY) || '').trim();
+    if (valorSessao) return valorSessao;
+
+    return String(localStorage.getItem(DESAFIO_CARROSSEL_SESSION_KEY) || '').trim();
   } catch (err) {
     console.warn('Não foi possível recuperar o desafio em foco da sessão.', err);
     return '';
@@ -2865,6 +2968,8 @@ function openRankingPrivado() {
 
 function logoutUser() {
   limparSessaoLoginPersistida();
+  salvarDesafioEmFocoNaSessao('');
+  limparEstadoPainelPersistido();
   currentUser = null;
   currentPainel = null;
   rankingLoadInProgress = false;
