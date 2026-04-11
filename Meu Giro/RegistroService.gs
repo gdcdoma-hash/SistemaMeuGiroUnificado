@@ -72,8 +72,9 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
 
     return {
       ok:false,
-      code:'REGISTRO_ATIVIDADE_ERROR',
-      msg:err && err.message ? err.message : 'Erro interno ao registrar atividade na aba REGISTRO_KM.'
+      code:'REGISTRAR_ATIVIDADE_EXCEPTION',
+      msg:err && err.message ? err.message : 'Erro interno ao registrar atividade na aba REGISTRO_KM.',
+      debug:String(err && err.stack ? err.stack : err)
     };
 
   }
@@ -235,8 +236,9 @@ function editarAtividade(payload) {
   } catch (err) {
     return {
       ok: false,
-      code: 'EDICAO_ATIVIDADE_ERROR',
-      msg: err && err.message ? err.message : 'Erro interno ao editar atividade na aba REGISTRO_KM.'
+      code: 'EDITAR_ATIVIDADE_EXCEPTION',
+      msg: err && err.message ? err.message : 'Erro interno ao editar atividade na aba REGISTRO_KM.',
+      debug: String(err && err.stack ? err.stack : err)
     };
   }
 }
