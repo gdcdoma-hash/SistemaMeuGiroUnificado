@@ -157,6 +157,29 @@ function formatDateToYMD_(value) {
   return s;
 }
 
+function normalizarTimestampEdicao_(valor) {
+  if (!valor) return '';
+
+  if (Object.prototype.toString.call(valor) === '[object Date]' && !isNaN(valor.getTime())) {
+    return Utilities.formatDate(valor, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  }
+
+  var s = String(valor).trim();
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+  if (/^\d{2}\/\d{2}\/\d{4}/.test(s)) {
+    return s.slice(6, 10) + '-' + s.slice(3, 5) + '-' + s.slice(0, 2);
+  }
+
+  var d = new Date(s);
+  if (!isNaN(d.getTime())) {
+    return Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  }
+
+  return '';
+}
+
 /**
  * Lê uma aba inteira e devolve um array de objetos
  * usando a primeira linha como cabeçalho.

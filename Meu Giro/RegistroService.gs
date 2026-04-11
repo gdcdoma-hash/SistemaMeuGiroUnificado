@@ -252,16 +252,6 @@ function parseKmInputSeguro_(value) {
   return isFinite(parsed) ? parsed : NaN;
 }
 
-function normalizarTimestampEdicao_(valor) {
-  if (valor === null || valor === undefined || valor === '') return '';
-
-  if (Object.prototype.toString.call(valor) === '[object Date]' && !isNaN(valor.getTime())) {
-    return Utilities.formatDate(valor, Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
-  }
-
-  return String(valor).trim();
-}
-
 function normalizarDataEdicao_(valor) {
   if (valor === null || valor === undefined || valor === '') return '';
 
