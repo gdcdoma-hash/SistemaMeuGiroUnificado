@@ -2413,6 +2413,53 @@ function renderAtividadesState(variant, title, description) {
     '</div>';
 }
 
+
+function getGoogleScriptErrorMessage(err, fallback) {
+  const fallbackText = String(fallback || 'Erro inesperado.').trim() || 'Erro inesperado.';
+
+  if (typeof err === 'string') {
+    const text = err.trim();
+    if (text) return 'string: ' + text;
+    return fallbackText;
+  }
+
+  if (err && typeof err === 'object') {
+    const parts = [];
+
+    parts.push('type=' + typeof err);
+
+    const fields = ['name', 'message', 'msg', 'details', 'error', 'stack'];
+    for (var i = 0; i < fields.length; i++) {
+      const key = fields[i];
+      const value = err[key];
+      if (value === undefined || value === null) continue;
+      const text = String(value).trim();
+      if (!text || text === '[object Object]' || text.toLowerCase() === 'undefined') continue;
+      parts.push(key + '=' + text);
+    }
+
+    try {
+      const keys = Object.keys(err);
+      if (keys && keys.length) {
+        parts.push('keys=' + keys.join(','));
+      }
+    } catch (keysErr) {}
+
+    try {
+      const serialized = JSON.stringify(err);
+      if (serialized && serialized !== '{}' && serialized !== '[]') {
+        parts.push('json=' + serialized);
+      }
+    } catch (jsonErr) {}
+
+    if (parts.length) {
+      return parts.join(' | ');
+    }
+  }
+
+  return fallbackText;
+}
+
 function toFiniteNumber(value, fallback) {
   const n = Number(value);
   return Number.isFinite(n) ? n : Number(fallback || 0);
@@ -2496,7 +2543,7 @@ async function salvarAtividade(forcarDuplicidade) {
         return;
       }
 
-      setRegistroMsg((res && res.msg) ? res.msg : 'Não foi possível registrar a atividade.', 'error');
+      setRegistroMsg(getGoogleScriptErrorMessage(res, 'Não foi possível registrar a atividade.'), 'error');
       return;
     }
 
@@ -2515,9 +2562,7 @@ async function salvarAtividade(forcarDuplicidade) {
     nextMessage = 'success';
   } catch (err) {
     nextMessage = 'error';
-    const errMsg = (err && err.message)
-      ? String(err.message)
-      : 'Erro ao registrar atividade.';
+    const errMsg = getGoogleScriptErrorMessage(err, 'Erro ao registrar atividade.');
     setRegistroMsg(errMsg, 'error');
     console.error(err);
   } finally {
@@ -2609,7 +2654,7 @@ async function salvarEdicaoAtividade() {
 
     if (!res || !res.ok) {
       nextMessage = 'error';
-      setRegistroMsg((res && res.msg) ? res.msg : 'Não foi possível salvar a edição.', 'error');
+      setRegistroMsg(getGoogleScriptErrorMessage(res, 'Não foi possível salvar a edição.'), 'error');
       return;
     }
 
@@ -2629,9 +2674,7 @@ async function salvarEdicaoAtividade() {
     nextMessage = 'success';
   } catch (err) {
     nextMessage = 'error';
-    const errMsg = (err && err.message)
-      ? String(err.message)
-      : 'Erro ao salvar edição.';
+    const errMsg = getGoogleScriptErrorMessage(err, 'Erro ao salvar edição.');
     setRegistroMsg(errMsg, 'error');
     console.error(err);
   } finally {
