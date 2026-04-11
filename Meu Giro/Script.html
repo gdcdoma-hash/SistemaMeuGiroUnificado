@@ -2485,6 +2485,7 @@ async function salvarAtividade(forcarDuplicidade) {
     });
 
     if (!res || !res.ok) {
+      nextMessage = 'error';
       if (res && res.code === 'DUPLICIDADE' && !forcarDuplicidade) {
         const confirmar = confirm('Você já registrou uma atividade com esse valor hoje. Deseja continuar?');
         if (confirmar) {
@@ -2513,7 +2514,11 @@ async function salvarAtividade(forcarDuplicidade) {
     shouldReloadPainel = true;
     nextMessage = 'success';
   } catch (err) {
-    setRegistroMsg('Erro ao registrar atividade.', 'error');
+    nextMessage = 'error';
+    const errMsg = (err && err.message)
+      ? String(err.message)
+      : 'Erro ao registrar atividade.';
+    setRegistroMsg(errMsg, 'error');
     console.error(err);
   } finally {
     finishLoading(nextMessage);
@@ -2603,6 +2608,7 @@ async function salvarEdicaoAtividade() {
     });
 
     if (!res || !res.ok) {
+      nextMessage = 'error';
       setRegistroMsg((res && res.msg) ? res.msg : 'Não foi possível salvar a edição.', 'error');
       return;
     }
@@ -2622,7 +2628,11 @@ async function salvarEdicaoAtividade() {
     shouldReloadPainel = true;
     nextMessage = 'success';
   } catch (err) {
-    setRegistroMsg('Erro ao salvar edição.', 'error');
+    nextMessage = 'error';
+    const errMsg = (err && err.message)
+      ? String(err.message)
+      : 'Erro ao salvar edição.';
+    setRegistroMsg(errMsg, 'error');
     console.error(err);
   } finally {
     finishLoading(nextMessage);
