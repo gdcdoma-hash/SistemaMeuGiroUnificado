@@ -2475,6 +2475,7 @@ async function salvarAtividade(forcarDuplicidade) {
   };
 
   let nextMessage = '';
+  let shouldReloadPainel = false;
   try {
     const res = await new Promise(function(resolve, reject) {
       google.script.run
@@ -2509,13 +2510,16 @@ async function salvarAtividade(forcarDuplicidade) {
     });
     pendingTotalPedaladoFeedback = true;
     painelProgressFeedbackMode = 'activity-registered';
-    carregarPainel();
+    shouldReloadPainel = true;
     nextMessage = 'success';
   } catch (err) {
     setRegistroMsg('Erro ao registrar atividade.', 'error');
     console.error(err);
   } finally {
     finishLoading(nextMessage);
+    if (shouldReloadPainel || painelReloadPending) {
+      carregarPainel();
+    }
   }
 }
 
@@ -2583,6 +2587,7 @@ async function salvarEdicaoAtividade() {
   };
 
   let nextMessage = '';
+  let shouldReloadPainel = false;
   try {
     const res = await new Promise(function(resolve, reject) {
       google.script.run
@@ -2614,13 +2619,16 @@ async function salvarEdicaoAtividade() {
     });
     pendingTotalPedaladoFeedback = true;
     painelProgressFeedbackMode = 'activity-registered';
-    carregarPainel();
+    shouldReloadPainel = true;
     nextMessage = 'success';
   } catch (err) {
     setRegistroMsg('Erro ao salvar edição.', 'error');
     console.error(err);
   } finally {
     finishLoading(nextMessage);
+    if (shouldReloadPainel || painelReloadPending) {
+      carregarPainel();
+    }
   }
 }
 function iniciarEdicaoAtividadeUI(item) {
@@ -2722,6 +2730,7 @@ async function excluirAtividadeUI(item, btnExcluir) {
   setRegistroMsg('');
 
   let removedWithSuccess = false;
+  let shouldReloadPainel = false;
   try {
     const res = await new Promise(function(resolve, reject) {
       google.script.run
@@ -2743,7 +2752,7 @@ async function excluirAtividadeUI(item, btnExcluir) {
     setRegistroCardState('success');
     setRegistroMsg('Atividade excluída.', 'success', 1800);
     renderAtividadesState('loading', 'Atualizando atividades registradas...', 'Removendo a atividade da lista para mostrar a versão mais recente.');
-    carregarPainel();
+    shouldReloadPainel = true;
     removedWithSuccess = true;
   } catch (err) {
     setRegistroMsg('Erro ao excluir atividade.', 'error');
@@ -2759,6 +2768,9 @@ async function excluirAtividadeUI(item, btnExcluir) {
     if (btnExcluir) {
       btnExcluir.disabled = false;
       btnExcluir.innerText = 'Excluir';
+    }
+    if (shouldReloadPainel || painelReloadPending) {
+      carregarPainel();
     }
   }
 }
