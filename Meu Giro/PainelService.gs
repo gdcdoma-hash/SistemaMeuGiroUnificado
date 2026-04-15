@@ -536,6 +536,10 @@ function painelMG_isStatusHistorico_(status) {
   return !!statusFinais[normalizado];
 }
 
+function painelMG_normalizarDataISO_(value) {
+  return normalizarDataISO_(value);
+}
+
 function painelMG_compareHistoricoDesafios_(a, b) {
   var fimA = painelMG_normalizarDataISO_(a && a.periodo_fim);
   var fimB = painelMG_normalizarDataISO_(b && b.periodo_fim);
