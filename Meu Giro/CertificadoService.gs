@@ -1,3 +1,6 @@
+var CERTIFICADO_BACKGROUND_FILE_ID_ = '1vPHVb07i5fc5oKIM0g6LVdIE3JBze-ZR';
+var CERTIFICADO_PASTA_BASE_ID_ = '1GncBumQM3RAS6WIT0jHQPaIMKBlT7OHi';
+
 function gerarOuObterCertificadoDesafio(payload) {
   try {
     var contexto = certificadoBuscarContextoDesafio_(payload || {});
@@ -61,42 +64,211 @@ function gerarOuObterCertificadoDesafio(payload) {
 function gerarCertificadoDesafio_(contexto) {
   var ctx = contexto || {};
   var nomeArquivo = [
-    'Certificado',
+    'certificado',
     ctx.id_dgmb || 'sem-id',
     ctx.id_desafio || 'desafio'
   ].join('_') + '.pdf';
-  var conteudo = [
-    'CERTIFICADO DE CONCLUSÃO',
-    '',
-    'ID DGMB: ' + String(ctx.id_dgmb || ''),
-    'Desafio: ' + String(ctx.id_desafio || ''),
-    'Item: ' + String(ctx.id_item_estoque || ''),
-    'Status de validação: APROVADO',
-    'Data: ' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss')
-  ];
-  var html = HtmlService.createHtmlOutput(
-    '<html><body style=\"font-family:Arial,sans-serif;padding:24px;\">' +
-      conteudo.map(function(linha) {
-        return '<p style=\"margin:0 0 10px 0;\">' + String(linha || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p>';
-      }).join('') +
-    '</body></html>'
-  );
+  var dadosVisuais = certificadoBuscarDadosVisuais_(ctx);
+  var pastaDestino = certificadoGetOuCriarPastaDesafio_(ctx.id_desafio);
+  var arquivoExistente = certificadoBuscarArquivoExistente_(pastaDestino, nomeArquivo);
+  if (arquivoExistente) {
+    var urlExistente = String(arquivoExistente.getUrl() || '').trim();
+    if (urlExistente) {
+      certificadoSalvarLinkPlanilha_(ctx, urlExistente);
+      return { ok: true, url: urlExistente, reused: true };
+    }
+  }
+
+  var html = HtmlService.createHtmlOutput(gerarHtmlCertificadoDesafio_(ctx, dadosVisuais));
   var blobPdf = html.getBlob().getAs(MimeType.PDF).setName(nomeArquivo);
-  var arquivo = DriveApp.createFile(blobPdf);
+  var arquivo = pastaDestino.createFile(blobPdf);
   arquivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   var url = String(arquivo.getUrl() || '').trim();
   if (!url) {
     return { ok: false, code: 'CERTIFICADO_URL_INVALIDA', msg: 'Não foi possível gerar a URL do certificado.' };
   }
 
-  if (ctx.sheet_name && ctx.rowNumber && ctx.idx_link_certificado > -1) {
-    var sh = getSpreadsheet_().getSheetByName(ctx.sheet_name);
-    if (sh) {
-      sh.getRange(ctx.rowNumber, ctx.idx_link_certificado + 1).setValue(url);
-    }
-  }
+  certificadoSalvarLinkPlanilha_(ctx, url);
 
   return { ok: true, url: url };
+}
+
+function gerarHtmlCertificadoDesafio_(ctx, dados) {
+  var payload = dados || {};
+  var frase = 'Você não apenas concluiu o desafio. Você provou que é capaz de ir além.';
+  var dataGeracao = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy');
+  var backgroundDataUri = certGetBackgroundDataUri_();
+
+  return [
+    '<!DOCTYPE html>',
+    '<html>',
+    '<head>',
+      '<meta charset="UTF-8">',
+      '<style>',
+        '@page { size: A4 landscape; margin: 0; }',
+        'html, body { margin: 0; padding: 0; width: 100%; height: 100%; font-family: Arial, sans-serif; }',
+        '.page { width: 1123px; height: 794px; position: relative; overflow: hidden; color: #fff; }',
+        '.bg { position: absolute; inset: 0; background-image: url("' + certEscapeHtml_(backgroundDataUri) + '"); background-size: cover; background-position: center; }',
+        '.overlay { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,0.66) 0%, rgba(0,0,0,0.50) 45%, rgba(0,0,0,0.10) 70%, rgba(0,0,0,0.00) 100%); }',
+        '.content { position: relative; z-index: 2; width: 58%; padding: 122px 0 0 84px; }',
+        '.title { font-size: 42px; font-weight: 800; letter-spacing: 1px; margin: 0 0 14px 0; text-transform: uppercase; }',
+        '.name { font-size: 36px; font-weight: 700; margin: 0 0 10px 0; color: #ffd44d; line-height: 1.15; }',
+        '.subtitle { font-size: 20px; margin: 0 0 22px 0; color: #f4f4f4; }',
+        '.phrase { font-size: 18px; line-height: 1.5; margin: 0 0 26px 0; max-width: 95%; }',
+        '.grid { width: 92%; border-collapse: collapse; border-spacing: 0; }',
+        '.grid td { padding: 7px 0; vertical-align: top; border-bottom: 1px solid rgba(255,255,255,0.25); font-size: 16px; }',
+        '.grid td.label { width: 165px; color: #ffe8a2; font-weight: 700; text-transform: uppercase; font-size: 13px; letter-spacing: .6px; }',
+        '.footer { margin-top: 18px; font-size: 12px; color: #f2f2f2; opacity: .9; }',
+      '</style>',
+    '</head>',
+    '<body>',
+      '<div class="page">',
+        '<div class="bg"></div>',
+        '<div class="overlay"></div>',
+        '<div class="content">',
+          '<p class="title">Certificado</p>',
+          '<p class="name">' + certEscapeHtml_(payload.nome_participante || ('Participante ' + (ctx.id_dgmb || ''))) + '</p>',
+          '<p class="subtitle">Concluiu com sucesso o desafio <strong>' + certEscapeHtml_(payload.nome_desafio || ('ID ' + (ctx.id_desafio || ''))) + '</strong>.</p>',
+          '<p class="phrase">' + certEscapeHtml_(frase) + '</p>',
+          '<table class="grid">',
+            '<tr><td class="label">Meta</td><td>' + certEscapeHtml_(payload.meta_km) + '</td></tr>',
+            '<tr><td class="label">KM realizado</td><td>' + certEscapeHtml_(payload.km_realizado) + '</td></tr>',
+            '<tr><td class="label">Status</td><td>' + certEscapeHtml_(payload.status_desafio || 'CONCLUÍDO') + '</td></tr>',
+            '<tr><td class="label">Período</td><td>' + certEscapeHtml_(payload.periodo) + '</td></tr>',
+          '</table>',
+          '<p class="footer">ID DGMB: ' + certEscapeHtml_(ctx.id_dgmb || '') + ' • Desafio: ' + certEscapeHtml_(ctx.id_desafio || '') + ' • Emitido em: ' + certEscapeHtml_(dataGeracao) + '</p>',
+        '</div>',
+      '</div>',
+    '</body>',
+    '</html>'
+  ].join('');
+}
+
+function certificadoSalvarLinkPlanilha_(ctx, url) {
+  if (!(ctx && ctx.sheet_name && ctx.rowNumber && ctx.idx_link_certificado > -1)) return;
+  var sh = getSpreadsheet_().getSheetByName(ctx.sheet_name);
+  if (!sh) return;
+  var range = sh.getRange(ctx.rowNumber, ctx.idx_link_certificado + 1);
+  var atual = String(range.getValue() || '').trim();
+  if (atual === String(url || '').trim()) return;
+  range.setValue(url);
+}
+
+function certificadoBuscarArquivoExistente_(pasta, nomeArquivo) {
+  if (!pasta || !nomeArquivo) return null;
+  var arquivos = pasta.getFilesByName(nomeArquivo);
+  if (arquivos.hasNext()) return arquivos.next();
+  return null;
+}
+
+function certificadoBuscarDadosVisuais_(ctx) {
+  var resumo = certificadoBuscarResumoDesafio_(ctx.id_dgmb, ctx.id_desafio, ctx.id_item_estoque);
+  var nome = certificadoBuscarNomeParticipante_(ctx.id_dgmb);
+  var status = normalizeText_(resumo.status_apuracao || ctx.status_apuracao).toUpperCase();
+
+  return {
+    nome_participante: nome || '',
+    nome_desafio: resumo.nome_desafio || ('Desafio ' + String(ctx.id_desafio || '')),
+    meta_km: certFormatKm_(resumo.meta_km),
+    km_realizado: certFormatKm_(resumo.distancia_realizada),
+    status_desafio: status || 'CONCLUÍDO',
+    periodo: certFormatPeriodo_(resumo.periodo_inicio, resumo.periodo_fim)
+  };
+}
+
+function certificadoBuscarResumoDesafio_(idDgmb, idDesafio, idItemEstoque) {
+  var id = normalizeText_(idDgmb);
+  var desafio = normalizeText_(idDesafio);
+  var item = normalizeText_(idItemEstoque);
+  if (!id || !desafio) return {};
+
+  var resumo = [];
+  try {
+    resumo = atualizarMeuGiroResumo_(id) || [];
+  } catch (e) {
+    resumo = [];
+  }
+
+  for (var i = 0; i < resumo.length; i++) {
+    var row = resumo[i] || {};
+    if (normalizeText_(row.id_desafio) !== desafio) continue;
+    if (item && normalizeText_(row.id_item_estoque) !== item) continue;
+    return row;
+  }
+
+  return {};
+}
+
+function certificadoBuscarNomeParticipante_(idDgmb) {
+  var id = normalizeText_(idDgmb);
+  if (!id) return '';
+
+  var sh = getSheetByName_(SHEETS.PESSOAS);
+  var values = sh.getDataRange().getValues();
+  if (!values || values.length < 2) return '';
+
+  var map = buildHeaderMap_(values[0]);
+  var idxId = getRequiredColumnIndex_(map, ['id_dgmb'], SHEETS.PESSOAS);
+  var idxNome = getRequiredColumnIndex_(map, ['nome'], SHEETS.PESSOAS);
+
+  for (var i = 1; i < values.length; i++) {
+    var row = values[i] || [];
+    if (normalizeText_(row[idxId]) !== id) continue;
+    return normalizeText_(row[idxNome]);
+  }
+
+  return '';
+}
+
+function certificadoGetOuCriarPastaDesafio_(idDesafio) {
+  var pastaBase = DriveApp.getFolderById(CERTIFICADO_PASTA_BASE_ID_);
+  var nomeSubpasta = 'ID_DESAFIO_' + String(idDesafio || 'sem-id').trim();
+  var subpastas = pastaBase.getFoldersByName(nomeSubpasta);
+  if (subpastas.hasNext()) return subpastas.next();
+  return pastaBase.createFolder(nomeSubpasta);
+}
+
+function certFormatKm_(valor) {
+  var n = parseLocalizedNumber_(valor);
+  if (!isFinite(n) || n <= 0) return '-';
+  return n.toFixed(1).replace('.', ',') + ' km';
+}
+
+function certFormatPeriodo_(inicio, fim) {
+  var inicioFmt = certFormatDataPt_(inicio);
+  var fimFmt = certFormatDataPt_(fim);
+  if (inicioFmt && fimFmt) return inicioFmt + ' a ' + fimFmt;
+  return inicioFmt || fimFmt || '-';
+}
+
+function certFormatDataPt_(valor) {
+  if (!valor) return '';
+  if (Object.prototype.toString.call(valor) === '[object Date]' && !isNaN(valor.getTime())) {
+    return Utilities.formatDate(valor, Session.getScriptTimeZone(), 'dd/MM/yyyy');
+  }
+  var txt = String(valor || '').trim();
+  if (!txt) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(txt)) {
+    return txt.split('-').reverse().join('/');
+  }
+  return txt;
+}
+
+function certEscapeHtml_(valor) {
+  return String(valor || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function certGetBackgroundDataUri_() {
+  var file = DriveApp.getFileById(CERTIFICADO_BACKGROUND_FILE_ID_);
+  var blob = file.getBlob();
+  var mime = String(blob.getContentType() || 'image/png').trim();
+  var b64 = Utilities.base64Encode(blob.getBytes());
+  return 'data:' + mime + ';base64,' + b64;
 }
 
 function certificadoBuscarContextoDesafio_(payload) {
