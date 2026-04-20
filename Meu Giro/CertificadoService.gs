@@ -153,9 +153,10 @@ function certificadoBuscarContextoDesafio_(payload) {
     if (idDesafioFiltro && rowDesafio !== idDesafioFiltro) continue;
     if (idItemFiltro && rowItem !== idItemFiltro) continue;
 
-    var statusApuracao = idxStatusApuracao > -1
-      ? normalizeText_(row[idxStatusApuracao]).toUpperCase()
-      : '';
+    var statusApuracao = certificadoBuscarStatusApuracaoResumo_(rowId, rowDesafio, rowItem);
+    if (!statusApuracao && idxStatusApuracao > -1) {
+      statusApuracao = normalizeText_(row[idxStatusApuracao]).toUpperCase();
+    }
 
     var desafioElegivel = {
       CONCLUIDO: true,
@@ -188,4 +189,36 @@ function certificadoBuscarContextoDesafio_(payload) {
     code: 'DESAFIO_NAO_ENCONTRADO',
     msg: 'Desafio não encontrado para este usuário.'
   };
+}
+
+function certificadoBuscarStatusApuracaoResumo_(idDgmb, idDesafio, idItemEstoque) {
+  var id = normalizeText_(idDgmb);
+  var desafio = normalizeText_(idDesafio);
+  var item = normalizeText_(idItemEstoque);
+  if (!id || !desafio) return '';
+
+  var resumo = [];
+  try {
+    resumo = atualizarMeuGiroResumo_(id) || [];
+  } catch (e) {
+    resumo = [];
+  }
+
+  for (var i = 0; i < resumo.length; i++) {
+    var row = resumo[i] || {};
+    var rowDesafio = normalizeText_(row.id_desafio);
+    var rowItem = normalizeText_(row.id_item_estoque);
+    if (rowDesafio !== desafio) continue;
+    if (item && rowItem !== item) continue;
+    if (!item && rowItem) continue;
+    return normalizeText_(row.status_apuracao).toUpperCase();
+  }
+
+  for (var j = 0; j < resumo.length; j++) {
+    var rowFallback = resumo[j] || {};
+    if (normalizeText_(rowFallback.id_desafio) !== desafio) continue;
+    return normalizeText_(rowFallback.status_apuracao).toUpperCase();
+  }
+
+  return '';
 }
