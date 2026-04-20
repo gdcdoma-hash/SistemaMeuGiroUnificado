@@ -92,7 +92,7 @@
 
   .menu {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
     align-items: stretch;
   }
@@ -2387,4 +2387,59 @@
       box-shadow: 0 0 0 0 rgba(249, 115, 22, 0);
     }
   }
+
+
+  .admin-cert-helper {
+    color: #4b5563;
+    margin-bottom: 12px;
+  }
+
+  .admin-cert-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    padding: 14px;
+    background: #ffffff;
+  }
+
+  .admin-cert-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .admin-cert-link-wrap {
+    margin: 10px 0;
+  }
+
+  .admin-cert-link-wrap a {
+    color: #2563eb;
+    font-weight: 700;
+    text-decoration: underline;
+  }
+
+  .admin-cert-obs {
+    width: 100%;
+    min-height: 76px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    padding: 10px;
+    font-family: inherit;
+    margin-bottom: 10px;
+    resize: vertical;
+  }
+
+  .admin-cert-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  @media (min-width: 560px) {
+    .admin-cert-actions {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
 </style>

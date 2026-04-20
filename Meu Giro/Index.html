@@ -51,6 +51,17 @@
       </span>
       <span class="menu-label">Ranking</span>
     </button>
+
+
+    <button id="btn-admin-cert-top" class="menu-btn menu-icon-btn" type="button" onclick="openAdminValidacao()" style="display:none;">
+      <span class="menu-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2l8 4v6c0 5.2-3.4 8.8-8 10-4.6-1.2-8-4.8-8-10V6l8-4z"></path>
+          <path d="M9 12l2 2 4-4"></path>
+        </svg>
+      </span>
+      <span class="menu-label">Admin</span>
+    </button>
   </nav>
 </header>
   <main class="container">
@@ -271,6 +282,18 @@
 
       <div class="card">
         <button id="btn-ranking-painel" class="btn-main ranking-action-btn" onclick="markRankingTrigger(this); carregarRanking('manual')">Ver ranking do desafio</button>
+      </div>
+    </section>
+
+    <section id="screen-admin-cert" class="screen">
+      <div class="card">
+        <h2>Admin · Validação de certificado</h2>
+        <p class="admin-cert-helper">Área restrita ao ID_DGMB 1133 para validar print do Strava.</p>
+        <div id="admin-cert-msg" class="msg status-msg" aria-live="polite"></div>
+        <button id="btn-admin-cert-refresh" class="btn-main" type="button" onclick="carregarAdminValidacaoPendencias()">Atualizar pendências</button>
+      </div>
+      <div class="card">
+        <div id="admin-cert-lista" class="lista"></div>
       </div>
     </section>
 

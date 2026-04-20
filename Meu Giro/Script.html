@@ -44,7 +44,8 @@ const LOGIN_SESSION_STORAGE_KEY = 'meuGiro.loginSession';
 const PAINEL_STATE_STORAGE_KEY = 'meuGiro.painelState';
 const TELAS_RELEVANTES_SESSAO = {
   painel: true,
-  ranking: true
+  ranking: true,
+  admin_cert: true
 };
 let telaPrivadaRestaurada = 'painel';
 const statusMessageTimers = {};
@@ -445,6 +446,7 @@ function tentarRestaurarSessaoPersistida() {
     cidade_uf: sessao.cidade_uf || ''
   };
 
+  syncAdminValidacaoVisibility();
   showScreen('painel');
   carregarPainel('restored');
   return true;
@@ -494,6 +496,7 @@ document.addEventListener('DOMContentLoaded', function() {
   setupPhraseButtonTouchFeedback();
   setupQuickKmShortcutFeedback();
   setupQuickKmClearFeedback();
+  syncAdminValidacaoVisibility();
   tentarRestaurarSessaoPersistida();
 });
 
@@ -547,6 +550,7 @@ function login() {
         setTransientStatus('login-msg', '');
 
         persistirSessaoLogin(currentUser);
+        syncAdminValidacaoVisibility();
         showScreen('painel');
         carregarPainel();
       })
@@ -3159,6 +3163,155 @@ function escapeHtml(text) {
     .replace(/'/g, '&#039;');
 }
 
+
+
+function isAdminValidacaoUser() {
+  return !!(currentUser && String(currentUser.id_dgmb || '').trim() === '1133');
+}
+
+function syncAdminValidacaoVisibility() {
+  var btnAdmin = document.getElementById('btn-admin-cert-top');
+  if (!btnAdmin) return;
+
+  var isAdmin = isAdminValidacaoUser();
+  btnAdmin.style.display = isAdmin ? '' : 'none';
+}
+
+function setAdminCertMsg(message, variant, timeoutMs) {
+  setTransientStatus('admin-cert-msg', message, variant, timeoutMs);
+}
+
+function openAdminValidacao() {
+  if (!currentUser || !currentUser.id_dgmb) {
+    const loginMsg = document.getElementById('login-msg');
+    if (loginMsg) setTransientStatus('login-msg', 'Sua sessão expirou. Entre novamente.', 'error');
+    showScreen('login');
+    return;
+  }
+
+  if (!isAdminValidacaoUser()) {
+    showScreen('painel');
+    setPainelMsg('Acesso negado. Área administrativa restrita.', 'error');
+    return;
+  }
+
+  showScreen('admin-cert');
+  carregarAdminValidacaoPendencias();
+}
+
+function carregarAdminValidacaoPendencias() {
+  if (!isAdminValidacaoUser()) {
+    setAdminCertMsg('Acesso negado. Esta área é restrita ao ID_DGMB 1133.', 'error');
+    return;
+  }
+
+  var adminId = String(currentUser.id_dgmb || '').trim();
+  setAdminCertMsg('Carregando pendências...', 'loading');
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res || res.ok !== true) {
+        setAdminCertMsg((res && res.msg) ? res.msg : 'Não foi possível carregar as pendências.', 'error');
+        return;
+      }
+
+      renderAdminValidacaoLista(res.data || []);
+      setAdminCertMsg('Pendências atualizadas.', 'success', 2200);
+    })
+    .withFailureHandler(function() {
+      setAdminCertMsg('Erro de conexão ao carregar pendências.', 'error');
+    })
+    .listarPendenciasValidacaoCertificado(adminId);
+}
+
+function renderAdminValidacaoLista(lista) {
+  var box = document.getElementById('admin-cert-lista');
+  if (!box) return;
+
+  var itens = Array.isArray(lista) ? lista : [];
+  box.innerHTML = '';
+
+  if (!itens.length) {
+    box.innerHTML = '<div class="atividade atividade-empty"><strong>Sem pendências.</strong><p>Nenhum certificado pendente no momento.</p></div>';
+    return;
+  }
+
+  itens.forEach(function(item, index) {
+    var idCard = 'admin-cert-obs-' + index;
+    var titulo = (item.nome_participante || 'Participante sem nome') + ' · ' + (item.nome_desafio || ('Desafio ' + (item.id_desafio || '-')));
+
+    var card = document.createElement('div');
+    card.className = 'atividade admin-cert-card';
+    card.innerHTML = '' +
+      '<div class="admin-cert-head">' +
+        '<strong>' + escapeHtml(titulo) + '</strong>' +
+        '<span class="desafio-status-badge">' + escapeHtml(String(item.status_validacao_certificado || '-')) + '</span>' +
+      '</div>' +
+      '<div class="desafio-metricas-grid">' +
+        '<p><span>ID DGMB</span><strong>' + escapeHtml(String(item.id_dgmb || '-')) + '</strong></p>' +
+        '<p><span>ID desafio</span><strong>' + escapeHtml(String(item.id_desafio || '-')) + '</strong></p>' +
+        '<p><span>Meta</span><strong>' + formatNumber(item.meta_km) + ' km</strong></p>' +
+        '<p><span>KM realizado</span><strong>' + formatNumber(item.km_realizado) + ' km</strong></p>' +
+        '<p><span>Status apuração</span><strong>' + escapeHtml(String(item.status_apuracao || '-')) + '</strong></p>' +
+        '<p><span>Status validação</span><strong>' + escapeHtml(String(item.status_validacao_certificado || '-')) + '</strong></p>' +
+      '</div>' +
+      '<p class="admin-cert-link-wrap"><a href="' + escapeHtml(String(item.link_print_strava || '#')) + '" target="_blank" rel="noopener">Abrir print do Strava</a></p>' +
+      '<label for="' + idCard + '">Observação</label>' +
+      '<textarea id="' + idCard + '" class="admin-cert-obs" placeholder="Opcional em aprovação; obrigatório para reprovar.">' + escapeHtml(String(item.obs_validacao_certificado || '')) + '</textarea>' +
+      '<div class="atividade-acoes admin-cert-actions">' +
+        '<button type="button" class="btn-secondary atividade-acao-btn" data-admin-action="EM_ANALISE">Em análise</button>' +
+        '<button type="button" class="btn-secondary atividade-acao-btn" data-admin-action="APROVADO">Aprovar</button>' +
+        '<button type="button" class="btn-secondary atividade-acao-btn" data-admin-action="REPROVADO">Reprovar</button>' +
+      '</div>';
+
+    card.querySelectorAll('[data-admin-action]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        atualizarStatusAdminValidacao(item, btn.getAttribute('data-admin-action'), idCard);
+      });
+    });
+
+    box.appendChild(card);
+  });
+}
+
+function atualizarStatusAdminValidacao(item, novoStatus, obsInputId) {
+  if (!isAdminValidacaoUser()) {
+    setAdminCertMsg('Acesso negado. Esta área é restrita ao ID_DGMB 1133.', 'error');
+    return;
+  }
+
+  var obsInput = document.getElementById(obsInputId);
+  var observacao = obsInput ? String(obsInput.value || '').trim() : '';
+  if (novoStatus === 'REPROVADO' && !observacao) {
+    setAdminCertMsg('Informe uma observação para reprovar o certificado.', 'error');
+    return;
+  }
+
+  setAdminCertMsg('Atualizando validação...', 'loading');
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res || res.ok !== true) {
+        setAdminCertMsg((res && res.msg) ? res.msg : 'Não foi possível atualizar o status.', 'error');
+        return;
+      }
+
+      setAdminCertMsg('Status atualizado para ' + novoStatus + '.', 'success', 2200);
+      carregarAdminValidacaoPendencias();
+    })
+    .withFailureHandler(function() {
+      setAdminCertMsg('Erro de conexão ao atualizar validação.', 'error');
+    })
+    .atualizarStatusValidacaoCertificadoAdmin({
+      admin_id_dgmb: String(currentUser.id_dgmb || '').trim(),
+      id_dgmb: item.id_dgmb || '',
+      id_desafio: item.id_desafio || '',
+      id_item_estoque: item.id_item_estoque || '',
+      novo_status: novoStatus,
+      observacao: observacao
+    });
+}
+
 function openMeuGiro() {
   if (currentUser && currentUser.id_dgmb) {
     showScreen('painel');
@@ -3236,6 +3389,7 @@ function logoutUser() {
 
   cancelarEdicaoAtividadeUI();
 
+  syncAdminValidacaoVisibility();
   showScreen('inicio');
 }
 
