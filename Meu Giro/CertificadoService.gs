@@ -1,4 +1,4 @@
-var CERTIFICADO_BACKGROUND_URL_ = 'https://drive.google.com/uc?export=view&id=1vPHVb07i5fc5oKIM0g6LVdIE3JBze-ZR';
+var CERTIFICADO_BACKGROUND_FILE_ID_ = '1vPHVb07i5fc5oKIM0g6LVdIE3JBze-ZR';
 var CERTIFICADO_PASTA_BASE_ID_ = '1GncBumQM3RAS6WIT0jHQPaIMKBlT7OHi';
 
 function gerarOuObterCertificadoDesafio(payload) {
@@ -69,9 +69,18 @@ function gerarCertificadoDesafio_(contexto) {
     ctx.id_desafio || 'desafio'
   ].join('_') + '.pdf';
   var dadosVisuais = certificadoBuscarDadosVisuais_(ctx);
+  var pastaDestino = certificadoGetOuCriarPastaDesafio_(ctx.id_desafio);
+  var arquivoExistente = certificadoBuscarArquivoExistente_(pastaDestino, nomeArquivo);
+  if (arquivoExistente) {
+    var urlExistente = String(arquivoExistente.getUrl() || '').trim();
+    if (urlExistente) {
+      certificadoSalvarLinkPlanilha_(ctx, urlExistente);
+      return { ok: true, url: urlExistente, reused: true };
+    }
+  }
+
   var html = HtmlService.createHtmlOutput(gerarHtmlCertificadoDesafio_(ctx, dadosVisuais));
   var blobPdf = html.getBlob().getAs(MimeType.PDF).setName(nomeArquivo);
-  var pastaDestino = certificadoGetOuCriarPastaDesafio_(ctx.id_desafio);
   var arquivo = pastaDestino.createFile(blobPdf);
   arquivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   var url = String(arquivo.getUrl() || '').trim();
@@ -79,12 +88,7 @@ function gerarCertificadoDesafio_(contexto) {
     return { ok: false, code: 'CERTIFICADO_URL_INVALIDA', msg: 'Não foi possível gerar a URL do certificado.' };
   }
 
-  if (ctx.sheet_name && ctx.rowNumber && ctx.idx_link_certificado > -1) {
-    var sh = getSpreadsheet_().getSheetByName(ctx.sheet_name);
-    if (sh) {
-      sh.getRange(ctx.rowNumber, ctx.idx_link_certificado + 1).setValue(url);
-    }
-  }
+  certificadoSalvarLinkPlanilha_(ctx, url);
 
   return { ok: true, url: url };
 }
@@ -93,6 +97,7 @@ function gerarHtmlCertificadoDesafio_(ctx, dados) {
   var payload = dados || {};
   var frase = 'Você não apenas concluiu o desafio. Você provou que é capaz de ir além.';
   var dataGeracao = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy');
+  var backgroundDataUri = certGetBackgroundDataUri_();
 
   return [
     '<!DOCTYPE html>',
@@ -103,7 +108,7 @@ function gerarHtmlCertificadoDesafio_(ctx, dados) {
         '@page { size: A4 landscape; margin: 0; }',
         'html, body { margin: 0; padding: 0; width: 100%; height: 100%; font-family: Arial, sans-serif; }',
         '.page { width: 1123px; height: 794px; position: relative; overflow: hidden; color: #fff; }',
-        '.bg { position: absolute; inset: 0; background-image: url("' + certEscapeHtml_(CERTIFICADO_BACKGROUND_URL_) + '"); background-size: cover; background-position: center; }',
+        '.bg { position: absolute; inset: 0; background-image: url("' + certEscapeHtml_(backgroundDataUri) + '"); background-size: cover; background-position: center; }',
         '.overlay { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,0.66) 0%, rgba(0,0,0,0.50) 45%, rgba(0,0,0,0.10) 70%, rgba(0,0,0,0.00) 100%); }',
         '.content { position: relative; z-index: 2; width: 58%; padding: 122px 0 0 84px; }',
         '.title { font-size: 42px; font-weight: 800; letter-spacing: 1px; margin: 0 0 14px 0; text-transform: uppercase; }',
@@ -137,6 +142,23 @@ function gerarHtmlCertificadoDesafio_(ctx, dados) {
     '</body>',
     '</html>'
   ].join('');
+}
+
+function certificadoSalvarLinkPlanilha_(ctx, url) {
+  if (!(ctx && ctx.sheet_name && ctx.rowNumber && ctx.idx_link_certificado > -1)) return;
+  var sh = getSpreadsheet_().getSheetByName(ctx.sheet_name);
+  if (!sh) return;
+  var range = sh.getRange(ctx.rowNumber, ctx.idx_link_certificado + 1);
+  var atual = String(range.getValue() || '').trim();
+  if (atual === String(url || '').trim()) return;
+  range.setValue(url);
+}
+
+function certificadoBuscarArquivoExistente_(pasta, nomeArquivo) {
+  if (!pasta || !nomeArquivo) return null;
+  var arquivos = pasta.getFilesByName(nomeArquivo);
+  if (arquivos.hasNext()) return arquivos.next();
+  return null;
 }
 
 function certificadoBuscarDadosVisuais_(ctx) {
@@ -239,6 +261,14 @@ function certEscapeHtml_(valor) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function certGetBackgroundDataUri_() {
+  var file = DriveApp.getFileById(CERTIFICADO_BACKGROUND_FILE_ID_);
+  var blob = file.getBlob();
+  var mime = String(blob.getContentType() || 'image/png').trim();
+  var b64 = Utilities.base64Encode(blob.getBytes());
+  return 'data:' + mime + ';base64,' + b64;
 }
 
 function certificadoBuscarContextoDesafio_(payload) {
