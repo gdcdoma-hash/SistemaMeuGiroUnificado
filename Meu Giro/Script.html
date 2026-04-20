@@ -2176,6 +2176,15 @@ function buildDesafioCard(item, options) {
   var realizado = formatNumber(desafio.distancia_realizada);
   var percentual = formatNumber(percentualNormalizado);
   var restante = formatNumber(Math.max(0, toFiniteNumber(desafio.meta_km, 0) - toFiniteNumber(desafio.distancia_realizada, 0)));
+  var statusDesafioCertificado = String((desafio && desafio.status_apuracao) || '').trim().toUpperCase();
+  var statusValidacaoCertificado = String((desafio && desafio.status_validacao_certificado) || '').trim().toUpperCase();
+  var concluido = statusDesafioCertificado === 'CONCLUIDO';
+  var aguardandoValidacaoCertificado = concluido && statusValidacaoCertificado !== 'APROVADO';
+  var podeBaixarCertificado = isDesafioElegivelCertificado_(desafio);
+  var payloadCertificado = encodeURIComponent(JSON.stringify({
+    id_desafio: desafio.id_desafio || '',
+    id_item_estoque: desafio.id_item_estoque || ''
+  }));
 
   card.innerHTML =
     '<div class="desafio-resumo-head">' +
@@ -2188,7 +2197,13 @@ function buildDesafioCard(item, options) {
       '<p><span>Falta</span><strong>' + restante + ' km</strong></p>' +
       '<p><span>Conclusão</span><strong>' + percentual + '%</strong></p>' +
     '</div>' +
-    '<div class="desafio-progress-track" aria-hidden="true"><span class="desafio-progress-fill" style="width:' + percentualNormalizado + '%"></span></div>';
+    '<div class="desafio-progress-track" aria-hidden="true"><span class="desafio-progress-fill" style="width:' + percentualNormalizado + '%"></span></div>' +
+    (aguardandoValidacaoCertificado
+      ? '<p class="desafio-validacao-aviso">Aguardando validação do seu desempenho pela equipe.</p>'
+      : '') +
+    (podeBaixarCertificado
+      ? '<div class="atividade-acoes"><button type="button" class="btn-secondary atividade-acao-btn" onclick="solicitarCertificadoDesafio(\'' + payloadCertificado + '\')">Baixar certificado</button></div>'
+      : '');
 
   return card;
 }
@@ -2250,6 +2265,56 @@ function isDesafioHistoricoElegivel_(desafio) {
     ENCERRADO: true
   };
   return !!statusHistorico[status];
+}
+
+function isDesafioElegivelCertificado_(desafio) {
+  if (!desafio) return false;
+  var status = String((desafio && desafio.status_apuracao) || '').trim().toUpperCase();
+  var statusConclusao = {
+    CONCLUIDO: true,
+    FINALIZADO: true,
+    ENCERRADO: true
+  };
+  var statusValidacao = String((desafio && desafio.status_validacao_certificado) || '').trim().toUpperCase();
+  return !!statusConclusao[status] && statusValidacao === 'APROVADO';
+}
+
+function solicitarCertificadoDesafio(payloadEncoded) {
+  var payload = {};
+  try {
+    payload = JSON.parse(decodeURIComponent(String(payloadEncoded || '')));
+  } catch (e) {
+    payload = {};
+  }
+
+  var idDgmb = currentUser && currentUser.id_dgmb ? String(currentUser.id_dgmb).trim() : '';
+  if (!idDgmb) {
+    setPainelMsg('Sessão inválida. Entre novamente para baixar seu certificado.', 'error');
+    return;
+  }
+
+  setPainelMsg('Gerando certificado...', 'loading');
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res || res.ok !== true || !res.url) {
+        if (res && res.code === 'CERTIFICADO_NAO_LIBERADO') {
+          setPainelMsg('Aguardando validação do seu desempenho pela equipe.', 'loading');
+          return;
+        }
+        setPainelMsg((res && res.msg) ? res.msg : 'Não foi possível gerar o certificado agora.', 'error');
+        return;
+      }
+      setPainelMsg(res.reused ? 'Certificado pronto para download.' : 'Certificado gerado com sucesso.', 'success', 2600);
+      window.open(res.url, '_blank', 'noopener');
+    })
+    .withFailureHandler(function() {
+      setPainelMsg('Erro de conexão ao gerar certificado.', 'error');
+    })
+    .gerarOuObterCertificadoDesafio({
+      id_dgmb: idDgmb,
+      id_desafio: payload.id_desafio || '',
+      id_item_estoque: payload.id_item_estoque || ''
+    });
 }
 
 function compareDesafioHistorico_(a, b) {
