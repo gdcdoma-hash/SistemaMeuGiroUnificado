@@ -538,6 +538,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
   var idxItem = getOptionalColumnIndex_(map, ['id_item_estoque', 'id item estoque']);
   var idxTipoDesafio = getOptionalColumnIndex_(map, ['tipo_do_desafio', 'tipo do desafio', 'tipo_desafio', 'tipo desafio']);
   var idxStatusDesafio = getOptionalColumnIndex_(map, ['status_desafio', 'status desafio']);
+  var idxStatusValidacaoCertificado = getOptionalColumnIndex_(map, ['status_validacao_certificado']);
   var idxStatusPag = getOptionalColumnIndex_(map, ['status_pagamento', 'pagamento_status', 'pagamento', 'pix_status']);
   var idxStatusInscricao = getOptionalColumnIndex_(map, ['status_inscricao', 'status inscrição', 'status', 'situacao', 'situação']);
   var idxConfirmacao = getOptionalColumnIndex_(map, ['confirmacao', 'confirmação', 'confirmado', 'inscricao_confirmada']);
@@ -562,6 +563,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
     var statusConfirmacao = idxConfirmacao > -1 ? normalizeText_(row[idxConfirmacao]) : '';
     var statusPagamento = idxStatusPag > -1 ? normalizeText_(row[idxStatusPag]) : '';
     var statusDesafio = idxStatusDesafio > -1 ? normalizeText_(row[idxStatusDesafio]) : '';
+    var statusValidacaoCertificado = idxStatusValidacaoCertificado > -1 ? normalizeText_(row[idxStatusValidacaoCertificado]) : '';
 
     var validacao = validarInscricaoMinima_({
       status_inscricao: statusInscricao,
@@ -590,6 +592,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
       id_item_estoque: idItem,
       meta_km: metaKm,
       status_desafio: statusDesafio,
+      status_validacao_certificado: statusValidacaoCertificado,
       apto: apto,
       periodo_inicio: periodo.inicio || '',
       periodo_fim: periodo.fim || '',
@@ -756,6 +759,7 @@ function atualizarMeuGiroResumo_(idDgmb) {
       distancia_realizada: linha[5],
       percentual_concluido: linha[6],
       status_apuracao: status,
+      status_validacao_certificado: normalizeText_(vinculo.status_validacao_certificado).toUpperCase(),
       periodo_inicio: inicio || '',
       periodo_fim: fim || ''
     });
