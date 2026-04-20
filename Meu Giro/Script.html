@@ -324,6 +324,32 @@ function setTransientStatus(elementId, message, variant, timeoutMs) {
   }
 }
 
+
+function buildDesafioCertificadoDomId(prefix, desafio) {
+  var baseKey = getDesafioBaseKey_(desafio) || [
+    String((desafio && desafio.id_desafio) || '').trim(),
+    String((desafio && desafio.id_item_estoque) || '').trim(),
+    String((desafio && desafio.nome_desafio) || '').trim()
+  ].join('|');
+
+  var slug = String(baseKey || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48);
+
+  if (!slug) slug = 'desafio';
+  return String(prefix || 'certificado') + '-' + slug;
+}
+
+function setCertificadoLocalMsg(elementId, message, variant, timeoutMs) {
+  setTransientStatus(elementId, message, variant, timeoutMs);
+  var el = document.getElementById(elementId);
+  if (el && String(message || '').trim()) {
+    el.classList.add('msg-inline');
+  }
+}
+
 function persistirSessaoLogin(user) {
   var id = String(user && user.id_dgmb || '').trim();
   if (!id) return;
@@ -2189,6 +2215,14 @@ function buildDesafioCard(item, options) {
     id_desafio: desafio.id_desafio || '',
     id_item_estoque: desafio.id_item_estoque || ''
   }));
+  var certificadoStatusId = buildDesafioCertificadoDomId('certificado-status', desafio);
+  var certificadoBtnId = buildDesafioCertificadoDomId('certificado-btn', desafio);
+  var mensagemLocalCertificado = !concluido
+    ? 'Conclua sua meta para liberar seu certificado.'
+    : (aguardandoValidacaoCertificado ? 'Aguardando validação do seu desempenho pela equipe.' : '');
+  var varianteLocalCertificado = !concluido
+    ? ''
+    : (aguardandoValidacaoCertificado ? 'loading' : '');
 
   card.innerHTML =
     '<div class="desafio-resumo-head">' +
@@ -2202,12 +2236,10 @@ function buildDesafioCard(item, options) {
       '<p><span>Conclusão</span><strong>' + percentual + '%</strong></p>' +
     '</div>' +
     '<div class="desafio-progress-track" aria-hidden="true"><span class="desafio-progress-fill" style="width:' + percentualNormalizado + '%"></span></div>' +
-    (aguardandoValidacaoCertificado
-      ? '<p class="desafio-validacao-aviso">Aguardando validação do seu desempenho pela equipe.</p>'
-      : '') +
     (podeBaixarCertificado
-      ? '<div class="atividade-acoes"><button type="button" class="btn-secondary atividade-acao-btn" onclick="solicitarCertificadoDesafio(\'' + payloadCertificado + '\')">Baixar certificado</button></div>'
-      : '');
+      ? '<div class="atividade-acoes"><button type="button" id="' + certificadoBtnId + '" class="btn-secondary atividade-acao-btn" onclick="solicitarCertificadoDesafio(\'' + payloadCertificado + '\', \'' + certificadoStatusId + '\', \'' + certificadoBtnId + '\')">Baixar certificado</button></div>'
+      : '') +
+    '<div id="' + certificadoStatusId + '" class="msg status-msg certificado-status-local' + (mensagemLocalCertificado ? ' is-visible msg-inline' : '') + (varianteLocalCertificado ? (' msg-' + varianteLocalCertificado) : '') + '">' + escapeHtml(mensagemLocalCertificado) + '</div>';
 
   return card;
 }
@@ -2283,7 +2315,7 @@ function isDesafioElegivelCertificado_(desafio) {
   return !!statusConclusao[status] && statusValidacao === 'APROVADO';
 }
 
-function solicitarCertificadoDesafio(payloadEncoded) {
+function solicitarCertificadoDesafio(payloadEncoded, localStatusId, buttonId) {
   var payload = {};
   try {
     payload = JSON.parse(decodeURIComponent(String(payloadEncoded || '')));
@@ -2292,27 +2324,46 @@ function solicitarCertificadoDesafio(payloadEncoded) {
   }
 
   var idDgmb = currentUser && currentUser.id_dgmb ? String(currentUser.id_dgmb).trim() : '';
+  var btn = document.getElementById(String(buttonId || ''));
   if (!idDgmb) {
     setPainelMsg('Sessão inválida. Entre novamente para baixar seu certificado.', 'error');
+    setCertificadoLocalMsg(localStatusId, 'Sessão inválida. Entre novamente para baixar seu certificado.', 'error');
     return;
   }
 
+  if (btn) {
+    btn.disabled = true;
+  }
+
   setPainelMsg('Gerando certificado...', 'loading');
+  setCertificadoLocalMsg(localStatusId, 'Gerando seu certificado...', 'loading');
   google.script.run
     .withSuccessHandler(function(res) {
+      if (btn) {
+        btn.disabled = false;
+      }
+
       if (!res || res.ok !== true || !res.url) {
         if (res && res.code === 'CERTIFICADO_NAO_LIBERADO') {
           setPainelMsg('Aguardando validação do seu desempenho pela equipe.', 'loading');
+          setCertificadoLocalMsg(localStatusId, 'Aguardando validação do seu desempenho pela equipe.', 'loading');
           return;
         }
-        setPainelMsg((res && res.msg) ? res.msg : 'Não foi possível gerar o certificado agora.', 'error');
+        var mensagemErro = (res && res.msg) ? res.msg : 'Não foi possível gerar o certificado agora.';
+        setPainelMsg(mensagemErro, 'error');
+        setCertificadoLocalMsg(localStatusId, mensagemErro, 'error');
         return;
       }
       setPainelMsg(res.reused ? 'Certificado pronto para download.' : 'Certificado gerado com sucesso.', 'success', 2600);
+      setCertificadoLocalMsg(localStatusId, 'Certificado pronto. Abrindo...', 'success', 3000);
       window.open(res.url, '_blank', 'noopener');
     })
     .withFailureHandler(function() {
+      if (btn) {
+        btn.disabled = false;
+      }
       setPainelMsg('Erro de conexão ao gerar certificado.', 'error');
+      setCertificadoLocalMsg(localStatusId, 'Não foi possível gerar seu certificado agora. Tente novamente.', 'error');
     })
     .gerarOuObterCertificadoDesafio({
       id_dgmb: idDgmb,
