@@ -108,6 +108,7 @@ function gerarHtmlCertificadoDesafio_(ctx, dados) {
   var payload = dados || {};
   var frase = 'Você não apenas concluiu o desafio. Você provou que é capaz de ir além.';
   var dataGeracao = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy');
+  var backgroundDataUri = certGetBackgroundDataUri_();
   return [
     '<!DOCTYPE html>',
     '<html>',
@@ -132,7 +133,7 @@ function gerarHtmlCertificadoDesafio_(ctx, dados) {
     '</head>',
     '<body>',
       '<div class="page">',
-        '<img class="bg" src="' + certEscapeHtml_(CERTIFICADO_BACKGROUND_URL_) + '" alt="">',
+        '<img class="bg" src="' + certEscapeHtml_(backgroundDataUri) + '" alt="">',
         '<div class="overlay"></div>',
         '<div class="content">',
           '<p class="title">Certificado</p>',
@@ -304,6 +305,18 @@ function certificadoLerLinkPlanilha_(ctx) {
 function certLinkValido_(url) {
   var u = String(url || '').trim();
   return /^https?:\/\/\S+/i.test(u);
+}
+
+function certGetBackgroundDataUri_() {
+  var response = UrlFetchApp.fetch(CERTIFICADO_BACKGROUND_URL_, { muteHttpExceptions: true });
+  var code = Number(response.getResponseCode() || 0);
+  if (code < 200 || code >= 300) {
+    throw new Error('Não foi possível carregar a imagem de fundo do certificado.');
+  }
+  var blob = response.getBlob();
+  var mime = String(blob.getContentType() || 'image/png').trim();
+  var b64 = Utilities.base64Encode(blob.getBytes());
+  return 'data:' + mime + ';base64,' + b64;
 }
 
 function certificadoBuscarContextoDesafio_(payload) {

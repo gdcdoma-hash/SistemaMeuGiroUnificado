@@ -2355,8 +2355,9 @@ function solicitarCertificadoDesafio(payloadEncoded, localStatusId, buttonId) {
         return;
       }
       setPainelMsg(res.reused ? 'Certificado pronto para download.' : 'Certificado gerado com sucesso.', 'success', 2600);
-      setCertificadoLocalMsg(localStatusId, 'Certificado pronto. Abrindo...', 'success', 3000);
-      window.open(res.url, '_blank', 'noopener');
+      setCertificadoLocalMsg(localStatusId, 'Certificado pronto. Tentando abrir...', 'success', 3000);
+      var abriu = abrirCertificadoUrlRobusto_(res.url);
+      exibirFallbackCertificadoLink_(localStatusId, res.url, abriu);
     })
     .withFailureHandler(function() {
       if (btn) {
@@ -2370,6 +2371,46 @@ function solicitarCertificadoDesafio(payloadEncoded, localStatusId, buttonId) {
       id_desafio: payload.id_desafio || '',
       id_item_estoque: payload.id_item_estoque || ''
     });
+}
+
+function abrirCertificadoUrlRobusto_(url) {
+  var safeUrl = String(url || '').trim();
+  if (!safeUrl) return false;
+
+  try {
+    var novaAba = window.open(safeUrl, '_blank', 'noopener,noreferrer');
+    if (novaAba && !novaAba.closed) return true;
+  } catch (e) {}
+
+  try {
+    var a = document.createElement('a');
+    a.href = safeUrl;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    return true;
+  } catch (e2) {}
+
+  return false;
+}
+
+function exibirFallbackCertificadoLink_(localStatusId, url, abriuAutomatico) {
+  var safeUrl = String(url || '').trim();
+  if (!safeUrl) return;
+
+  var el = document.getElementById(String(localStatusId || ''));
+  if (!el) return;
+
+  var msg = abriuAutomatico
+    ? 'Se não abrir automaticamente, toque no link: '
+    : 'Não foi possível abrir automaticamente. Toque no link: ';
+
+  el.classList.add('msg-inline', 'msg-success', 'is-visible');
+  el.innerHTML = escapeHtml(msg) +
+    '<a href="' + escapeHtml(safeUrl) + '" target="_blank" rel="noopener noreferrer">Abrir certificado</a>';
 }
 
 function compareDesafioHistorico_(a, b) {
