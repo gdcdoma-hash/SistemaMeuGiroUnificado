@@ -125,6 +125,7 @@ function certificadoBuscarContextoDesafio_(payload) {
   var idxId = getRequiredColumnIndex_(map, ['id_dgmb'], sheetName);
   var idxIdDesafio = getOptionalColumnIndex_(map, ['id_desafio']);
   var idxIdItem = getOptionalColumnIndex_(map, ['id_item_estoque', 'id item estoque']);
+  var idxObservacao = getOptionalColumnIndex_(map, ['observacao', 'observação']);
   var idxStatusApuracao = getOptionalColumnIndex_(map, ['status_apuracao', 'status apuracao', 'status apuração', 'status_desafio', 'status desafio']);
   var idxStatusValidacao = getRequiredColumnIndex_(map, ['status_validacao_certificado'], sheetName);
 
@@ -142,6 +143,11 @@ function certificadoBuscarContextoDesafio_(payload) {
     if (rowId !== idDgmb) continue;
 
     var rowDesafio = idxIdDesafio > -1 ? normalizeText_(row[idxIdDesafio]) : '';
+    if (!rowDesafio && idxObservacao > -1) {
+      var observacao = String(row[idxObservacao] || '');
+      var matchDesafio = observacao.match(/\[\s*ID_DESAFIO\s*:\s*([0-9]+)\s*\]/i);
+      rowDesafio = matchDesafio && matchDesafio[1] ? normalizeText_(matchDesafio[1]) : '';
+    }
     var rowItem = idxIdItem > -1 ? normalizeText_(row[idxIdItem]) : '';
 
     if (idDesafioFiltro && rowDesafio !== idDesafioFiltro) continue;
