@@ -102,7 +102,7 @@ function gerarCertificadoDesafio_(contexto) {
   var arquivo = null;
   try {
     var templateFile = DriveApp.getFileById(templateId);
-    arquivoTemporario = templateFile.makeCopy('tmp_' + nomeArquivo.replace(/\.pdf$/i, '') + '_' + new Date().getTime());
+    arquivoTemporario = templateFile.makeCopy('tmp_' + nomeArquivo.replace(/\.pdf$/i, '') + '_' + new Date().getTime(), pastaDestino);
     var apresentacao = SlidesApp.openById(arquivoTemporario.getId());
     var slides = apresentacao.getSlides();
     if (!slides || !slides.length) {
