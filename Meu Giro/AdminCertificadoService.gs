@@ -131,6 +131,7 @@ function atualizarStatusValidacaoCertificadoAdmin(payload) {
     var idDgmb = normalizeText_(data.id_dgmb);
     var idDesafio = normalizeText_(data.id_desafio);
     var idItem = normalizeText_(data.id_item_estoque);
+    var rowNumberPayload = Number(data.row_number || 0);
     var novoStatus = normalizeText_(data.novo_status).toUpperCase();
     var observacao = normalizeText_(data.observacao);
 
@@ -175,22 +176,37 @@ function atualizarStatusValidacaoCertificadoAdmin(payload) {
     var idxObsValidacao = getRequiredColumnIndex_(map, ['obs_validacao_certificado'], sheetName);
 
     var linhaAtualizacao = -1;
-
-    for (var i = 1; i < values.length; i++) {
-      var row = values[i];
-      if (normalizeText_(row[idxIdDgmb]) !== idDgmb) continue;
-
-      var rowDesafio = idxIdDesafio > -1 ? normalizeText_(row[idxIdDesafio]) : '';
-      if (!rowDesafio && idxObsRegistro > -1) {
-        rowDesafio = extrairIdDesafioObservacao_(row[idxObsRegistro]);
+    if (rowNumberPayload > 1 && rowNumberPayload <= values.length) {
+      var rowByNumber = values[rowNumberPayload - 1] || [];
+      var rowByNumberId = normalizeText_(rowByNumber[idxIdDgmb]);
+      var rowByNumberDesafio = idxIdDesafio > -1 ? normalizeText_(rowByNumber[idxIdDesafio]) : '';
+      if (!rowByNumberDesafio && idxObsRegistro > -1) {
+        rowByNumberDesafio = extrairIdDesafioObservacao_(rowByNumber[idxObsRegistro]);
       }
-      if (rowDesafio !== idDesafio) continue;
+      var rowByNumberItem = idxIdItem > -1 ? normalizeText_(rowByNumber[idxIdItem]) : '';
 
-      var rowItem = idxIdItem > -1 ? normalizeText_(row[idxIdItem]) : '';
-      if (idItem && rowItem !== idItem) continue;
+      if (rowByNumberId === idDgmb && rowByNumberDesafio === idDesafio && rowByNumberItem === idItem) {
+        linhaAtualizacao = rowNumberPayload;
+      }
+    }
 
-      linhaAtualizacao = i + 1;
-      break;
+    if (linhaAtualizacao === -1) {
+      for (var i = 1; i < values.length; i++) {
+        var row = values[i];
+        if (normalizeText_(row[idxIdDgmb]) !== idDgmb) continue;
+
+        var rowDesafio = idxIdDesafio > -1 ? normalizeText_(row[idxIdDesafio]) : '';
+        if (!rowDesafio && idxObsRegistro > -1) {
+          rowDesafio = extrairIdDesafioObservacao_(row[idxObsRegistro]);
+        }
+        if (rowDesafio !== idDesafio) continue;
+
+        var rowItem = idxIdItem > -1 ? normalizeText_(row[idxIdItem]) : '';
+        if (rowItem !== idItem) continue;
+
+        linhaAtualizacao = i + 1;
+        break;
+      }
     }
 
     if (linhaAtualizacao === -1) {
