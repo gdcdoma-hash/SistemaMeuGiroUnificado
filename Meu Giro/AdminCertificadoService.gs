@@ -78,8 +78,17 @@ function listarPendenciasValidacaoCertificado(adminIdDgmb) {
       var chaveSemItem = [idDgmb, idDesafio, ''].join('|');
       var resumo = resumoPorChave[chaveExata] || resumoPorChave[chaveSemItem] || null;
 
-      var metaKm = resumo ? Number(resumo.meta_km || 0) : (idxMeta > -1 ? parseLocalizedNumber_(row[idxMeta]) : 0);
-      var kmRealizado = resumo ? Number(resumo.distancia_realizada || 0) : (idxRealizado > -1 ? parseLocalizedNumber_(row[idxRealizado]) : 0);
+      var metaKmPlanilha = idxMeta > -1 ? parseLocalizedNumber_(row[idxMeta]) : 0;
+      var kmRealizadoPlanilha = idxRealizado > -1 ? parseLocalizedNumber_(row[idxRealizado]) : 0;
+      var metaKmResumo = resumo ? Number(resumo.meta_km || 0) : NaN;
+      var kmRealizadoResumo = resumo ? Number(resumo.distancia_realizada || 0) : NaN;
+
+      var metaKm = isFinite(metaKmResumo) && metaKmResumo > 0
+        ? metaKmResumo
+        : metaKmPlanilha;
+      var kmRealizado = isFinite(kmRealizadoResumo) && kmRealizadoResumo > 0
+        ? kmRealizadoResumo
+        : kmRealizadoPlanilha;
       var metaValida = isFinite(metaKm) && metaKm > 0;
       var metaAtingida = metaValida && isFinite(kmRealizado) && kmRealizado >= metaKm;
       if (!metaAtingida) continue;
