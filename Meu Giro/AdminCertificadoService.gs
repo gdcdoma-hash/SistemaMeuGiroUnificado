@@ -76,6 +76,12 @@ function listarPendenciasValidacaoCertificado(adminIdDgmb) {
       var chaveSemItem = [idDgmb, idDesafio, ''].join('|');
       var resumo = resumoPorChave[chaveExata] || resumoPorChave[chaveSemItem] || null;
 
+      var metaKm = resumo ? Number(resumo.meta_km || 0) : (idxMeta > -1 ? parseLocalizedNumber_(row[idxMeta]) : 0);
+      var kmRealizado = resumo ? Number(resumo.distancia_realizada || 0) : (idxRealizado > -1 ? parseLocalizedNumber_(row[idxRealizado]) : 0);
+      var metaValida = isFinite(metaKm) && metaKm > 0;
+      var metaAtingida = metaValida && isFinite(kmRealizado) && kmRealizado >= metaKm;
+      if (!metaAtingida) continue;
+
       out.push({
         row_number: i + 1,
         id_dgmb: idDgmb,
@@ -83,8 +89,8 @@ function listarPendenciasValidacaoCertificado(adminIdDgmb) {
         id_desafio: idDesafio,
         id_item_estoque: idItem,
         nome_desafio: nomesDesafiosPorId[idDesafio] || '',
-        meta_km: resumo ? Number(resumo.meta_km || 0) : (idxMeta > -1 ? parseLocalizedNumber_(row[idxMeta]) : 0),
-        km_realizado: resumo ? Number(resumo.distancia_realizada || 0) : (idxRealizado > -1 ? parseLocalizedNumber_(row[idxRealizado]) : 0),
+        meta_km: metaKm,
+        km_realizado: kmRealizado,
         status_apuracao: resumo ? normalizeText_(resumo.status_apuracao).toUpperCase() : (idxStatusApuracao > -1 ? normalizeText_(row[idxStatusApuracao]).toUpperCase() : ''),
         status_validacao_certificado: statusValidacao,
         print_strava_certificado: idxPrint > -1 ? normalizeText_(row[idxPrint]) : '',
