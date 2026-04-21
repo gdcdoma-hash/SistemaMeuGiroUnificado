@@ -1,5 +1,5 @@
 var CERTIFICADO_PASTA_BASE_ID_ = '1GncBumQM3RAS6WIT0jHQPaIMKBlT7OHi';
-var TEMPLATE_CERTIFICADO_SLIDES_ID_ = '';
+var TEMPLATE_CERTIFICADO_SLIDES_ID_ = '13BP2rHBiqymQyOk1bJsNFsSPxJAhQEPHj5FRIuAssfo';
 
 function gerarOuObterCertificadoDesafio(payload) {
   try {
