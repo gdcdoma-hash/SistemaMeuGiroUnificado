@@ -65,19 +65,27 @@ function listarPendenciasValidacaoCertificado(adminIdDgmb) {
     var out = [];
     for (var i = 1; i < values.length; i++) {
       var row = values[i];
+      var rowNumber = i + 1;
       var statusValidacao = idxStatusValidacao > -1 ? adminCertificadoNormalizarStatusValidacao_(row[idxStatusValidacao]) : '';
       if (!statusValidacao) statusValidacao = 'PENDENTE';
-      if (!statusVisiveisLista[statusValidacao]) continue;
 
       var idDgmb = normalizeText_(row[idxIdDgmb]);
-      if (!idDgmb) continue;
-
       var idDesafio = idxIdDesafio > -1 ? normalizeText_(row[idxIdDesafio]) : '';
       if (!idDesafio && idxObsRegistro > -1) {
         idDesafio = extrairIdDesafioObservacao_(row[idxObsRegistro]);
       }
-
       var idItem = idxIdItem > -1 ? normalizeText_(row[idxIdItem]) : '';
+
+      if (!statusVisiveisLista[statusValidacao]) {
+        Logger.log('[ADMIN_CERT_LISTAR][EXCLUIDO][STATUS] row=%s id_dgmb=%s id_desafio=%s id_item_estoque=%s status=%s', rowNumber, idDgmb, idDesafio, idItem, statusValidacao);
+        continue;
+      }
+
+      if (!idDgmb) {
+        Logger.log('[ADMIN_CERT_LISTAR][EXCLUIDO][SEM_ID_DGMB] row=%s id_desafio=%s id_item_estoque=%s status=%s', rowNumber, idDesafio, idItem, statusValidacao);
+        continue;
+      }
+
       var chaveExata = [idDgmb, idDesafio, idItem].join('|');
       var chaveSemItem = [idDgmb, idDesafio, ''].join('|');
       var resumo = resumoPorChave[chaveExata] || resumoPorChave[chaveSemItem] || null;
@@ -95,10 +103,15 @@ function listarPendenciasValidacaoCertificado(adminIdDgmb) {
         : kmRealizadoPlanilha;
       var metaValida = isFinite(metaKm) && metaKm > 0;
       var metaAtingida = metaValida && isFinite(kmRealizado) && kmRealizado >= metaKm;
-      if (!metaAtingida && statusValidacao === 'PENDENTE') continue;
+      if (!metaAtingida && statusValidacao === 'PENDENTE') {
+        Logger.log('[ADMIN_CERT_LISTAR][EXCLUIDO][META_NAO_ATINGIDA] row=%s id_dgmb=%s id_desafio=%s id_item_estoque=%s status=%s meta_km=%s km_realizado=%s', rowNumber, idDgmb, idDesafio, idItem, statusValidacao, metaKm, kmRealizado);
+        continue;
+      }
+
+      Logger.log('[ADMIN_CERT_LISTAR][INCLUIDO] row=%s id_dgmb=%s id_desafio=%s id_item_estoque=%s status=%s meta_km=%s km_realizado=%s', rowNumber, idDgmb, idDesafio, idItem, statusValidacao, metaKm, kmRealizado);
 
       out.push({
-        row_number: i + 1,
+        row_number: rowNumber,
         id_dgmb: idDgmb,
         nome_participante: nomesPorId[idDgmb] || '',
         id_desafio: idDesafio,
@@ -147,6 +160,7 @@ function atualizarStatusValidacaoCertificadoAdmin(payload) {
     var rowNumberPayload = Number(data.row_number || 0);
     var novoStatus = adminCertificadoNormalizarStatusValidacao_(data.novo_status);
     var observacao = normalizeText_(data.observacao);
+    Logger.log('[ADMIN_CERT_ATUALIZAR][INPUT] row_number=%s id_dgmb=%s id_desafio=%s id_item_estoque=%s novo_status=%s', rowNumberPayload, idDgmb, idDesafio, idItem, novoStatus);
 
     if (!idDgmb || !idDesafio) {
       return { ok: false, code: 'PARAMETROS_INVALIDOS', msg: 'ID_DGMB e ID_DESAFIO são obrigatórios.' };
@@ -227,6 +241,9 @@ function atualizarStatusValidacaoCertificadoAdmin(payload) {
     }
 
     sh.getRange(linhaAtualizacao, idxStatusValidacao + 1).setValue(novoStatus);
+    SpreadsheetApp.flush();
+    var statusFinalSalvo = adminCertificadoNormalizarStatusValidacao_(sh.getRange(linhaAtualizacao, idxStatusValidacao + 1).getValue());
+    Logger.log('[ADMIN_CERT_ATUALIZAR][WRITE] row_number_payload=%s linha_atualizada=%s id_dgmb=%s id_desafio=%s id_item_estoque=%s novo_status=%s status_salvo_final=%s', rowNumberPayload, linhaAtualizacao, idDgmb, idDesafio, idItem, novoStatus, statusFinalSalvo);
 
     if (novoStatus === 'APROVADO') {
       sh.getRange(linhaAtualizacao, idxDataAprovacao + 1).setValue(new Date());
@@ -244,7 +261,7 @@ function atualizarStatusValidacaoCertificadoAdmin(payload) {
         id_dgmb: idDgmb,
         id_desafio: idDesafio,
         id_item_estoque: idItem,
-        status_validacao_certificado: novoStatus,
+        status_validacao_certificado: statusFinalSalvo,
         observacao: observacao,
         row_number: linhaAtualizacao
       }

@@ -3299,10 +3299,23 @@ function carregarAdminValidacaoPendencias() {
 
   google.script.run
     .withSuccessHandler(function(res) {
+      console.log('[ADMIN_CERT][LISTAR][RESPOSTA]', res);
       if (!res || res.ok !== true) {
         setAdminCertMsg((res && res.msg) ? res.msg : 'Não foi possível carregar as pendências.', 'error');
         return;
       }
+
+      var itensRecebidos = Array.isArray(res.data) ? res.data : [];
+      console.log('[ADMIN_CERT][LISTAR][QTD_ITENS]', itensRecebidos.length);
+      itensRecebidos.forEach(function(item, idx) {
+        console.log('[ADMIN_CERT][LISTAR][ITEM]', idx, {
+          row_number: item.row_number,
+          id_dgmb: item.id_dgmb,
+          id_desafio: item.id_desafio,
+          id_item_estoque: item.id_item_estoque,
+          status_validacao_certificado: item.status_validacao_certificado
+        });
+      });
 
       renderAdminValidacaoLista(res.data || []);
       setAdminCertMsg('Pendências atualizadas.', 'success', 2200);
@@ -3318,6 +3331,16 @@ function renderAdminValidacaoLista(lista) {
   if (!box) return;
 
   var itens = Array.isArray(lista) ? lista : [];
+  console.log('[ADMIN_CERT][RENDER][QTD_ITENS]', itens.length);
+  itens.forEach(function(item, idx) {
+    console.log('[ADMIN_CERT][RENDER][ITEM]', idx, {
+      row_number: item.row_number,
+      id_dgmb: item.id_dgmb,
+      id_desafio: item.id_desafio,
+      id_item_estoque: item.id_item_estoque,
+      status_validacao_certificado: item.status_validacao_certificado
+    });
+  });
   box.innerHTML = '';
 
   if (!itens.length) {
@@ -3391,9 +3414,20 @@ function atualizarStatusAdminValidacao(item, novoStatus, obsInputId) {
 
   setAdminActionButtonsBusy_(actionButtons, clickedButton, novoStatus, true);
   setAdminCertMsg('Atualizando validação...', 'loading');
+  var payloadAtualizacao = {
+    admin_id_dgmb: String(currentUser.id_dgmb || '').trim(),
+    id_dgmb: item.id_dgmb || '',
+    id_desafio: item.id_desafio || '',
+    id_item_estoque: item.id_item_estoque || '',
+    row_number: item.row_number || '',
+    novo_status: novoStatus,
+    observacao: observacao
+  };
+  console.log('[ADMIN_CERT][ATUALIZAR][PAYLOAD]', payloadAtualizacao);
 
   google.script.run
     .withSuccessHandler(function(res) {
+      console.log('[ADMIN_CERT][ATUALIZAR][RESPOSTA]', res);
       setAdminActionButtonsBusy_(actionButtons, clickedButton, novoStatus, false);
       if (!res || res.ok !== true) {
         setAdminCertMsg((res && res.msg) ? res.msg : 'Não foi possível atualizar o status.', 'error');
@@ -3404,18 +3438,11 @@ function atualizarStatusAdminValidacao(item, novoStatus, obsInputId) {
       carregarAdminValidacaoPendencias();
     })
     .withFailureHandler(function() {
+      console.log('[ADMIN_CERT][ATUALIZAR][ERRO_CONEXAO]');
       setAdminActionButtonsBusy_(actionButtons, clickedButton, novoStatus, false);
       setAdminCertMsg('Erro de conexão ao atualizar validação.', 'error');
     })
-    .atualizarStatusValidacaoCertificadoAdmin({
-      admin_id_dgmb: String(currentUser.id_dgmb || '').trim(),
-      id_dgmb: item.id_dgmb || '',
-      id_desafio: item.id_desafio || '',
-      id_item_estoque: item.id_item_estoque || '',
-      row_number: item.row_number || '',
-      novo_status: novoStatus,
-      observacao: observacao
-    });
+    .atualizarStatusValidacaoCertificadoAdmin(payloadAtualizacao);
 }
 
 function formatAdminStatusValidacao_(status) {
