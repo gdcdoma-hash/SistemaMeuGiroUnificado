@@ -3370,6 +3370,8 @@ function atualizarStatusAdminValidacao(item, novoStatus, obsInputId) {
     return;
   }
 
+  novoStatus = formatAdminStatusValidacao_(novoStatus);
+
   var obsInput = document.getElementById(obsInputId);
   var card = obsInput ? obsInput.closest('.admin-cert-card') : null;
   var actionButtons = card ? Array.prototype.slice.call(card.querySelectorAll('[data-admin-action]')) : [];
@@ -3417,7 +3419,7 @@ function atualizarStatusAdminValidacao(item, novoStatus, obsInputId) {
 }
 
 function formatAdminStatusValidacao_(status) {
-  var valor = String(status || '').trim().toUpperCase();
+  var valor = String(status || '').trim().toUpperCase().replace(/\s+/g, '_');
   if (!valor) return 'PENDENTE';
 
   if (valor === 'EM_ANALISE') return 'EM_ANALISE';
