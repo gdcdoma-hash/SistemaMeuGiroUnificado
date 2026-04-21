@@ -1,4 +1,3 @@
-var CERTIFICADO_BACKGROUND_URL_ = 'https://i.imgur.com/nvjnDd4.png';
 var CERTIFICADO_PASTA_BASE_ID_ = '1GncBumQM3RAS6WIT0jHQPaIMKBlT7OHi';
 
 function gerarOuObterCertificadoDesafio(payload) {
@@ -108,7 +107,6 @@ function gerarHtmlCertificadoDesafio_(ctx, dados) {
   var payload = dados || {};
   var frase = 'Você não apenas concluiu o desafio. Você provou que é capaz de ir além.';
   var dataGeracao = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy');
-  var backgroundDataUri = certGetBackgroundDataUri_();
   return [
     '<!DOCTYPE html>',
     '<html>',
@@ -116,37 +114,53 @@ function gerarHtmlCertificadoDesafio_(ctx, dados) {
       '<meta charset="UTF-8">',
       '<style>',
         '@page { size: A4 landscape; margin: 0; }',
-        'html, body { margin: 0; padding: 0; width: 100%; height: 100%; font-family: Arial, sans-serif; }',
-        '.page { width: 1123px; height: 794px; position: relative; overflow: hidden; color: #fff; }',
-        '.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }',
-        '.overlay { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,0.66) 0%, rgba(0,0,0,0.50) 45%, rgba(0,0,0,0.10) 70%, rgba(0,0,0,0.00) 100%); }',
-        '.content { position: relative; z-index: 2; width: 58%; padding: 122px 0 0 84px; }',
-        '.title { font-size: 42px; font-weight: 800; letter-spacing: 1px; margin: 0 0 14px 0; text-transform: uppercase; }',
-        '.name { font-size: 36px; font-weight: 700; margin: 0 0 10px 0; color: #ffd44d; line-height: 1.15; }',
-        '.subtitle { font-size: 20px; margin: 0 0 22px 0; color: #f4f4f4; }',
-        '.phrase { font-size: 18px; line-height: 1.5; margin: 0 0 26px 0; max-width: 95%; }',
-        '.grid { width: 92%; border-collapse: collapse; border-spacing: 0; }',
-        '.grid td { padding: 7px 0; vertical-align: top; border-bottom: 1px solid rgba(255,255,255,0.25); font-size: 16px; }',
-        '.grid td.label { width: 165px; color: #ffe8a2; font-weight: 700; text-transform: uppercase; font-size: 13px; letter-spacing: .6px; }',
-        '.footer { margin-top: 18px; font-size: 12px; color: #f2f2f2; opacity: .9; }',
+        'html, body { margin: 0; padding: 0; width: 100%; height: 100%; font-family: Arial, sans-serif; background: #efefef; }',
+        '.page { width: 1123px; height: 794px; position: relative; overflow: hidden; color: #111; background: #f5f5f5; }',
+        '.top-band { height: 22px; background: #f1c40f; }',
+        '.frame { position: absolute; inset: 22px 28px 26px 28px; border: 2px solid #1e1e1e; background: #fff; }',
+        '.header { background: linear-gradient(90deg, #111 0%, #222 58%, #2f2f2f 100%); color: #fff; padding: 24px 42px 20px 42px; border-bottom: 6px solid #f1c40f; }',
+        '.title { margin: 0; font-size: 42px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; }',
+        '.subtitle { margin: 8px 0 0 0; font-size: 17px; color: #d7d7d7; letter-spacing: .3px; }',
+        '.content { padding: 30px 42px 0 42px; }',
+        '.name-label { margin: 0; font-size: 13px; text-transform: uppercase; font-weight: 700; color: #666; letter-spacing: 1px; }',
+        '.name { margin: 8px 0 8px 0; font-size: 50px; font-weight: 800; color: #101010; line-height: 1.1; }',
+        '.challenge { margin: 0; font-size: 24px; line-height: 1.32; color: #222; }',
+        '.challenge strong { color: #000; background: #f7d85c; padding: 2px 8px; }',
+        '.divider { margin: 20px 0 16px 0; height: 4px; background: linear-gradient(90deg, #f1c40f 0%, #f1c40f 38%, #3d3d3d 38%, #3d3d3d 100%); }',
+        '.cards { width: 100%; border-collapse: separate; border-spacing: 12px 12px; }',
+        '.card { width: 50%; border: 1px solid #d9d9d9; background: #f8f8f8; padding: 12px 16px; }',
+        '.card-label { margin: 0 0 7px 0; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .9px; color: #575757; }',
+        '.card-value { margin: 0; font-size: 23px; font-weight: 700; color: #111; }',
+        '.impact { margin: 10px 0 0 0; padding: 16px 18px; border-left: 8px solid #f1c40f; background: #191919; color: #fff; font-size: 21px; line-height: 1.36; font-weight: 700; }',
+        '.footer { position: absolute; left: 42px; right: 42px; bottom: 26px; font-size: 12px; color: #6d6d6d; border-top: 1px solid #d8d8d8; padding-top: 10px; }',
       '</style>',
     '</head>',
     '<body>',
       '<div class="page">',
-        '<img class="bg" src="' + certEscapeHtml_(backgroundDataUri) + '" alt="">',
-        '<div class="overlay"></div>',
-        '<div class="content">',
-          '<p class="title">Certificado</p>',
-          '<p class="name">' + certEscapeHtml_(payload.nome_participante || ('Participante ' + (ctx.id_dgmb || ''))) + '</p>',
-          '<p class="subtitle">Concluiu com sucesso o desafio <strong>' + certEscapeHtml_(payload.nome_desafio || ('ID ' + (ctx.id_desafio || ''))) + '</strong>.</p>',
-          '<p class="phrase">' + certEscapeHtml_(frase) + '</p>',
-          '<table class="grid">',
-            '<tr><td class="label">Meta</td><td>' + certEscapeHtml_(payload.meta_km) + '</td></tr>',
-            '<tr><td class="label">KM realizado</td><td>' + certEscapeHtml_(payload.km_realizado) + '</td></tr>',
-            '<tr><td class="label">Status</td><td>' + certEscapeHtml_(payload.status_desafio || 'CONCLUÍDO') + '</td></tr>',
-            '<tr><td class="label">Período</td><td>' + certEscapeHtml_(payload.periodo) + '</td></tr>',
-          '</table>',
-          '<p class="footer">ID DGMB: ' + certEscapeHtml_(ctx.id_dgmb || '') + ' • Desafio: ' + certEscapeHtml_(ctx.id_desafio || '') + ' • Emitido em: ' + certEscapeHtml_(dataGeracao) + '</p>',
+        '<div class="top-band"></div>',
+        '<div class="frame">',
+          '<div class="header">',
+            '<p class="title">Certificado</p>',
+            '<p class="subtitle">Meu Giro / DGMB • Reconhecimento Oficial de Conclusão</p>',
+          '</div>',
+          '<div class="content">',
+            '<p class="name-label">Participante</p>',
+            '<p class="name">' + certEscapeHtml_(payload.nome_participante || ('Participante ' + (ctx.id_dgmb || ''))) + '</p>',
+            '<p class="challenge">Concluiu com sucesso o desafio <strong>' + certEscapeHtml_(payload.nome_desafio || ('ID ' + (ctx.id_desafio || ''))) + '</strong>.</p>',
+            '<div class="divider"></div>',
+            '<table class="cards">',
+              '<tr>',
+                '<td class="card"><p class="card-label">Meta</p><p class="card-value">' + certEscapeHtml_(payload.meta_km) + '</p></td>',
+                '<td class="card"><p class="card-label">KM realizado</p><p class="card-value">' + certEscapeHtml_(payload.km_realizado) + '</p></td>',
+              '</tr>',
+              '<tr>',
+                '<td class="card"><p class="card-label">Status</p><p class="card-value">' + certEscapeHtml_(payload.status_desafio || 'CONCLUÍDO') + '</p></td>',
+                '<td class="card"><p class="card-label">Período</p><p class="card-value">' + certEscapeHtml_(payload.periodo) + '</p></td>',
+              '</tr>',
+            '</table>',
+            '<p class="impact">' + certEscapeHtml_(frase) + '</p>',
+          '</div>',
+          '<p class="footer">Emitido em: ' + certEscapeHtml_(dataGeracao) + ' • ID DGMB: ' + certEscapeHtml_(ctx.id_dgmb || '') + ' • Referência do desafio: ' + certEscapeHtml_(ctx.id_desafio || '') + '</p>',
         '</div>',
       '</div>',
     '</body>',
@@ -305,18 +319,6 @@ function certificadoLerLinkPlanilha_(ctx) {
 function certLinkValido_(url) {
   var u = String(url || '').trim();
   return /^https?:\/\/\S+/i.test(u);
-}
-
-function certGetBackgroundDataUri_() {
-  var response = UrlFetchApp.fetch(CERTIFICADO_BACKGROUND_URL_, { muteHttpExceptions: true });
-  var code = Number(response.getResponseCode() || 0);
-  if (code < 200 || code >= 300) {
-    throw new Error('Não foi possível carregar a imagem de fundo do certificado.');
-  }
-  var blob = response.getBlob();
-  var mime = String(blob.getContentType() || 'image/png').trim();
-  var b64 = Utilities.base64Encode(blob.getBytes());
-  return 'data:' + mime + ';base64,' + b64;
 }
 
 function certificadoBuscarContextoDesafio_(payload) {
