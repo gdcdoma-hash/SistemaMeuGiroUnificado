@@ -41,7 +41,7 @@ function listarPendenciasValidacaoCertificado(adminIdDgmb) {
     var idxMeta = getOptionalColumnIndex_(map, ['distancia_km', 'distancia km', 'meta_km', 'meta km']);
     var idxRealizado = getOptionalColumnIndex_(map, ['distancia_realizada', 'distancia realizada']);
     var idxStatusApuracao = getOptionalColumnIndex_(map, ['status_apuracao', 'status apuracao', 'status apuração', 'status_desafio', 'status desafio']);
-    var idxStatusValidacao = getRequiredColumnIndex_(map, ['status_validacao_certificado'], sheetName);
+    var idxStatusValidacao = getOptionalColumnIndex_(map, ['status_validacao_certificado']);
     var idxPrint = getOptionalColumnIndex_(map, ['print_strava_certificado']);
     var idxLinkPrint = getRequiredColumnIndex_(map, ['link_print_strava'], sheetName);
     var idxDataEnvio = getOptionalColumnIndex_(map, ['data_envio_print_strava']);
@@ -53,15 +53,9 @@ function listarPendenciasValidacaoCertificado(adminIdDgmb) {
     var resumoPorChave = adminCertificadoBuildResumoPorChave_();
 
     var out = [];
-    var statusPendentes = {
-      PENDENTE: true,
-      EM_ANALISE: true
-    };
-
     for (var i = 1; i < values.length; i++) {
       var row = values[i];
-      var statusValidacao = normalizeText_(row[idxStatusValidacao]).toUpperCase();
-      if (!statusPendentes[statusValidacao]) continue;
+      var statusValidacao = idxStatusValidacao > -1 ? normalizeText_(row[idxStatusValidacao]).toUpperCase() : '';
 
       var idDgmb = normalizeText_(row[idxIdDgmb]);
       if (!idDgmb) continue;
