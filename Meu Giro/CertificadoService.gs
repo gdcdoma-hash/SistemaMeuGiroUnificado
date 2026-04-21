@@ -1,4 +1,5 @@
 var CERTIFICADO_PASTA_BASE_ID_ = '1GncBumQM3RAS6WIT0jHQPaIMKBlT7OHi';
+var TEMPLATE_CERTIFICADO_SLIDES_ID_ = '';
 
 function gerarOuObterCertificadoDesafio(payload) {
   try {
@@ -88,9 +89,67 @@ function gerarCertificadoDesafio_(contexto) {
     }
   }
 
-  var html = HtmlService.createHtmlOutput(gerarHtmlCertificadoDesafio_(ctx, dadosVisuais));
-  var blobPdf = html.getBlob().getAs(MimeType.PDF).setName(nomeArquivo);
-  var arquivo = pastaDestino.createFile(blobPdf);
+  var templateId = String(TEMPLATE_CERTIFICADO_SLIDES_ID_ || '').trim();
+  if (!templateId) {
+    return {
+      ok: false,
+      code: 'CERTIFICADO_TEMPLATE_SLIDES_NAO_CONFIGURADO',
+      msg: 'Template do certificado em Google Slides não configurado.'
+    };
+  }
+
+  var arquivoTemporario = null;
+  var arquivo = null;
+  try {
+    var templateFile = DriveApp.getFileById(templateId);
+    arquivoTemporario = templateFile.makeCopy('tmp_' + nomeArquivo.replace(/\.pdf$/i, '') + '_' + new Date().getTime());
+    var apresentacao = SlidesApp.openById(arquivoTemporario.getId());
+    var slides = apresentacao.getSlides();
+    if (!slides || !slides.length) {
+      return {
+        ok: false,
+        code: 'CERTIFICADO_TEMPLATE_SEM_SLIDE',
+        msg: 'Template de certificado sem slide válido.'
+      };
+    }
+
+    var slide = slides[0];
+    var frase = 'Você não apenas concluiu o desafio. Você provou que é capaz de ir além.';
+    var dataGeracao = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy');
+    var placeholders = {
+      '{{NOME}}': dadosVisuais.nome_participante || ('Participante ' + (ctx.id_dgmb || '')),
+      '{{DESAFIO}}': dadosVisuais.nome_desafio || ('ID ' + (ctx.id_desafio || '')),
+      '{{META}}': dadosVisuais.meta_km || '-',
+      '{{KM_REALIZADO}}': dadosVisuais.km_realizado || '-',
+      '{{STATUS}}': dadosVisuais.status_desafio || 'CONCLUÍDO',
+      '{{PERIODO}}': dadosVisuais.periodo || '-',
+      '{{FRASE}}': frase,
+      '{{DATA_EMISSAO}}': dataGeracao,
+      '{{ID_DGMB}}': String(ctx.id_dgmb || ''),
+      '{{ID_DESAFIO}}': String(ctx.id_desafio || '')
+    };
+
+    Object.keys(placeholders).forEach(function(chave) {
+      slide.replaceAllText(chave, String(placeholders[chave] || ''));
+    });
+
+    apresentacao.saveAndClose();
+    var blobPdf = DriveApp.getFileById(arquivoTemporario.getId()).getBlob().getAs(MimeType.PDF).setName(nomeArquivo);
+    arquivo = pastaDestino.createFile(blobPdf);
+  } catch (e) {
+    return {
+      ok: false,
+      code: 'CERTIFICADO_GERACAO_SLIDES_ERROR',
+      msg: e && e.message ? e.message : 'Erro ao gerar certificado via Google Slides.'
+    };
+  } finally {
+    if (arquivoTemporario) {
+      try {
+        arquivoTemporario.setTrashed(true);
+      } catch (trashErr) {}
+    }
+  }
+
   arquivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   var url = String(arquivo.getUrl() || '').trim();
   if (!url) {
