@@ -2355,7 +2355,7 @@ function solicitarCertificadoDesafio(payloadEncoded, localStatusId, buttonId) {
         return;
       }
       setPainelMsg(res.reused ? 'Certificado pronto para download.' : 'Certificado gerado com sucesso.', 'success', 2600);
-      setCertificadoLocalMsg(localStatusId, 'Certificado pronto. Tentando abrir...', 'success', 3000);
+      setCertificadoLocalMsg(localStatusId, 'Certificado pronto. Tentando abrir...', 'success');
       var abriu = abrirCertificadoUrlRobusto_(res.url);
       exibirFallbackCertificadoLink_(localStatusId, res.url, abriu);
     })
