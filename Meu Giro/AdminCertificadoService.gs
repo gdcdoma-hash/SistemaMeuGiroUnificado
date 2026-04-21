@@ -91,7 +91,7 @@ function listarPendenciasValidacaoCertificado(adminIdDgmb) {
         : kmRealizadoPlanilha;
       var metaValida = isFinite(metaKm) && metaKm > 0;
       var metaAtingida = metaValida && isFinite(kmRealizado) && kmRealizado >= metaKm;
-      if (!metaAtingida) continue;
+      if (!metaAtingida && statusValidacao === 'PENDENTE') continue;
 
       out.push({
         row_number: i + 1,
@@ -321,3 +321,5 @@ function adminCertificadoBuildResumoPorChave_() {
 
   return out;
 }
+
+
