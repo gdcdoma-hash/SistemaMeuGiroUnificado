@@ -3417,7 +3417,14 @@ function atualizarStatusAdminValidacao(item, novoStatus, obsInputId) {
 
 function formatAdminStatusValidacao_(status) {
   var valor = String(status || '').trim().toUpperCase();
-  return valor || 'PENDENTE';
+  if (!valor) return 'PENDENTE';
+
+  if (valor === 'EM_ANALISE') return 'EM_ANALISE';
+  if (valor === 'APROVADO') return 'APROVADO';
+  if (valor === 'REPROVADO') return 'REPROVADO';
+  if (valor === 'PENDENTE') return 'PENDENTE';
+
+  return 'PENDENTE';
 }
 
 function setAdminActionButtonsBusy_(buttons, clickedButton, status, isBusy) {

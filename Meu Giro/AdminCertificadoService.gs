@@ -52,10 +52,18 @@ function listarPendenciasValidacaoCertificado(adminIdDgmb) {
     var nomesDesafiosPorId = adminCertificadoBuildMapaNomesDesafios_();
     var resumoPorChave = adminCertificadoBuildResumoPorChave_();
 
+    var statusVisiveisLista = {
+      PENDENTE: true,
+      EM_ANALISE: true,
+      REPROVADO: true
+    };
+
     var out = [];
     for (var i = 1; i < values.length; i++) {
       var row = values[i];
       var statusValidacao = idxStatusValidacao > -1 ? normalizeText_(row[idxStatusValidacao]).toUpperCase() : '';
+      if (!statusValidacao) statusValidacao = 'PENDENTE';
+      if (!statusVisiveisLista[statusValidacao]) continue;
 
       var idDgmb = normalizeText_(row[idxIdDgmb]);
       if (!idDgmb) continue;
@@ -96,7 +104,11 @@ function listarPendenciasValidacaoCertificado(adminIdDgmb) {
     }
 
     out.sort(function(a, b) {
-      return String(a.status_validacao_certificado || '').localeCompare(String(b.status_validacao_certificado || '')) ||
+      var ordemStatus = { PENDENTE: 1, EM_ANALISE: 2, REPROVADO: 3 };
+      var ordemA = ordemStatus[String(a.status_validacao_certificado || '').toUpperCase()] || 99;
+      var ordemB = ordemStatus[String(b.status_validacao_certificado || '').toUpperCase()] || 99;
+
+      return ordemA - ordemB ||
         String(a.nome_participante || '').localeCompare(String(b.nome_participante || ''));
     });
 
