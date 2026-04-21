@@ -78,8 +78,17 @@ function listarPendenciasValidacaoCertificado(adminIdDgmb) {
       var chaveSemItem = [idDgmb, idDesafio, ''].join('|');
       var resumo = resumoPorChave[chaveExata] || resumoPorChave[chaveSemItem] || null;
 
-      var metaKm = resumo ? Number(resumo.meta_km || 0) : (idxMeta > -1 ? parseLocalizedNumber_(row[idxMeta]) : 0);
-      var kmRealizado = resumo ? Number(resumo.distancia_realizada || 0) : (idxRealizado > -1 ? parseLocalizedNumber_(row[idxRealizado]) : 0);
+      var metaKmPlanilha = idxMeta > -1 ? parseLocalizedNumber_(row[idxMeta]) : 0;
+      var kmRealizadoPlanilha = idxRealizado > -1 ? parseLocalizedNumber_(row[idxRealizado]) : 0;
+      var metaKmResumo = resumo ? Number(resumo.meta_km || 0) : NaN;
+      var kmRealizadoResumo = resumo ? Number(resumo.distancia_realizada || 0) : NaN;
+
+      var metaKm = isFinite(metaKmResumo) && metaKmResumo > 0
+        ? metaKmResumo
+        : metaKmPlanilha;
+      var kmRealizado = isFinite(kmRealizadoResumo) && kmRealizadoResumo > 0
+        ? kmRealizadoResumo
+        : kmRealizadoPlanilha;
       var metaValida = isFinite(metaKm) && metaKm > 0;
       var metaAtingida = metaValida && isFinite(kmRealizado) && kmRealizado >= metaKm;
       if (!metaAtingida) continue;
@@ -131,6 +140,7 @@ function atualizarStatusValidacaoCertificadoAdmin(payload) {
     var idDgmb = normalizeText_(data.id_dgmb);
     var idDesafio = normalizeText_(data.id_desafio);
     var idItem = normalizeText_(data.id_item_estoque);
+    var rowNumberPayload = Number(data.row_number || 0);
     var novoStatus = normalizeText_(data.novo_status).toUpperCase();
     var observacao = normalizeText_(data.observacao);
 
@@ -175,22 +185,37 @@ function atualizarStatusValidacaoCertificadoAdmin(payload) {
     var idxObsValidacao = getRequiredColumnIndex_(map, ['obs_validacao_certificado'], sheetName);
 
     var linhaAtualizacao = -1;
-
-    for (var i = 1; i < values.length; i++) {
-      var row = values[i];
-      if (normalizeText_(row[idxIdDgmb]) !== idDgmb) continue;
-
-      var rowDesafio = idxIdDesafio > -1 ? normalizeText_(row[idxIdDesafio]) : '';
-      if (!rowDesafio && idxObsRegistro > -1) {
-        rowDesafio = extrairIdDesafioObservacao_(row[idxObsRegistro]);
+    if (rowNumberPayload > 1 && rowNumberPayload <= values.length) {
+      var rowByNumber = values[rowNumberPayload - 1] || [];
+      var rowByNumberId = normalizeText_(rowByNumber[idxIdDgmb]);
+      var rowByNumberDesafio = idxIdDesafio > -1 ? normalizeText_(rowByNumber[idxIdDesafio]) : '';
+      if (!rowByNumberDesafio && idxObsRegistro > -1) {
+        rowByNumberDesafio = extrairIdDesafioObservacao_(rowByNumber[idxObsRegistro]);
       }
-      if (rowDesafio !== idDesafio) continue;
+      var rowByNumberItem = idxIdItem > -1 ? normalizeText_(rowByNumber[idxIdItem]) : '';
 
-      var rowItem = idxIdItem > -1 ? normalizeText_(row[idxIdItem]) : '';
-      if (idItem && rowItem !== idItem) continue;
+      if (rowByNumberId === idDgmb && rowByNumberDesafio === idDesafio && rowByNumberItem === idItem) {
+        linhaAtualizacao = rowNumberPayload;
+      }
+    }
 
-      linhaAtualizacao = i + 1;
-      break;
+    if (linhaAtualizacao === -1) {
+      for (var i = 1; i < values.length; i++) {
+        var row = values[i];
+        if (normalizeText_(row[idxIdDgmb]) !== idDgmb) continue;
+
+        var rowDesafio = idxIdDesafio > -1 ? normalizeText_(row[idxIdDesafio]) : '';
+        if (!rowDesafio && idxObsRegistro > -1) {
+          rowDesafio = extrairIdDesafioObservacao_(row[idxObsRegistro]);
+        }
+        if (rowDesafio !== idDesafio) continue;
+
+        var rowItem = idxIdItem > -1 ? normalizeText_(row[idxIdItem]) : '';
+        if (rowItem !== idItem) continue;
+
+        linhaAtualizacao = i + 1;
+        break;
+      }
     }
 
     if (linhaAtualizacao === -1) {
