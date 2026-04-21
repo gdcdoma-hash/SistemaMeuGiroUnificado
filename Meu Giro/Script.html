@@ -2404,13 +2404,23 @@ function exibirFallbackCertificadoLink_(localStatusId, url, abriuAutomatico) {
   var el = document.getElementById(String(localStatusId || ''));
   if (!el) return;
 
-  var msg = abriuAutomatico
-    ? 'Se não abrir automaticamente, toque no link: '
-    : 'Não foi possível abrir automaticamente. Toque no link: ';
+  var msgApoio = abriuAutomatico
+    ? 'Se ele não abriu automaticamente, toque no botão abaixo.'
+    : 'Não foi possível abrir automaticamente. Toque no botão abaixo.';
 
-  el.classList.add('msg-inline', 'msg-success', 'is-visible');
-  el.innerHTML = escapeHtml(msg) +
-    '<a href="' + escapeHtml(safeUrl) + '" target="_blank" rel="noopener noreferrer">Abrir certificado</a>';
+  el.className = 'msg status-msg certificado-status-local msg-inline msg-success is-visible';
+  el.innerHTML = '' +
+    '<strong>Certificado pronto.</strong>' +
+    '<p class="certificado-status-helper">' + escapeHtml(msgApoio) + '</p>' +
+    '<div class="atividade-acoes">' +
+      '<button type="button" class="btn-secondary atividade-acao-btn" onclick="abrirCertificadoManual_(' + JSON.stringify(safeUrl) + ')">Abrir certificado</button>' +
+    '</div>';
+}
+
+function abrirCertificadoManual_(url) {
+  var safeUrl = String(url || '').trim();
+  if (!safeUrl) return;
+  abrirCertificadoUrlRobusto_(safeUrl);
 }
 
 function compareDesafioHistorico_(a, b) {
