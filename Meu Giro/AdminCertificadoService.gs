@@ -16,6 +16,10 @@ function validarAcessoAdminCertificado_(adminIdDgmb) {
   };
 }
 
+function adminCertificadoNormalizarStatusValidacao_(valor) {
+  return String(valor || '').trim().toUpperCase().replace(/\s+/g, '_');
+}
+
 function listarPendenciasValidacaoCertificado(adminIdDgmb) {
   try {
     var acesso = validarAcessoAdminCertificado_(adminIdDgmb);
@@ -61,7 +65,7 @@ function listarPendenciasValidacaoCertificado(adminIdDgmb) {
     var out = [];
     for (var i = 1; i < values.length; i++) {
       var row = values[i];
-      var statusValidacao = idxStatusValidacao > -1 ? normalizeText_(row[idxStatusValidacao]).toUpperCase() : '';
+      var statusValidacao = idxStatusValidacao > -1 ? adminCertificadoNormalizarStatusValidacao_(row[idxStatusValidacao]) : '';
       if (!statusValidacao) statusValidacao = 'PENDENTE';
       if (!statusVisiveisLista[statusValidacao]) continue;
 
@@ -114,8 +118,8 @@ function listarPendenciasValidacaoCertificado(adminIdDgmb) {
 
     out.sort(function(a, b) {
       var ordemStatus = { PENDENTE: 1, EM_ANALISE: 2, REPROVADO: 3 };
-      var ordemA = ordemStatus[String(a.status_validacao_certificado || '').toUpperCase()] || 99;
-      var ordemB = ordemStatus[String(b.status_validacao_certificado || '').toUpperCase()] || 99;
+      var ordemA = ordemStatus[adminCertificadoNormalizarStatusValidacao_(a.status_validacao_certificado)] || 99;
+      var ordemB = ordemStatus[adminCertificadoNormalizarStatusValidacao_(b.status_validacao_certificado)] || 99;
 
       return ordemA - ordemB ||
         String(a.nome_participante || '').localeCompare(String(b.nome_participante || ''));
@@ -141,7 +145,7 @@ function atualizarStatusValidacaoCertificadoAdmin(payload) {
     var idDesafio = normalizeText_(data.id_desafio);
     var idItem = normalizeText_(data.id_item_estoque);
     var rowNumberPayload = Number(data.row_number || 0);
-    var novoStatus = normalizeText_(data.novo_status).toUpperCase();
+    var novoStatus = adminCertificadoNormalizarStatusValidacao_(data.novo_status);
     var observacao = normalizeText_(data.observacao);
 
     if (!idDgmb || !idDesafio) {
@@ -321,5 +325,3 @@ function adminCertificadoBuildResumoPorChave_() {
 
   return out;
 }
-
-
