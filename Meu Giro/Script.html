@@ -2251,7 +2251,6 @@ function buildDesafioCard(item, options) {
         '<div id="' + certificadoImagemAcoesId + '" class="atividade-acoes" style="display:none;">' +
           '<button type="button" class="btn-secondary atividade-acao-btn" onclick="baixarPdfCertificadoDesafio(\'' + payloadCertificado + '\')">Baixar PDF</button>' +
           '<button type="button" class="btn-secondary atividade-acao-btn" onclick="baixarImagemCertificadoDesafio(\'' + payloadCertificado + '\')">Baixar imagem</button>' +
-          '<button type="button" class="btn-secondary atividade-acao-btn" onclick="compartilharCertificadoWhatsapp(\'' + payloadCertificado + '\')">Compartilhar no WhatsApp</button>' +
         '</div>'
       : '') +
     '<div id="' + certificadoStatusId + '" class="msg status-msg certificado-status-local' + (mensagemLocalCertificado ? ' is-visible msg-inline' : '') + (varianteLocalCertificado ? (' msg-' + varianteLocalCertificado) : '') + '">' + escapeHtml(mensagemLocalCertificado) + '</div>';
@@ -2398,8 +2397,7 @@ function atualizarAcoesImagemCertificado_(payload, imageActionsId, res) {
   certificadoImagemLinks_[key] = {
     imageUrl: imageUrl,
     pdfDownloadUrl: pdfDownloadUrl,
-    downloadImageUrl: String((res && res.downloadImageUrl) || '').trim() || imageUrl,
-    whatsAppUrl: String((res && res.whatsAppUrl) || '').trim()
+    downloadImageUrl: String((res && res.downloadImageUrl) || '').trim() || imageUrl
   };
 
   var box = document.getElementById(String(imageActionsId || ''));
@@ -2467,24 +2465,6 @@ function baixarImagemCertificadoDesafio(payloadEncoded) {
   if (!baixou) {
     abrirCertificadoUrlRobusto_(url);
   }
-}
-
-function compartilharCertificadoWhatsapp(payloadEncoded) {
-  var payload = {};
-  try {
-    payload = JSON.parse(decodeURIComponent(String(payloadEncoded || '')));
-  } catch (e) {
-    payload = {};
-  }
-
-  var key = buildCertificadoDesafioKey_(payload);
-  var links = key ? certificadoImagemLinks_[key] : null;
-  if (!links || !links.whatsAppUrl) {
-    setPainelMsg('Primeiro gere o certificado.', 'error');
-    return;
-  }
-
-  abrirCertificadoUrlRobusto_(links.whatsAppUrl);
 }
 
 function abrirCertificadoUrlRobusto_(url) {
