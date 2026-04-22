@@ -2247,8 +2247,9 @@ function buildDesafioCard(item, options) {
     '</div>' +
     '<div class="desafio-progress-track" aria-hidden="true"><span class="desafio-progress-fill" style="width:' + percentualNormalizado + '%"></span></div>' +
     (podeBaixarCertificado
-      ? '<div class="atividade-acoes"><button type="button" id="' + certificadoBtnId + '" class="btn-secondary atividade-acao-btn" onclick="solicitarCertificadoDesafio(\'' + payloadCertificado + '\', \'' + certificadoStatusId + '\', \'' + certificadoBtnId + '\', \'' + certificadoImagemAcoesId + '\')">Baixar PDF</button></div>' +
+      ? '<div class="atividade-acoes"><button type="button" id="' + certificadoBtnId + '" class="btn-secondary atividade-acao-btn" onclick="solicitarCertificadoDesafio(\'' + payloadCertificado + '\', \'' + certificadoStatusId + '\', \'' + certificadoBtnId + '\', \'' + certificadoImagemAcoesId + '\')">Gerar certificado</button></div>' +
         '<div id="' + certificadoImagemAcoesId + '" class="atividade-acoes" style="display:none;">' +
+          '<button type="button" class="btn-secondary atividade-acao-btn" onclick="baixarPdfCertificadoDesafio(\'' + payloadCertificado + '\')">Baixar PDF</button>' +
           '<button type="button" class="btn-secondary atividade-acao-btn" onclick="baixarImagemCertificadoDesafio(\'' + payloadCertificado + '\')">Baixar imagem</button>' +
           '<button type="button" class="btn-secondary atividade-acao-btn" onclick="compartilharCertificadoWhatsapp(\'' + payloadCertificado + '\')">Compartilhar no WhatsApp</button>' +
         '</div>'
@@ -2369,10 +2370,7 @@ function solicitarCertificadoDesafio(payloadEncoded, localStatusId, buttonId, im
         return;
       }
       setPainelMsg(res.reused ? 'Certificado pronto para download.' : 'Certificado gerado com sucesso.', 'success', 2600);
-      setCertificadoLocalMsg(localStatusId, 'Certificado pronto. Tentando abrir...', 'success');
-      var pdfUrl = String((res && res.pdfDownloadUrl) || '').trim() || String((res && res.url) || '').trim();
-      var abriu = abrirCertificadoUrlRobusto_(pdfUrl);
-      exibirFallbackCertificadoLink_(localStatusId, pdfUrl, abriu);
+      setCertificadoLocalMsg(localStatusId, 'Certificado pronto para download.', 'success');
       atualizarAcoesImagemCertificado_(payload, imageActionsId, res);
     })
     .withFailureHandler(function() {
@@ -2394,10 +2392,12 @@ function atualizarAcoesImagemCertificado_(payload, imageActionsId, res) {
   if (!key) return;
 
   var imageUrl = String((res && res.imageUrl) || '').trim();
-  if (!imageUrl) return;
+  var pdfDownloadUrl = String((res && res.pdfDownloadUrl) || '').trim() || String((res && res.url) || '').trim();
+  if (!imageUrl && !pdfDownloadUrl) return;
 
   certificadoImagemLinks_[key] = {
     imageUrl: imageUrl,
+    pdfDownloadUrl: pdfDownloadUrl,
     downloadImageUrl: String((res && res.downloadImageUrl) || '').trim() || imageUrl,
     whatsAppUrl: String((res && res.whatsAppUrl) || '').trim()
   };
@@ -2405,6 +2405,25 @@ function atualizarAcoesImagemCertificado_(payload, imageActionsId, res) {
   var box = document.getElementById(String(imageActionsId || ''));
   if (!box) return;
   box.style.display = '';
+}
+
+function baixarPdfCertificadoDesafio(payloadEncoded) {
+  var payload = {};
+  try {
+    payload = JSON.parse(decodeURIComponent(String(payloadEncoded || '')));
+  } catch (e) {
+    payload = {};
+  }
+
+  var key = buildCertificadoDesafioKey_(payload);
+  var links = key ? certificadoImagemLinks_[key] : null;
+  var pdfUrl = String((links && links.pdfDownloadUrl) || '').trim();
+  if (!pdfUrl) {
+    setPainelMsg('Primeiro gere o certificado.', 'error');
+    return;
+  }
+
+  abrirCertificadoUrlRobusto_(pdfUrl);
 }
 
 function baixarImagemCertificadoDesafio(payloadEncoded) {
@@ -2422,7 +2441,32 @@ function baixarImagemCertificadoDesafio(payloadEncoded) {
     return;
   }
 
-  abrirCertificadoUrlRobusto_(links.downloadImageUrl || links.imageUrl);
+  var downloadUrl = String((links && links.downloadImageUrl) || '').trim();
+  var fallbackUrl = String((links && links.imageUrl) || '').trim();
+  var url = downloadUrl || fallbackUrl;
+  if (!url) {
+    setPainelMsg('Primeiro gere o certificado.', 'error');
+    return;
+  }
+
+  var baixou = false;
+  try {
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = '';
+    a.rel = 'noopener noreferrer';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    baixou = true;
+  } catch (e3) {
+    baixou = false;
+  }
+
+  if (!baixou) {
+    abrirCertificadoUrlRobusto_(url);
+  }
 }
 
 function compartilharCertificadoWhatsapp(payloadEncoded) {
@@ -2465,19 +2509,6 @@ function abrirCertificadoUrlRobusto_(url) {
   } catch (e2) {}
 
   return false;
-}
-
-function exibirFallbackCertificadoLink_(localStatusId, url, abriuAutomatico) {
-  var safeUrl = String(url || '').trim();
-  if (!safeUrl) return;
-
-  var el = document.getElementById(String(localStatusId || ''));
-  if (!el) return;
-
-  el.className = 'msg status-msg certificado-status-local msg-inline msg-success is-visible';
-  el.innerHTML = '' +
-    '<strong>Certificado pronto.</strong>' +
-    '<p class="certificado-status-helper">Se não abriu automaticamente, toque novamente no botão acima.</p>';
 }
 
 function compareDesafioHistorico_(a, b) {
