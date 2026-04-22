@@ -49,6 +49,7 @@ const TELAS_RELEVANTES_SESSAO = {
 };
 let telaPrivadaRestaurada = 'painel';
 const statusMessageTimers = {};
+const certificadoImagemLinks_ = {};
 
 function syncGlobalBusyState() {
   const root = document.body;
@@ -340,6 +341,14 @@ function buildDesafioCertificadoDomId(prefix, desafio) {
 
   if (!slug) slug = 'desafio';
   return String(prefix || 'certificado') + '-' + slug;
+}
+
+function buildCertificadoDesafioKey_(payload) {
+  var data = payload || {};
+  return [
+    String(data.id_desafio || '').trim(),
+    String(data.id_item_estoque || '').trim()
+  ].join('|');
 }
 
 function setCertificadoLocalMsg(elementId, message, variant, timeoutMs) {
@@ -2217,6 +2226,7 @@ function buildDesafioCard(item, options) {
   }));
   var certificadoStatusId = buildDesafioCertificadoDomId('certificado-status', desafio);
   var certificadoBtnId = buildDesafioCertificadoDomId('certificado-btn', desafio);
+  var certificadoImagemAcoesId = buildDesafioCertificadoDomId('certificado-imagem-acoes', desafio);
   var mensagemLocalCertificado = !concluido
     ? 'Conclua sua meta para liberar seu certificado.'
     : (aguardandoValidacaoCertificado ? 'Aguardando validação do seu desempenho pela equipe.' : '');
@@ -2237,7 +2247,11 @@ function buildDesafioCard(item, options) {
     '</div>' +
     '<div class="desafio-progress-track" aria-hidden="true"><span class="desafio-progress-fill" style="width:' + percentualNormalizado + '%"></span></div>' +
     (podeBaixarCertificado
-      ? '<div class="atividade-acoes"><button type="button" id="' + certificadoBtnId + '" class="btn-secondary atividade-acao-btn" onclick="solicitarCertificadoDesafio(\'' + payloadCertificado + '\', \'' + certificadoStatusId + '\', \'' + certificadoBtnId + '\')">Baixar certificado</button></div>'
+      ? '<div class="atividade-acoes"><button type="button" id="' + certificadoBtnId + '" class="btn-secondary atividade-acao-btn" onclick="solicitarCertificadoDesafio(\'' + payloadCertificado + '\', \'' + certificadoStatusId + '\', \'' + certificadoBtnId + '\', \'' + certificadoImagemAcoesId + '\')">Baixar certificado</button></div>' +
+        '<div id="' + certificadoImagemAcoesId + '" class="atividade-acoes" style="display:none;">' +
+          '<button type="button" class="btn-secondary atividade-acao-btn" onclick="baixarImagemCertificadoDesafio(\'' + payloadCertificado + '\')">Baixar imagem</button>' +
+          '<button type="button" class="btn-secondary atividade-acao-btn" onclick="compartilharCertificadoWhatsapp(\'' + payloadCertificado + '\')">Compartilhar no WhatsApp</button>' +
+        '</div>'
       : '') +
     '<div id="' + certificadoStatusId + '" class="msg status-msg certificado-status-local' + (mensagemLocalCertificado ? ' is-visible msg-inline' : '') + (varianteLocalCertificado ? (' msg-' + varianteLocalCertificado) : '') + '">' + escapeHtml(mensagemLocalCertificado) + '</div>';
 
@@ -2315,7 +2329,7 @@ function isDesafioElegivelCertificado_(desafio) {
   return !!statusConclusao[status] && statusValidacao === 'APROVADO';
 }
 
-function solicitarCertificadoDesafio(payloadEncoded, localStatusId, buttonId) {
+function solicitarCertificadoDesafio(payloadEncoded, localStatusId, buttonId, imageActionsId) {
   var payload = {};
   try {
     payload = JSON.parse(decodeURIComponent(String(payloadEncoded || '')));
@@ -2358,6 +2372,7 @@ function solicitarCertificadoDesafio(payloadEncoded, localStatusId, buttonId) {
       setCertificadoLocalMsg(localStatusId, 'Certificado pronto. Tentando abrir...', 'success');
       var abriu = abrirCertificadoUrlRobusto_(res.url);
       exibirFallbackCertificadoLink_(localStatusId, res.url, abriu);
+      atualizarAcoesImagemCertificado_(payload, imageActionsId, res);
     })
     .withFailureHandler(function() {
       if (btn) {
@@ -2371,6 +2386,60 @@ function solicitarCertificadoDesafio(payloadEncoded, localStatusId, buttonId) {
       id_desafio: payload.id_desafio || '',
       id_item_estoque: payload.id_item_estoque || ''
     });
+}
+
+function atualizarAcoesImagemCertificado_(payload, imageActionsId, res) {
+  var key = buildCertificadoDesafioKey_(payload);
+  if (!key) return;
+
+  var imageUrl = String((res && res.imageUrl) || '').trim();
+  if (!imageUrl) return;
+
+  certificadoImagemLinks_[key] = {
+    imageUrl: imageUrl,
+    downloadImageUrl: String((res && res.downloadImageUrl) || '').trim() || imageUrl,
+    whatsAppUrl: String((res && res.whatsAppUrl) || '').trim()
+  };
+
+  var box = document.getElementById(String(imageActionsId || ''));
+  if (!box) return;
+  box.style.display = '';
+}
+
+function baixarImagemCertificadoDesafio(payloadEncoded) {
+  var payload = {};
+  try {
+    payload = JSON.parse(decodeURIComponent(String(payloadEncoded || '')));
+  } catch (e) {
+    payload = {};
+  }
+
+  var key = buildCertificadoDesafioKey_(payload);
+  var links = key ? certificadoImagemLinks_[key] : null;
+  if (!links || !links.imageUrl) {
+    setPainelMsg('Primeiro gere o certificado.', 'error');
+    return;
+  }
+
+  abrirCertificadoUrlRobusto_(links.downloadImageUrl || links.imageUrl);
+}
+
+function compartilharCertificadoWhatsapp(payloadEncoded) {
+  var payload = {};
+  try {
+    payload = JSON.parse(decodeURIComponent(String(payloadEncoded || '')));
+  } catch (e) {
+    payload = {};
+  }
+
+  var key = buildCertificadoDesafioKey_(payload);
+  var links = key ? certificadoImagemLinks_[key] : null;
+  if (!links || !links.whatsAppUrl) {
+    setPainelMsg('Primeiro gere o certificado.', 'error');
+    return;
+  }
+
+  abrirCertificadoUrlRobusto_(links.whatsAppUrl);
 }
 
 function abrirCertificadoUrlRobusto_(url) {

@@ -32,18 +32,26 @@ function gerarOuObterCertificadoDesafio(payload) {
 
     var linkPlanilha = certificadoLerLinkPlanilha_(contexto);
     if (certLinkValido_(linkPlanilha)) {
+      var extrasPlanilha = certificadoMontarExtrasImagem_(contexto);
       return {
         ok: true,
         url: linkPlanilha,
-        reused: true
+        reused: true,
+        imageUrl: extrasPlanilha.imageUrl || '',
+        downloadImageUrl: extrasPlanilha.downloadImageUrl || '',
+        whatsAppUrl: extrasPlanilha.whatsAppUrl || ''
       };
     }
 
     if (certLinkValido_(contexto.link_certificado_existente)) {
+      var extrasExistente = certificadoMontarExtrasImagem_(contexto);
       return {
         ok: true,
         url: contexto.link_certificado_existente,
-        reused: true
+        reused: true,
+        imageUrl: extrasExistente.imageUrl || '',
+        downloadImageUrl: extrasExistente.downloadImageUrl || '',
+        whatsAppUrl: extrasExistente.whatsAppUrl || ''
       };
     }
 
@@ -56,10 +64,14 @@ function gerarOuObterCertificadoDesafio(payload) {
       };
     }
 
+    var extrasNovo = certificadoMontarExtrasImagem_(contexto);
     return {
       ok: true,
       url: String(gerado.url || ''),
-      reused: false
+      reused: false,
+      imageUrl: extrasNovo.imageUrl || '',
+      downloadImageUrl: extrasNovo.downloadImageUrl || '',
+      whatsAppUrl: extrasNovo.whatsAppUrl || ''
     };
   } catch (err) {
     return {
@@ -67,6 +79,29 @@ function gerarOuObterCertificadoDesafio(payload) {
       code: 'CERTIFICADO_ERROR',
       msg: err && err.message ? err.message : 'Erro interno ao gerar certificado.'
     };
+  }
+}
+
+function certificadoMontarExtrasImagem_(contexto) {
+  var ctx = contexto || {};
+  if (ctx._certificado_imagem_processado_) {
+    return ctx._certificado_imagem_processado_;
+  }
+  try {
+    var imagem = gerarCertificadoImagem_(ctx);
+    if (!imagem || imagem.ok !== true) {
+      ctx._certificado_imagem_processado_ = {};
+      return ctx._certificado_imagem_processado_;
+    }
+    ctx._certificado_imagem_processado_ = {
+      imageUrl: String(imagem.imageUrl || '').trim(),
+      downloadImageUrl: String(imagem.downloadImageUrl || '').trim(),
+      whatsAppUrl: String(imagem.whatsAppUrl || '').trim()
+    };
+    return ctx._certificado_imagem_processado_;
+  } catch (e) {
+    ctx._certificado_imagem_processado_ = {};
+    return ctx._certificado_imagem_processado_;
   }
 }
 
