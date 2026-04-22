@@ -36,6 +36,7 @@ function gerarOuObterCertificadoDesafio(payload) {
       return {
         ok: true,
         url: linkPlanilha,
+        pdfDownloadUrl: montarUrlDownloadPdfCertificado_(linkPlanilha),
         reused: true,
         imageUrl: extrasPlanilha.imageUrl || '',
         downloadImageUrl: extrasPlanilha.downloadImageUrl || '',
@@ -48,6 +49,7 @@ function gerarOuObterCertificadoDesafio(payload) {
       return {
         ok: true,
         url: contexto.link_certificado_existente,
+        pdfDownloadUrl: montarUrlDownloadPdfCertificado_(contexto.link_certificado_existente),
         reused: true,
         imageUrl: extrasExistente.imageUrl || '',
         downloadImageUrl: extrasExistente.downloadImageUrl || '',
@@ -68,6 +70,7 @@ function gerarOuObterCertificadoDesafio(payload) {
     return {
       ok: true,
       url: String(gerado.url || ''),
+      pdfDownloadUrl: String(gerado.pdfDownloadUrl || ''),
       reused: false,
       imageUrl: extrasNovo.imageUrl || '',
       downloadImageUrl: extrasNovo.downloadImageUrl || '',
@@ -120,7 +123,12 @@ function gerarCertificadoDesafio_(contexto) {
     if (urlExistente) {
       var saveExistente = certificadoSalvarLinkPlanilha_(ctx, urlExistente);
       if (!saveExistente.ok) return saveExistente;
-      return { ok: true, url: urlExistente, reused: true };
+      return {
+        ok: true,
+        url: urlExistente,
+        pdfDownloadUrl: montarUrlDownloadPdfCertificado_(arquivoExistente.getId() || urlExistente),
+        reused: true
+      };
     }
   }
 
@@ -194,7 +202,11 @@ function gerarCertificadoDesafio_(contexto) {
   var saveNovo = certificadoSalvarLinkPlanilha_(ctx, url);
   if (!saveNovo.ok) return saveNovo;
 
-  return { ok: true, url: url };
+  return {
+    ok: true,
+    url: url,
+    pdfDownloadUrl: montarUrlDownloadPdfCertificado_(arquivo.getId() || url)
+  };
 }
 
 function gerarHtmlCertificadoDesafio_(ctx, dados) {
@@ -413,6 +425,31 @@ function certificadoLerLinkPlanilha_(ctx) {
 function certLinkValido_(url) {
   var u = String(url || '').trim();
   return /^https?:\/\/\S+/i.test(u);
+}
+
+function montarUrlDownloadPdfCertificado_(urlOuId) {
+  var fileId = extrairDriveFileIdCertificado_(urlOuId);
+  if (!fileId) return '';
+  return 'https://drive.google.com/uc?export=download&id=' + encodeURIComponent(fileId);
+}
+
+function extrairDriveFileIdCertificado_(urlOuId) {
+  var txt = String(urlOuId || '').trim();
+  if (!txt) return '';
+  var byIdMatch = txt.match(/[-\w]{25,}/);
+  if (!/^https?:\/\//i.test(txt)) {
+    return byIdMatch ? byIdMatch[0] : '';
+  }
+  var patterns = [
+    /\/d\/([-\w]{25,})/i,
+    /[?&]id=([-\w]{25,})/i,
+    /\/file\/d\/([-\w]{25,})/i
+  ];
+  for (var i = 0; i < patterns.length; i++) {
+    var match = txt.match(patterns[i]);
+    if (match && match[1]) return match[1];
+  }
+  return byIdMatch ? byIdMatch[0] : '';
 }
 
 function certificadoBuscarContextoDesafio_(payload) {
