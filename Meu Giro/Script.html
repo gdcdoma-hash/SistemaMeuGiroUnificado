@@ -2247,7 +2247,7 @@ function buildDesafioCard(item, options) {
     '</div>' +
     '<div class="desafio-progress-track" aria-hidden="true"><span class="desafio-progress-fill" style="width:' + percentualNormalizado + '%"></span></div>' +
     (podeBaixarCertificado
-      ? '<div class="atividade-acoes"><button type="button" id="' + certificadoBtnId + '" class="btn-secondary atividade-acao-btn" onclick="solicitarCertificadoDesafio(\'' + payloadCertificado + '\', \'' + certificadoStatusId + '\', \'' + certificadoBtnId + '\', \'' + certificadoImagemAcoesId + '\')">Baixar certificado</button></div>' +
+      ? '<div class="atividade-acoes"><button type="button" id="' + certificadoBtnId + '" class="btn-secondary atividade-acao-btn" onclick="solicitarCertificadoDesafio(\'' + payloadCertificado + '\', \'' + certificadoStatusId + '\', \'' + certificadoBtnId + '\', \'' + certificadoImagemAcoesId + '\')">Baixar PDF</button></div>' +
         '<div id="' + certificadoImagemAcoesId + '" class="atividade-acoes" style="display:none;">' +
           '<button type="button" class="btn-secondary atividade-acao-btn" onclick="baixarImagemCertificadoDesafio(\'' + payloadCertificado + '\')">Baixar imagem</button>' +
           '<button type="button" class="btn-secondary atividade-acao-btn" onclick="compartilharCertificadoWhatsapp(\'' + payloadCertificado + '\')">Compartilhar no WhatsApp</button>' +
@@ -2357,7 +2357,7 @@ function solicitarCertificadoDesafio(payloadEncoded, localStatusId, buttonId, im
         btn.disabled = false;
       }
 
-      if (!res || res.ok !== true || !res.url) {
+      if (!res || res.ok !== true || !(res.pdfDownloadUrl || res.url)) {
         if (res && res.code === 'CERTIFICADO_NAO_LIBERADO') {
           setPainelMsg('Aguardando validação do seu desempenho pela equipe.', 'loading');
           setCertificadoLocalMsg(localStatusId, 'Aguardando validação do seu desempenho pela equipe.', 'loading');
@@ -2370,8 +2370,9 @@ function solicitarCertificadoDesafio(payloadEncoded, localStatusId, buttonId, im
       }
       setPainelMsg(res.reused ? 'Certificado pronto para download.' : 'Certificado gerado com sucesso.', 'success', 2600);
       setCertificadoLocalMsg(localStatusId, 'Certificado pronto. Tentando abrir...', 'success');
-      var abriu = abrirCertificadoUrlRobusto_(res.url);
-      exibirFallbackCertificadoLink_(localStatusId, res.url, abriu);
+      var pdfUrl = String((res && res.pdfDownloadUrl) || '').trim() || String((res && res.url) || '').trim();
+      var abriu = abrirCertificadoUrlRobusto_(pdfUrl);
+      exibirFallbackCertificadoLink_(localStatusId, pdfUrl, abriu);
       atualizarAcoesImagemCertificado_(payload, imageActionsId, res);
     })
     .withFailureHandler(function() {
