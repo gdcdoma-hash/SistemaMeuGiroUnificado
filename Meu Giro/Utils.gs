@@ -515,6 +515,62 @@ function buildMapaStatusDesafioListaPorId_(ss) {
   return out;
 }
 
+function logMeuGiroDiagnostico_(mensagem, dados) {
+  try {
+    Logger.log('[Meu Giro][diagnostico] ' + mensagem + (dados ? ' ' + JSON.stringify(dados) : ''));
+  } catch (e) {}
+}
+
+function extrairPeriodoDesafioTexto_(texto) {
+  var bruto = normalizeText_(texto);
+  if (!bruto) return { inicio: '', fim: '' };
+
+  var iso = bruto.match(/(\d{4}-\d{2}-\d{2}).*?(\d{4}-\d{2}-\d{2})/);
+  if (iso) return { inicio: normalizarDataISO_(iso[1]), fim: normalizarDataISO_(iso[2]) };
+
+  var br = bruto.match(/(\d{2}\/\d{2}\/\d{4}).*?(\d{2}\/\d{2}\/\d{4})/);
+  if (br) return { inicio: normalizarDataISO_(br[1]), fim: normalizarDataISO_(br[2]) };
+
+  return { inicio: '', fim: '' };
+}
+
+function montarPeriodoHistoricoVinculo_(row, indices, periodoLista, contextoLog) {
+  var periodoTexto = indices.periodo > -1 ? normalizeText_(row[indices.periodo]) : '';
+  var inicioHistorico = indices.inicio > -1 ? normalizarDataISO_(row[indices.inicio]) : '';
+  var fimHistorico = indices.fim > -1 ? normalizarDataISO_(row[indices.fim]) : '';
+
+  if ((!inicioHistorico || !fimHistorico) && periodoTexto) {
+    var periodoExtraido = extrairPeriodoDesafioTexto_(periodoTexto);
+    inicioHistorico = inicioHistorico || periodoExtraido.inicio;
+    fimHistorico = fimHistorico || periodoExtraido.fim;
+  }
+
+  var inicio = inicioHistorico;
+  var fim = fimHistorico;
+  var usouFallbackLista = false;
+
+  if ((!inicio || !fim) && periodoLista) {
+    inicio = inicio || periodoLista.inicio || '';
+    fim = fim || periodoLista.fim || '';
+    usouFallbackLista = !!(periodoLista.inicio || periodoLista.fim);
+  }
+
+  if (usouFallbackLista) {
+    logMeuGiroDiagnostico_('Fallback de período via ListaDesafios usado.', contextoLog);
+  }
+
+  if (!inicio || !fim) {
+    logMeuGiroDiagnostico_('Desafio sem data_inicio/data_fim para filtro histórico.', contextoLog);
+  }
+
+  return {
+    inicio: inicio || '',
+    fim: fim || '',
+    periodo_desafio: periodoTexto,
+    nome_desafio: (periodoLista && periodoLista.nome_desafio) || ''
+  };
+}
+
 function obterVinculosDesafioUsuario_(idDgmb) {
   var id = normalizeText_(idDgmb);
   if (!id) return [];
@@ -538,10 +594,14 @@ function obterVinculosDesafioUsuario_(idDgmb) {
   var idxItem = getOptionalColumnIndex_(map, ['id_item_estoque', 'id item estoque']);
   var idxTipoDesafio = getOptionalColumnIndex_(map, ['tipo_do_desafio', 'tipo do desafio', 'tipo_desafio', 'tipo desafio']);
   var idxStatusDesafio = getOptionalColumnIndex_(map, ['status_desafio', 'status desafio']);
+  var idxStatusUsuarioDesafio = getOptionalColumnIndex_(map, ['status_usuario_desafio', 'status usuário desafio', 'status usuario desafio']);
   var idxStatusValidacaoCertificado = getOptionalColumnIndex_(map, ['status_validacao_certificado']);
   var idxStatusPag = getOptionalColumnIndex_(map, ['status_pagamento', 'pagamento_status', 'pagamento', 'pix_status']);
-  var idxStatusInscricao = getOptionalColumnIndex_(map, ['status_inscricao', 'status inscrição', 'status', 'situacao', 'situação']);
+  var idxStatusInscricao = getOptionalColumnIndex_(map, ['status_inscricao', 'status inscrição']);
   var idxConfirmacao = getOptionalColumnIndex_(map, ['confirmacao', 'confirmação', 'confirmado', 'inscricao_confirmada']);
+  var idxPeriodoHistorico = getOptionalColumnIndex_(map, ['periodo_desafio', 'periodo desafio', 'período_desafio', 'período desafio']);
+  var idxInicioHistorico = getOptionalColumnIndex_(map, ['data_inicio_desafio', 'data inicio desafio', 'data início desafio']);
+  var idxFimHistorico = getOptionalColumnIndex_(map, ['data_fim_desafio', 'data fim desafio']);
 
   var vinculos = [];
   var chaves = {};
@@ -563,25 +623,50 @@ function obterVinculosDesafioUsuario_(idDgmb) {
     var statusConfirmacao = idxConfirmacao > -1 ? normalizeText_(row[idxConfirmacao]) : '';
     var statusPagamento = idxStatusPag > -1 ? normalizeText_(row[idxStatusPag]) : '';
     var statusDesafio = idxStatusDesafio > -1 ? normalizeText_(row[idxStatusDesafio]) : '';
+    var statusUsuarioDesafio = idxStatusUsuarioDesafio > -1 ? normalizeText_(row[idxStatusUsuarioDesafio]) : '';
     var statusValidacaoCertificado = idxStatusValidacaoCertificado > -1 ? normalizeText_(row[idxStatusValidacaoCertificado]) : '';
 
+    if (!idDesafio) {
+      logMeuGiroDiagnostico_('Vínculo sem marcador [ID_DESAFIO:###].', {
+        id_dgmb: id,
+        linha: i + 1,
+        id_item_estoque: idItem || ''
+      });
+    }
+
     var validacao = validarInscricaoMinima_({
-      status_inscricao: statusInscricao,
+      status_inscricao: statusInscricao || statusUsuarioDesafio,
       status_confirmacao: statusConfirmacao,
       status_pagamento: statusPagamento
     });
-    var aptoBase = validacao.valida && !inscricaoTemBloqueioMinimo_(statusDesafio);
-    var desafioAtivoNaLista = !statusListaDesafios.possuiColunaId
-      ? !!idDesafio
-      : statusListaDesafios.byId[idDesafio] === 'ativo';
-    // Desafio normal não depende de item de estoque; repescagem mantém fluxo atual.
+    var aptoBase = validacao.valida && !inscricaoTemBloqueioMinimo_(statusUsuarioDesafio);
+    var statusLista = idDesafio ? (statusListaDesafios.byId[idDesafio] || '') : '';
+
+    if (ehNormal && idDesafio && statusLista && statusLista !== 'ativo') {
+      logMeuGiroDiagnostico_('Desafio histórico preservado mesmo com ListaDesafios.Status inativo.', {
+        id_dgmb: id,
+        id_desafio: idDesafio,
+        status_lista: statusLista
+      });
+    }
+
+    // Para o Meu Giro, vínculo normal em dgmbDesafios não é bloqueado por ListaDesafios.Status.
+    // ListaDesafios segue como fallback de período/status visual e permanece preservada para inscrições.
     var apto = ehNormal
-      ? aptoBase && !!idDesafio && metaKm > 0 && desafioAtivoNaLista
+      ? aptoBase && !!idDesafio && metaKm > 0
       : aptoBase;
 
-    var periodo = ehNormal
-      ? (idDesafio && periodos.byId[idDesafio]) || { inicio: '', fim: '', nome_desafio: '' }
-      : (idDesafio && periodos.byId[idDesafio]) || periodos.byAba[abaDesafio] || { inicio: '', fim: '', nome_desafio: '' };
+    var periodoLista = (idDesafio && periodos.byId[idDesafio]) || (!ehNormal && periodos.byAba[abaDesafio]) || { inicio: '', fim: '', nome_desafio: '' };
+    var periodo = montarPeriodoHistoricoVinculo_(row, {
+      periodo: idxPeriodoHistorico,
+      inicio: idxInicioHistorico,
+      fim: idxFimHistorico
+    }, periodoLista, {
+      id_dgmb: id,
+      id_desafio: idDesafio || '',
+      linha: i + 1
+    });
+
     var chave = [id, idDesafio, idItem].join('|');
     if (chaves[chave]) continue;
     chaves[chave] = true;
@@ -592,10 +677,14 @@ function obterVinculosDesafioUsuario_(idDgmb) {
       id_item_estoque: idItem,
       meta_km: metaKm,
       status_desafio: statusDesafio,
+      status_usuario_desafio: statusUsuarioDesafio,
+      status_pagamento: statusPagamento,
+      status_lista_desafios: statusLista,
       status_validacao_certificado: statusValidacaoCertificado,
       apto: apto,
       periodo_inicio: periodo.inicio || '',
       periodo_fim: periodo.fim || '',
+      periodo_desafio: periodo.periodo_desafio || '',
       nome_desafio: periodo.nome_desafio || abaDesafio || '',
       aba_desafio: abaDesafio
     });
@@ -690,8 +779,8 @@ function atualizarMeuGiroResumo_(idDgmb) {
   for (var v = 0; v < vinculos.length; v++) {
     var vinculo = vinculos[v];
     var chave = [id, vinculo.id_desafio, vinculo.id_item_estoque].join('|');
-    var inicio = vinculo.periodo_inicio;
-    var fim = vinculo.periodo_fim;
+    var inicio = normalizarDataISO_(vinculo.periodo_inicio);
+    var fim = normalizarDataISO_(vinculo.periodo_fim);
     var apto = !!vinculo.apto && !!inicio && !!fim && !!vinculo.id_desafio;
     var distancia = 0;
 
@@ -760,8 +849,13 @@ function atualizarMeuGiroResumo_(idDgmb) {
       percentual_concluido: linha[6],
       status_apuracao: status,
       status_validacao_certificado: normalizeText_(vinculo.status_validacao_certificado).toUpperCase(),
+      status_desafio: normalizeText_(vinculo.status_desafio),
+      status_usuario_desafio: normalizeText_(vinculo.status_usuario_desafio),
+      status_pagamento: normalizeText_(vinculo.status_pagamento),
+      status_lista_desafios: normalizeText_(vinculo.status_lista_desafios),
       periodo_inicio: inicio || '',
-      periodo_fim: fim || ''
+      periodo_fim: fim || '',
+      periodo_desafio: normalizeText_(vinculo.periodo_desafio)
     });
   }
 
@@ -788,9 +882,9 @@ function atualizarMeuGiroResumoEmLote_() {
     return { total_ids: 0, atualizados: 0, ids: [] };
   }
 
-  var idxStatusDesafio = getOptionalColumnIndex_(map, ['status_desafio', 'status desafio']);
+  var idxStatusUsuarioDesafio = getOptionalColumnIndex_(map, ['status_usuario_desafio', 'status usuário desafio', 'status usuario desafio']);
   var idxStatusPag = getOptionalColumnIndex_(map, ['status_pagamento', 'pagamento_status', 'pagamento', 'pix_status']);
-  var idxStatusInscricao = getOptionalColumnIndex_(map, ['status_inscricao', 'status inscrição', 'status', 'situacao', 'situação']);
+  var idxStatusInscricao = getOptionalColumnIndex_(map, ['status_inscricao', 'status inscrição']);
   var idxConfirmacao = getOptionalColumnIndex_(map, ['confirmacao', 'confirmação', 'confirmado', 'inscricao_confirmada']);
   var ids = [];
   var idsMap = {};
@@ -803,13 +897,13 @@ function atualizarMeuGiroResumoEmLote_() {
     var statusInscricao = idxStatusInscricao > -1 ? normalizeText_(row[idxStatusInscricao]) : '';
     var statusConfirmacao = idxConfirmacao > -1 ? normalizeText_(row[idxConfirmacao]) : '';
     var statusPagamento = idxStatusPag > -1 ? normalizeText_(row[idxStatusPag]) : '';
-    var statusDesafio = idxStatusDesafio > -1 ? normalizeText_(row[idxStatusDesafio]) : '';
+    var statusUsuarioDesafio = idxStatusUsuarioDesafio > -1 ? normalizeText_(row[idxStatusUsuarioDesafio]) : '';
     var validacao = validarInscricaoMinima_({
-      status_inscricao: statusInscricao,
+      status_inscricao: statusInscricao || statusUsuarioDesafio,
       status_confirmacao: statusConfirmacao,
       status_pagamento: statusPagamento
     });
-    var apto = validacao.valida && !inscricaoTemBloqueioMinimo_(statusDesafio);
+    var apto = validacao.valida && !inscricaoTemBloqueioMinimo_(statusUsuarioDesafio);
     if (!apto) continue;
 
     idsMap[id] = true;
