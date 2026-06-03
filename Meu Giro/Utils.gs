@@ -667,7 +667,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
       linha: i + 1
     });
 
-    var chave = [id, idDesafio, idItem].join('|');
+    var chave = [id, idDesafio, idItem || ('META_' + Math.round((metaKm + Number.EPSILON) * 10) / 10)].join('|');
     if (chaves[chave]) continue;
     chaves[chave] = true;
 
@@ -748,6 +748,18 @@ function ensureMeuGiroResumoSheet_() {
   return sh;
 }
 
+function meuGiroResumoBuildChave_(idDgmb, idDesafio, idItemEstoque, metaKm) {
+  var id = normalizeText_(idDgmb);
+  var desafio = normalizeText_(idDesafio);
+  var item = normalizeText_(idItemEstoque);
+  var meta = Math.round((parseLocalizedNumber_(metaKm) + Number.EPSILON) * 10) / 10;
+
+  // id_item_estoque continua sendo o identificador preferencial do vínculo.
+  // Quando ele não existe, a Meta_KM já presente na aba diferencia múltiplos
+  // desafios do mesmo atleta no mesmo ID/período sem criar novas colunas.
+  return [id, desafio, item || ('META_' + meta)].join('|');
+}
+
 function atualizarMeuGiroResumo_(idDgmb) {
   var id = normalizeText_(idDgmb);
   if (!id) return [];
@@ -769,7 +781,12 @@ function atualizarMeuGiroResumo_(idDgmb) {
   for (var i = 1; i < valoresResumo.length; i++) {
     var row = valoresResumo[i];
     if (normalizeText_(row[idxId]) !== id) continue;
-    var chaveExistente = [normalizeText_(row[idxId]), normalizeText_(row[idxDesafio]), normalizeText_(row[idxItem])].join('|');
+    var chaveExistente = meuGiroResumoBuildChave_(
+      row[idxId],
+      row[idxDesafio],
+      idxItem > -1 ? row[idxItem] : '',
+      idxMetaResumo > -1 ? row[idxMetaResumo] : ''
+    );
     linhasPorChave[chaveExistente] = i + 1;
   }
 
@@ -778,7 +795,9 @@ function atualizarMeuGiroResumo_(idDgmb) {
 
   for (var v = 0; v < vinculos.length; v++) {
     var vinculo = vinculos[v];
-    var chave = [id, vinculo.id_desafio, vinculo.id_item_estoque].join('|');
+    var meta = Number(vinculo.meta_km || 0);
+    var metaArredondada = Math.round((meta + Number.EPSILON) * 10) / 10;
+    var chave = meuGiroResumoBuildChave_(id, vinculo.id_desafio, vinculo.id_item_estoque, metaArredondada);
     var inicio = normalizarDataISO_(vinculo.periodo_inicio);
     var fim = normalizarDataISO_(vinculo.periodo_fim);
     var apto = !!vinculo.apto && !!inicio && !!fim && !!vinculo.id_desafio;
@@ -793,7 +812,6 @@ function atualizarMeuGiroResumo_(idDgmb) {
       }
     }
 
-    var meta = Number(vinculo.meta_km || 0);
     var percentual = meta > 0 ? (distancia / meta) * 100 : 0;
     var status = 'INAPTO';
 
@@ -808,7 +826,6 @@ function atualizarMeuGiroResumo_(idDgmb) {
       }
     }
 
-    var metaArredondada = Math.round((meta + Number.EPSILON) * 10) / 10;
     var distanciaArredondada = Math.round((distancia + Number.EPSILON) * 10) / 10;
     var percentualArredondado = Math.round((percentual + Number.EPSILON) * 10) / 10;
 

@@ -473,10 +473,11 @@ function painelMG_chaveDesafioPainel_(desafio) {
   var idItem = painelMG_norm_(item.id_item_estoque);
   var inicio = painelMG_norm_(item.periodo_inicio);
   var fim = painelMG_norm_(item.periodo_fim);
+  var meta = painelMG_norm_(item.meta_km);
 
   if (!idDesafio) return '';
   if (idItem) return [idDesafio, idItem].join('|');
-  if (inicio || fim) return [idDesafio, inicio, fim].join('|');
+  if (inicio || fim || meta) return [idDesafio, inicio, fim, meta].join('|');
   return idDesafio;
 }
 
