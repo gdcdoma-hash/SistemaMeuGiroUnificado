@@ -1715,9 +1715,10 @@ function getDesafioKey(desafio) {
   var idItem = String(desafio.id_item_estoque || '').trim();
   var inicio = String(desafio.periodo_inicio || '').trim();
   var fim = String(desafio.periodo_fim || '').trim();
+  var meta = String(desafio.meta_km || '').trim();
   if (!idDesafio) return '';
   if (idItem) return idDesafio + '|' + idItem;
-  if (inicio || fim) return [idDesafio, inicio, fim].join('|');
+  if (inicio || fim || meta) return [idDesafio, inicio, fim, meta].join('|');
   return idDesafio;
 }
 
@@ -2176,7 +2177,6 @@ function selecionarDesafioEmFoco(chave) {
   }
 
   sincronizarPainelComDesafioEmFoco();
-  carregarRanking('manual');
 }
 
 function atualizarSeletorDesafioRanking() {
@@ -2370,8 +2370,9 @@ function getDesafioBaseKey_(desafio) {
   var idItem = String(desafio.id_item_estoque || '').trim();
   var inicio = String(desafio.periodo_inicio || '').trim();
   var fim = String(desafio.periodo_fim || '').trim();
+  var meta = String(desafio.meta_km || '').trim();
   if (!idDesafio && !idItem) return '';
-  return [idDesafio, idItem, inicio, fim].join('|');
+  return [idDesafio, idItem, inicio, fim, meta].join('|');
 }
 
 function mapearChavesDesafiosBase_(lista) {
