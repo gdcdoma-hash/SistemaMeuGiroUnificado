@@ -2042,6 +2042,8 @@ function renderDesafiosPainel(painel) {
     salvarDesafioEmFocoNaSessao(desafioEmFocoKey);
   }
 
+  renderDesafioEmFocoResumo();
+
   renderDesafiosAtivosCarrossel('desafios-ativos-lista', desafiosAtivos, {
     emptyTitle: 'Nenhum desafio ativo no momento.',
     emptyDescription: 'Assim que houver desafios ativos, eles aparecerão aqui.'
@@ -2145,13 +2147,18 @@ function navegarDesafioAtivo(delta) {
 
   var proximoIndice = desafiosAtivosCarouselIndex + Number(delta || 0);
   desafiosAtivosCarouselIndex = Math.max(0, Math.min(total - 1, proximoIndice));
-  desafioEmFocoKey = getDesafioKey(desafiosAtivosCarouselItems[desafiosAtivosCarouselIndex]);
-  salvarDesafioEmFocoNaSessao(desafioEmFocoKey);
-  renderDesafiosAtivosCarrossel('desafios-ativos-lista', desafiosAtivosCarouselItems, {});
-  sincronizarPainelComDesafioEmFoco();
+  aplicarDesafioEmFoco(getDesafioKey(desafiosAtivosCarouselItems[desafiosAtivosCarouselIndex]), { silent: true });
+}
+
+function onDesafioFocoSelectChange(chave) {
+  aplicarDesafioEmFoco(chave, { feedback: true });
 }
 
 function selecionarDesafioEmFoco(chave) {
+  aplicarDesafioEmFoco(chave, { feedback: true });
+}
+
+function aplicarDesafioEmFoco(chave, options) {
   var chaveSelecionada = String(chave || '').trim();
   if (!chaveSelecionada) return;
 
@@ -2163,7 +2170,10 @@ function selecionarDesafioEmFoco(chave) {
       break;
     }
   }
-  if (!encontrado) return;
+  if (!encontrado) {
+    renderDesafioEmFocoResumo();
+    return;
+  }
 
   desafioEmFocoKey = chaveSelecionada;
   salvarDesafioEmFocoNaSessao(desafioEmFocoKey);
@@ -2171,12 +2181,79 @@ function selecionarDesafioEmFoco(chave) {
   for (var a = 0; a < desafiosAtivosCarouselItems.length; a++) {
     if (getDesafioKey(desafiosAtivosCarouselItems[a]) === chaveSelecionada) {
       desafiosAtivosCarouselIndex = a;
-      renderDesafiosAtivosCarrossel('desafios-ativos-lista', desafiosAtivosCarouselItems, {});
       break;
     }
   }
 
+  renderDesafioEmFocoResumo(options && options.feedback ? 'Desafio em foco atualizado.' : '');
+  renderDesafiosAtivosCarrossel('desafios-ativos-lista', desafiosAtivosCarouselItems, {});
+  renderDesafiosLista('desafios-historico-lista', obterDesafiosHistoricoEmMemoria_(), {
+    emptyTitle: 'Sem histórico consolidado no momento.',
+    emptyDescription: 'Quando seus desafios forem concluídos ou encerrados, eles aparecem aqui.',
+    isHistorico: true,
+    allowSelect: true
+  });
   sincronizarPainelComDesafioEmFoco();
+}
+
+function obterDesafiosHistoricoEmMemoria_() {
+  var ativosMap = mapearChavesDesafiosBase_(desafiosAtivosCarouselItems || []);
+  return (Array.isArray(desafiosFocoItems) ? desafiosFocoItems : []).filter(function(item) {
+    return !ativosMap[getDesafioBaseKey_(item)] && isDesafioHistoricoElegivel_(item);
+  }).sort(compareDesafioHistorico_);
+}
+
+function renderDesafioEmFocoResumo(feedbackText) {
+  var desafioAtual = getDesafioEmFocoAtual();
+  var select = document.getElementById('desafio-foco-select');
+  var nomeEl = document.getElementById('desafio-foco-nome');
+  var periodoEl = document.getElementById('desafio-foco-periodo');
+  var statusEl = document.getElementById('desafio-foco-status');
+  var feedbackEl = document.getElementById('desafio-foco-feedback');
+  var itensFoco = Array.isArray(desafiosFocoItems) ? desafiosFocoItems : [];
+
+  if (nomeEl) nomeEl.innerText = desafioAtual ? getDesafioTitulo(desafioAtual) : '-';
+  if (periodoEl) periodoEl.innerText = desafioAtual ? getDesafioPeriodoLabel(desafioAtual) : 'Período não informado';
+  if (statusEl) statusEl.innerText = desafioAtual ? (String(desafioAtual.status_apuracao || '-').trim() || '-') : '-';
+
+  if (select) {
+    select.innerHTML = '';
+    if (!itensFoco.length) {
+      var emptyOption = document.createElement('option');
+      emptyOption.value = '';
+      emptyOption.innerText = 'Sem desafios disponíveis';
+      select.appendChild(emptyOption);
+      select.disabled = true;
+    } else {
+      select.disabled = false;
+      itensFoco.forEach(function(item) {
+        var option = document.createElement('option');
+        option.value = getDesafioKey(item);
+        option.innerText = getDesafioTitulo(item) + ' · ' + (String(item.status_apuracao || '-').trim() || '-');
+        select.appendChild(option);
+      });
+      select.value = String(desafioEmFocoKey || '');
+    }
+  }
+
+  if (feedbackEl) {
+    feedbackEl.innerText = feedbackText || '';
+    feedbackEl.classList.toggle('is-visible', !!feedbackText);
+    if (feedbackText) {
+      window.setTimeout(function() {
+        if (feedbackEl.innerText === feedbackText) {
+          feedbackEl.innerText = '';
+          feedbackEl.classList.remove('is-visible');
+        }
+      }, 2600);
+    }
+  }
+}
+
+function getDesafioPeriodoLabel(desafio) {
+  return desafio && desafio.periodo_inicio && desafio.periodo_fim
+    ? formatDateBR(desafio.periodo_inicio) + ' a ' + formatDateBR(desafio.periodo_fim)
+    : 'Período não informado';
 }
 
 function atualizarSeletorDesafioRanking() {
@@ -2284,16 +2361,15 @@ function buildDesafioCard(item, options) {
   var percentualNumero = toFiniteNumber(desafio.percentual_concluido, 0);
   var percentualNormalizado = Math.max(0, Math.min(100, percentualNumero));
 
-  card.className = 'atividade desafio-resumo-card ' + statusClass + (options.isHistorico ? ' desafio-resumo-card-historico' : '');
+  var selecionado = getDesafioKey(desafio) === String(desafioEmFocoKey || '').trim();
+  card.className = 'atividade desafio-resumo-card ' + statusClass + (options.isHistorico ? ' desafio-resumo-card-historico' : '') + (selecionado ? ' desafio-resumo-card-selecionado' : '');
 
   var nome = getDesafioTitulo(desafio);
   var meta = formatNumber(desafio.meta_km);
   var realizado = formatNumber(desafio.distancia_realizada);
   var percentual = formatNumber(percentualNormalizado);
   var restante = formatNumber(Math.max(0, toFiniteNumber(desafio.meta_km, 0) - toFiniteNumber(desafio.distancia_realizada, 0)));
-  var periodoLabel = desafio.periodo_inicio && desafio.periodo_fim
-    ? formatDateBR(desafio.periodo_inicio) + ' a ' + formatDateBR(desafio.periodo_fim)
-    : 'Período não informado';
+  var periodoLabel = getDesafioPeriodoLabel(desafio);
   var statusDesafioCertificado = String((desafio && desafio.status_apuracao) || '').trim().toUpperCase();
   var statusValidacaoCertificado = String((desafio && desafio.status_validacao_certificado) || '').trim().toUpperCase();
   var concluido = statusDesafioCertificado === 'CONCLUIDO';
@@ -2315,7 +2391,10 @@ function buildDesafioCard(item, options) {
 
   card.innerHTML =
     '<div class="desafio-resumo-head">' +
-      '<strong class="desafio-resumo-titulo">' + escapeHtml(nome) + '</strong>' +
+      '<div class="desafio-resumo-title-wrap">' +
+        '<strong class="desafio-resumo-titulo">' + escapeHtml(nome) + '</strong>' +
+        (selecionado ? '<span class="desafio-selecionado-badge">Selecionado · Em foco</span>' : '') +
+      '</div>' +
       '<span class="desafio-status-badge">' + escapeHtml(statusLabel) + '</span>' +
     '</div>' +
     '<div class="desafio-metricas-grid">' +
@@ -2327,7 +2406,7 @@ function buildDesafioCard(item, options) {
     '<p class="desafio-periodo"><span>Período</span> <strong>' + escapeHtml(periodoLabel) + '</strong></p>' +
     '<div class="desafio-progress-track" aria-hidden="true"><span class="desafio-progress-fill" style="width:' + percentualNormalizado + '%"></span></div>' +
     (options.allowSelect
-      ? '<div class="atividade-acoes"><button type="button" class="btn-secondary atividade-acao-btn" onclick="selecionarDesafioEmFoco(\'' + escapeHtml(getDesafioKey(desafio)) + '\')">Selecionar desafio</button></div>'
+      ? '<div class="atividade-acoes"><button type="button" class="btn-secondary atividade-acao-btn" onclick="selecionarDesafioEmFoco(\'' + escapeHtml(getDesafioKey(desafio)) + '\')"' + (selecionado ? ' disabled aria-current="true"' : '') + '>' + (selecionado ? 'Em foco' : 'Selecionar') + '</button></div>'
       : '') +
     (podeBaixarCertificado
       ? '<div class="atividade-acoes"><button type="button" id="' + certificadoBtnId + '" class="btn-secondary atividade-acao-btn" onclick="solicitarCertificadoDesafio(\'' + payloadCertificado + '\', \'' + certificadoStatusId + '\', \'' + certificadoBtnId + '\', \'' + certificadoImagemAcoesId + '\')">Gerar certificado</button></div>' +
