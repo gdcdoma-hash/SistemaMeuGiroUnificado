@@ -37,6 +37,7 @@ let quickKmClearFeedbackTimer = null;
 let kmInputAddFeedbackTimer = null;
 let kmInputClearFeedbackTimer = null;
 let desafiosAtivosCarouselItems = [];
+let desafiosFocoItems = [];
 let desafiosAtivosCarouselIndex = 0;
 let desafioEmFocoKey = '';
 const DESAFIO_CARROSSEL_SESSION_KEY = 'meuGiro.desafioEmFocoKey';
@@ -1844,12 +1845,24 @@ function filtrarAtividadesPorPeriodoDesafio(atividades, desafio) {
   var inicio = String(desafio && desafio.periodo_inicio || '').trim();
   var fim = String(desafio && desafio.periodo_fim || '').trim();
 
-  if (!inicio || !fim) return lista;
+  if (!desafio) return lista;
 
-  return lista.filter(function(item) {
-    var data = String(item && item.data || '').trim();
-    return !!data && data >= inicio && data <= fim;
-  });
+  if (!inicio || !fim) {
+    return {
+      items: [],
+      erro_periodo: true,
+      mensagem: 'Não foi possível filtrar atividades porque este desafio não possui período registrado.'
+    };
+  }
+
+  return {
+    items: lista.filter(function(item) {
+      var data = String(item && item.data || '').trim();
+      return !!data && data >= inicio && data <= fim;
+    }),
+    erro_periodo: false,
+    mensagem: ''
+  };
 }
 
 function montarPainelContextual(basePainel, desafio) {
@@ -1870,6 +1883,8 @@ function montarPainelContextual(basePainel, desafio) {
   var posicaoRanking = rankingDesafio.posicao !== undefined ? rankingDesafio.posicao : painel.posicao_ranking;
   var totalParticipantes = rankingDesafio.total !== undefined ? rankingDesafio.total : painel.total_participantes;
 
+  var atividadesFiltradas = filtrarAtividadesPorPeriodoDesafio(painel.atividades || [], desafioAtual);
+
   return {
     meta: meta,
     realizado: realizado,
@@ -1883,7 +1898,9 @@ function montarPainelContextual(basePainel, desafio) {
     ritmo_mensagem: ritmo.ritmo_mensagem,
     posicao_ranking: posicaoRanking,
     total_participantes: totalParticipantes,
-    atividades: filtrarAtividadesPorPeriodoDesafio(painel.atividades || [], desafioAtual)
+    atividades: Array.isArray(atividadesFiltradas) ? atividadesFiltradas : atividadesFiltradas.items,
+    atividades_erro_periodo: !!(atividadesFiltradas && atividadesFiltradas.erro_periodo),
+    atividades_mensagem: (atividadesFiltradas && atividadesFiltradas.mensagem) || ''
   };
 }
 
@@ -1912,10 +1929,9 @@ function atualizarContextoVisualRanking(desafioAtual) {
 
 function sincronizarPainelComDesafioEmFoco() {
   var painel = currentPainel || {};
-  var desafioAtual = null;
+  var desafioAtual = getDesafioEmFocoAtual();
 
-  if (Array.isArray(desafiosAtivosCarouselItems) && desafiosAtivosCarouselItems.length) {
-    desafioAtual = desafiosAtivosCarouselItems[desafiosAtivosCarouselIndex] || null;
+  if (desafioAtual) {
     desafioEmFocoKey = getDesafioKey(desafioAtual);
   }
 
@@ -1958,7 +1974,11 @@ function sincronizarPainelComDesafioEmFoco() {
       : 'Disponível quando houver base de comparação.';
   }
 
-  renderAtividades(contexto.atividades || []);
+  if (contexto.atividades_erro_periodo) {
+    renderAtividadesState('empty', contexto.atividades_mensagem, 'Selecione outro desafio ou procure a organização para revisar o período cadastrado.');
+  } else {
+    renderAtividades(contexto.atividades || []);
+  }
 }
 
 function setTextById(id, text) {
@@ -2007,6 +2027,19 @@ function renderDesafiosPainel(painel) {
   }
 
   desafiosHistorico.sort(compareDesafioHistorico_);
+  desafiosFocoItems = desafiosAtivos.concat(desafiosHistorico);
+
+  var focoMemorizado = String(desafioEmFocoKey || carregarDesafioEmFocoDaSessao() || '').trim();
+  var focoExiste = focoMemorizado && desafiosFocoItems.some(function(item) { return getDesafioKey(item) === focoMemorizado; });
+  if (focoExiste) {
+    desafioEmFocoKey = focoMemorizado;
+  } else if (desafiosAtivos.length) {
+    desafioEmFocoKey = getDesafioKey(desafiosAtivos[0]);
+    salvarDesafioEmFocoNaSessao(desafioEmFocoKey);
+  } else if (desafiosHistorico.length) {
+    desafioEmFocoKey = getDesafioKey(desafiosHistorico[0]);
+    salvarDesafioEmFocoNaSessao(desafioEmFocoKey);
+  }
 
   renderDesafiosAtivosCarrossel('desafios-ativos-lista', desafiosAtivos, {
     emptyTitle: 'Nenhum desafio ativo no momento.',
@@ -2016,7 +2049,8 @@ function renderDesafiosPainel(painel) {
   renderDesafiosLista('desafios-historico-lista', desafiosHistorico, {
     emptyTitle: 'Sem histórico consolidado no momento.',
     emptyDescription: 'Quando seus desafios forem concluídos ou encerrados, eles aparecem aqui.',
-    isHistorico: true
+    isHistorico: true,
+    allowSelect: true
   });
 }
 
@@ -2044,10 +2078,16 @@ function renderDesafiosAtivosCarrossel(containerId, lista, options) {
   if (indexFromFocus >= 0) {
     desafiosAtivosCarouselIndex = indexFromFocus;
   } else if (desafioMemorizado) {
+    var focoHistoricoExiste = Array.isArray(desafiosFocoItems) && desafiosFocoItems.some(function(item) {
+      return getDesafioKey(item) === desafioMemorizado;
+    });
     var indiceMemoriaNaoEncontrada = escolherIndiceDesafioMaisRelevante(itens);
     desafiosAtivosCarouselIndex = indiceMemoriaNaoEncontrada >= 0
       ? indiceMemoriaNaoEncontrada
       : Math.max(0, Math.min(Number(desafiosAtivosCarouselIndex) || 0, Math.max(0, itens.length - 1)));
+    if (focoHistoricoExiste) {
+      desafioEmFocoKey = desafioMemorizado;
+    }
   } else {
     var indiceAtual = Number(desafiosAtivosCarouselIndex);
     if (Number.isInteger(indiceAtual) && indiceAtual >= 0 && indiceAtual < itens.length) {
@@ -2061,8 +2101,10 @@ function renderDesafiosAtivosCarrossel(containerId, lista, options) {
   }
 
   if (!itens.length) {
-    desafioEmFocoKey = '';
-    salvarDesafioEmFocoNaSessao('');
+    if (!Array.isArray(desafiosFocoItems) || !desafiosFocoItems.length) {
+      desafioEmFocoKey = '';
+      salvarDesafioEmFocoNaSessao('');
+    }
     var titulo = options.emptyTitle || 'Nenhum desafio para exibir.';
     var descricao = options.emptyDescription || 'Novos desafios serão exibidos aqui assim que estiverem disponíveis.';
     box.innerHTML =
@@ -2074,9 +2116,14 @@ function renderDesafiosAtivosCarrossel(containerId, lista, options) {
     return;
   }
 
-  desafioEmFocoKey = getDesafioKey(itens[desafiosAtivosCarouselIndex]);
-  salvarDesafioEmFocoNaSessao(desafioEmFocoKey);
-  box.appendChild(buildDesafioCard(itens[desafiosAtivosCarouselIndex], { isHistorico: false }));
+  var focoAtualExiste = desafioEmFocoKey && Array.isArray(desafiosFocoItems) && desafiosFocoItems.some(function(item) {
+    return getDesafioKey(item) === desafioEmFocoKey;
+  });
+  if (!focoAtualExiste || indexFromFocus >= 0) {
+    desafioEmFocoKey = getDesafioKey(itens[desafiosAtivosCarouselIndex]);
+    salvarDesafioEmFocoNaSessao(desafioEmFocoKey);
+  }
+  box.appendChild(buildDesafioCard(itens[desafiosAtivosCarouselIndex], { isHistorico: false, allowSelect: true }));
 
   if (itens.length > 1) {
     var controls = document.createElement('div');
@@ -2101,6 +2148,35 @@ function navegarDesafioAtivo(delta) {
   salvarDesafioEmFocoNaSessao(desafioEmFocoKey);
   renderDesafiosAtivosCarrossel('desafios-ativos-lista', desafiosAtivosCarouselItems, {});
   sincronizarPainelComDesafioEmFoco();
+}
+
+function selecionarDesafioEmFoco(chave) {
+  var chaveSelecionada = String(chave || '').trim();
+  if (!chaveSelecionada) return;
+
+  var itensFoco = Array.isArray(desafiosFocoItems) ? desafiosFocoItems : [];
+  var encontrado = false;
+  for (var i = 0; i < itensFoco.length; i++) {
+    if (getDesafioKey(itensFoco[i]) === chaveSelecionada) {
+      encontrado = true;
+      break;
+    }
+  }
+  if (!encontrado) return;
+
+  desafioEmFocoKey = chaveSelecionada;
+  salvarDesafioEmFocoNaSessao(desafioEmFocoKey);
+
+  for (var a = 0; a < desafiosAtivosCarouselItems.length; a++) {
+    if (getDesafioKey(desafiosAtivosCarouselItems[a]) === chaveSelecionada) {
+      desafiosAtivosCarouselIndex = a;
+      renderDesafiosAtivosCarrossel('desafios-ativos-lista', desafiosAtivosCarouselItems, {});
+      break;
+    }
+  }
+
+  sincronizarPainelComDesafioEmFoco();
+  carregarRanking('manual');
 }
 
 function atualizarSeletorDesafioRanking() {
@@ -2215,6 +2291,9 @@ function buildDesafioCard(item, options) {
   var realizado = formatNumber(desafio.distancia_realizada);
   var percentual = formatNumber(percentualNormalizado);
   var restante = formatNumber(Math.max(0, toFiniteNumber(desafio.meta_km, 0) - toFiniteNumber(desafio.distancia_realizada, 0)));
+  var periodoLabel = desafio.periodo_inicio && desafio.periodo_fim
+    ? formatDateBR(desafio.periodo_inicio) + ' a ' + formatDateBR(desafio.periodo_fim)
+    : 'Período não informado';
   var statusDesafioCertificado = String((desafio && desafio.status_apuracao) || '').trim().toUpperCase();
   var statusValidacaoCertificado = String((desafio && desafio.status_validacao_certificado) || '').trim().toUpperCase();
   var concluido = statusDesafioCertificado === 'CONCLUIDO';
@@ -2245,7 +2324,11 @@ function buildDesafioCard(item, options) {
       '<p><span>Falta</span><strong>' + restante + ' km</strong></p>' +
       '<p><span>Conclusão</span><strong>' + percentual + '%</strong></p>' +
     '</div>' +
+    '<p class="desafio-periodo"><span>Período</span> <strong>' + escapeHtml(periodoLabel) + '</strong></p>' +
     '<div class="desafio-progress-track" aria-hidden="true"><span class="desafio-progress-fill" style="width:' + percentualNormalizado + '%"></span></div>' +
+    (options.allowSelect
+      ? '<div class="atividade-acoes"><button type="button" class="btn-secondary atividade-acao-btn" onclick="selecionarDesafioEmFoco(\'' + escapeHtml(getDesafioKey(desafio)) + '\')">Selecionar desafio</button></div>'
+      : '') +
     (podeBaixarCertificado
       ? '<div class="atividade-acoes"><button type="button" id="' + certificadoBtnId + '" class="btn-secondary atividade-acao-btn" onclick="solicitarCertificadoDesafio(\'' + payloadCertificado + '\', \'' + certificadoStatusId + '\', \'' + certificadoBtnId + '\', \'' + certificadoImagemAcoesId + '\')">Gerar certificado</button></div>' +
         '<div id="' + certificadoImagemAcoesId + '" class="atividade-acoes" style="display:none;">' +
@@ -3289,8 +3372,19 @@ function renderRanking(lista) {
 }
 
 function getDesafioEmFocoAtual() {
-  if (!Array.isArray(desafiosAtivosCarouselItems) || !desafiosAtivosCarouselItems.length) return null;
-  return desafiosAtivosCarouselItems[desafiosAtivosCarouselIndex] || null;
+  var chave = String(desafioEmFocoKey || '').trim();
+  var itensFoco = Array.isArray(desafiosFocoItems) ? desafiosFocoItems : [];
+  if (chave) {
+    for (var i = 0; i < itensFoco.length; i++) {
+      if (getDesafioKey(itensFoco[i]) === chave) return itensFoco[i] || null;
+    }
+  }
+
+  if (Array.isArray(desafiosAtivosCarouselItems) && desafiosAtivosCarouselItems.length) {
+    return desafiosAtivosCarouselItems[desafiosAtivosCarouselIndex] || null;
+  }
+
+  return itensFoco.length ? itensFoco[0] : null;
 }
 
 function atualizarCabecalhoTelaRanking(desafioAtual) {

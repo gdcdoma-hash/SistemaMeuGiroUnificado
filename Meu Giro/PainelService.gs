@@ -37,14 +37,19 @@ function getPainelUsuario(idDgmb) {
     var realizado = painelMG_toNumber_(desafioData.realizado);
     var realizadoPainel = painelMG_round1_(realizado);
 
+    var desafiosAtivosPainel = desafiosConsolidados.filter(function(d) {
+      return painelMG_isStatusAtivo_(d && d.status_apuracao);
+    });
+    var desafiosHistoricoPainel = desafiosConsolidados.filter(function(d) {
+      return painelMG_isStatusHistorico_(d && d.status_apuracao);
+    }).sort(painelMG_compareHistoricoDesafios_);
+
     var desafioPrincipalPainel = null;
-    for (var idxResumo = 0; idxResumo < desafiosConsolidados.length; idxResumo++) {
-      if (desafiosConsolidados[idxResumo].status_apuracao === 'ATIVO') {
-        desafioPrincipalPainel = desafiosConsolidados[idxResumo];
-        break;
-      }
-    }
-    if (!desafioPrincipalPainel && desafiosConsolidados.length) {
+    if (desafiosAtivosPainel.length) {
+      desafioPrincipalPainel = desafiosAtivosPainel[0];
+    } else if (desafiosHistoricoPainel.length) {
+      desafioPrincipalPainel = desafiosHistoricoPainel[0];
+    } else if (desafiosConsolidados.length) {
       desafioPrincipalPainel = desafiosConsolidados[0];
     }
 
@@ -118,12 +123,9 @@ function getPainelUsuario(idDgmb) {
 
         atividades: atividades,
         desafios: desafiosConsolidados,
-        desafios_ativos: desafiosConsolidados.filter(function(d) {
-          return painelMG_isStatusAtivo_(d && d.status_apuracao);
-        }),
-        desafios_historico: desafiosConsolidados.filter(function(d) {
-          return painelMG_isStatusHistorico_(d && d.status_apuracao);
-        }).sort(painelMG_compareHistoricoDesafios_),
+        desafio_em_foco: desafioPrincipalPainel,
+        desafios_ativos: desafiosAtivosPainel,
+        desafios_historico: desafiosHistoricoPainel,
         totalPedalado: realizadoPainel,
         total_pedalado: realizadoPainel
       }
@@ -237,7 +239,12 @@ function buscarInscricaoPainelMG_(idDgmb, resumoAtualizado) {
       break;
     }
   }
-  if (!desafioPrincipal && resumo.length) desafioPrincipal = resumo[0];
+  if (!desafioPrincipal && resumo.length) {
+    var historicos = resumo.filter(function(d) {
+      return painelMG_isStatusHistorico_(d && d.status_apuracao);
+    }).sort(painelMG_compareHistoricoDesafios_);
+    desafioPrincipal = historicos.length ? historicos[0] : resumo[0];
+  }
 
   var vinculoPrincipal = painelMG_buscarVinculoPrincipal_(idDgmb, desafioPrincipal);
   var periodoPorAba = painelMG_obterPeriodoOficialPorAba_(inscricao.aba_desafio);
