@@ -145,52 +145,13 @@
         <div id="desafio-foco-feedback" class="desafio-foco-feedback" aria-live="polite"></div>
       </div>
 
-      <div class="card card-progresso">
-        <h2>Progresso</h2>
+      <div id="desafio-selecionado-card" class="desafio-selecionado-container" aria-live="polite"></div>
 
-        <div class="progresso-resumo-grid">
-          <div class="progresso-mini-card">
-            <p class="progresso-mini-label">Meta</p>
-            <p class="progresso-mini-valor"><strong id="meta-km">0</strong></p>
-            <p class="progresso-mini-unit">km</p>
-          </div>
-
-          <div class="progresso-mini-card">
-            <p class="progresso-mini-label">Pedalado</p>
-            <p class="progresso-mini-valor"><strong id="realizado-km">0</strong></p>
-            <p class="progresso-mini-unit">km</p>
-          </div>
-
-          <div class="progresso-mini-card">
-            <p class="progresso-mini-label">Falta</p>
-            <p class="progresso-mini-valor"><strong id="restante-km">0</strong></p>
-            <p class="progresso-mini-unit">km</p>
-          </div>
-        </div>
-
-        <div class="progress-wrap progress-wrap-strong">
-          <div class="progress-bar" id="progress-bar">
-            <span class="progress-percent-inside" id="progress-percent">0%</span>
-          </div>
-        </div>
-
-        <p class="progress-text-center">
-          <strong id="progress-text">0 km de 0 km</strong>
-        </p>
-      </div>
-
-      <div class="card card-desafios-resumo">
-        <h2>Meus desafios</h2>
-
-        <div class="desafios-section">
-          <h3 class="desafios-subtitle">Desafios ativos</h3>
-          <div id="desafios-ativos-lista" class="lista"></div>
-        </div>
-
-        <div class="desafios-section desafios-section-historico">
-          <h3 class="desafios-subtitle">Histórico de desafios</h3>
-          <div id="desafios-historico-lista" class="lista"></div>
-        </div>
+      <div class="card card-atividades-foco">
+        <h2>Atividades registradas</h2>
+        <p class="card-context-helper">Atividades do desafio em foco.</p>
+        <div id="atividades-lista" class="lista"></div>
+        <p class="total-pedalado-resumo">Total pedalado: <strong id="total-pedalado">0</strong> km</p>
       </div>
 
       <div class="card">
@@ -200,7 +161,8 @@
           <p class="painel-ranking-main" id="painel-posicao-ranking">Ranking ainda indisponível.</p>
           <p class="painel-ranking-sub" id="painel-posicao-detalhe">Disponível quando houver base de comparação.</p>
         </div>
-        <p class="painel-ranking-context-tip" id="painel-ranking-context-tip">Troque o desafio no carrossel para ver outro ranking.</p>
+        <p class="painel-ranking-context-tip" id="painel-ranking-context-tip">Troque o desafio no seletor acima para ver outro ranking.</p>
+        <button id="btn-ranking-painel" class="btn-main ranking-action-btn" onclick="markRankingTrigger(this); carregarRanking('manual')">Ver ranking do desafio</button>
       </div>
 
       <div class="card ritmo-card">
@@ -255,49 +217,39 @@
         <p id="frase-feedback" class="phrase-feedback" aria-live="polite"></p>
       </div>
 
-      <div class="card">
-        <h2>Atividades registradas</h2>
-        <div id="atividades-lista" class="lista"></div>
-        <p class="total-pedalado-resumo">Total pedalado: <strong id="total-pedalado">0</strong> km</p>
-      </div>
+      <div id="registro-card" class="card card-registro-atividade">
+        <h2>Registrar atividade</h2>
+        <p class="field-helper field-helper-intro">Preencha só o dia e os km do pedal.</p>
 
-                <div id="registro-card" class="card card-registro-atividade">
-            <h2>Registrar atividade</h2>
-            <p class="field-helper field-helper-intro">Preencha só o dia e os km do pedal.</p>
+        <label for="data-atividade">Data da atividade</label>
+        <input id="data-atividade" type="date">
 
-            <label for="data-atividade">Data da atividade</label>
-            <input id="data-atividade" type="date">
+        <label for="km-atividade">KM pedalados</label>
+        <input id="km-atividade" type="text" inputmode="decimal" placeholder="Ex.: 25,5">
 
-            <label for="km-atividade">KM pedalados</label>
-            <input id="km-atividade" type="text" inputmode="decimal" placeholder="Ex.: 25,5">
+        <p class="field-helper">Use vírgula ou ponto.</p>
 
-            <p class="field-helper">Use vírgula ou ponto.</p>
+        <div class="quick-km-list" aria-label="Atalhos de quilometragem">
+          <button type="button" class="quick-km-btn quick-km-shortcut" onclick="addKm(5)">+5</button>
+          <button type="button" class="quick-km-btn quick-km-shortcut" onclick="addKm(10)">+10</button>
+          <button type="button" class="quick-km-btn quick-km-shortcut" onclick="addKm(15)">+15</button>
+          <button type="button" class="quick-km-btn quick-km-shortcut" onclick="addKm(20)">+20</button>
+          <button type="button" class="quick-km-btn quick-km-shortcut" onclick="addKm(25)">+25</button>
+          <button type="button" class="quick-km-btn quick-km-shortcut" onclick="addKm(30)">+30</button>
+          <button type="button" class="quick-km-btn quick-km-clear" onclick="clearKm()">Limpar</button>
+        </div>
 
-            <div class="quick-km-list" aria-label="Atalhos de quilometragem">
-              <button type="button" class="quick-km-btn quick-km-shortcut" onclick="addKm(5)">+5</button>
-              <button type="button" class="quick-km-btn quick-km-shortcut" onclick="addKm(10)">+10</button>
-              <button type="button" class="quick-km-btn quick-km-shortcut" onclick="addKm(15)">+15</button>
-              <button type="button" class="quick-km-btn quick-km-shortcut" onclick="addKm(20)">+20</button>
-              <button type="button" class="quick-km-btn quick-km-shortcut" onclick="addKm(25)">+25</button>
-              <button type="button" class="quick-km-btn quick-km-shortcut" onclick="addKm(30)">+30</button>
-              <button type="button" class="quick-km-btn quick-km-clear" onclick="clearKm()">Limpar</button>
-            </div>
+        <input id="atividade-id" type="hidden" value="">
+        <input id="atividade-activity-id" type="hidden" value="">
 
-            <input id="atividade-id" type="hidden" value="">
-            <input id="atividade-activity-id" type="hidden" value="">
+        <div id="registro-msg" class="msg status-msg" aria-live="polite"></div>
 
-                    <div id="registro-msg" class="msg status-msg" aria-live="polite"></div>
-
-          <div class="form-acoes-atividade">
-            <button id="btn-salvar" class="btn-main" onclick="salvarAtividade(false)">Registrar atividade</button>
-            <button id="btn-cancelar-edicao" class="btn-secondary btn-cancelar-edicao" type="button" onclick="cancelarEdicaoAtividadeUI()" style="display:none;">
-              Cancelar edição
-            </button>
-          </div>
-      </div>
-
-      <div class="card">
-        <button id="btn-ranking-painel" class="btn-main ranking-action-btn" onclick="markRankingTrigger(this); carregarRanking('manual')">Ver ranking do desafio</button>
+        <div class="form-acoes-atividade">
+          <button id="btn-salvar" class="btn-main" onclick="salvarAtividade(false)">Registrar atividade</button>
+          <button id="btn-cancelar-edicao" class="btn-secondary btn-cancelar-edicao" type="button" onclick="cancelarEdicaoAtividadeUI()" style="display:none;">
+            Cancelar edição
+          </button>
+        </div>
       </div>
     </section>
 
