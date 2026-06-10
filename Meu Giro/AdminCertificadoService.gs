@@ -39,7 +39,7 @@ function listarPendenciasValidacaoCertificado(adminIdDgmb) {
 
     var map = buildHeaderMap_(values[0]);
     var idxIdDgmb = getRequiredColumnIndex_(map, ['id_dgmb'], sheetName);
-    var idxIdDesafio = getOptionalColumnIndex_(map, ['id_desafio']);
+    var idxIdDesafio = getIdDesafioColumnIndex_(map);
     var idxIdItem = getOptionalColumnIndex_(map, ['id_item_estoque', 'id item estoque']);
     var idxObsRegistro = getOptionalColumnIndex_(map, ['observacao', 'observação']);
     var idxMeta = getOptionalColumnIndex_(map, ['distancia_km', 'distancia km', 'meta_km', 'meta km']);
@@ -70,10 +70,7 @@ function listarPendenciasValidacaoCertificado(adminIdDgmb) {
       if (!statusValidacao) statusValidacao = 'PENDENTE';
 
       var idDgmb = normalizeText_(row[idxIdDgmb]);
-      var idDesafio = idxIdDesafio > -1 ? normalizeText_(row[idxIdDesafio]) : '';
-      if (!idDesafio && idxObsRegistro > -1) {
-        idDesafio = extrairIdDesafioObservacao_(row[idxObsRegistro]);
-      }
+      var idDesafio = obterIdDesafioRegistro_(row, idxIdDesafio, idxObsRegistro);
       var idItem = idxIdItem > -1 ? normalizeText_(row[idxIdItem]) : '';
 
       if (!statusVisiveisLista[statusValidacao]) {
@@ -195,7 +192,7 @@ function atualizarStatusValidacaoCertificadoAdmin(payload) {
 
     var map = buildHeaderMap_(values[0]);
     var idxIdDgmb = getRequiredColumnIndex_(map, ['id_dgmb'], sheetName);
-    var idxIdDesafio = getOptionalColumnIndex_(map, ['id_desafio']);
+    var idxIdDesafio = getIdDesafioColumnIndex_(map);
     var idxIdItem = getOptionalColumnIndex_(map, ['id_item_estoque', 'id item estoque']);
     var idxObsRegistro = getOptionalColumnIndex_(map, ['observacao', 'observação']);
     var idxStatusValidacao = getRequiredColumnIndex_(map, ['status_validacao_certificado'], sheetName);
@@ -206,10 +203,7 @@ function atualizarStatusValidacaoCertificadoAdmin(payload) {
     if (rowNumberPayload > 1 && rowNumberPayload <= values.length) {
       var rowByNumber = values[rowNumberPayload - 1] || [];
       var rowByNumberId = normalizeText_(rowByNumber[idxIdDgmb]);
-      var rowByNumberDesafio = idxIdDesafio > -1 ? normalizeText_(rowByNumber[idxIdDesafio]) : '';
-      if (!rowByNumberDesafio && idxObsRegistro > -1) {
-        rowByNumberDesafio = extrairIdDesafioObservacao_(rowByNumber[idxObsRegistro]);
-      }
+      var rowByNumberDesafio = obterIdDesafioRegistro_(rowByNumber, idxIdDesafio, idxObsRegistro);
       var rowByNumberItem = idxIdItem > -1 ? normalizeText_(rowByNumber[idxIdItem]) : '';
 
       if (rowByNumberId === idDgmb && rowByNumberDesafio === idDesafio && rowByNumberItem === idItem) {
@@ -222,10 +216,7 @@ function atualizarStatusValidacaoCertificadoAdmin(payload) {
         var row = values[i];
         if (normalizeText_(row[idxIdDgmb]) !== idDgmb) continue;
 
-        var rowDesafio = idxIdDesafio > -1 ? normalizeText_(row[idxIdDesafio]) : '';
-        if (!rowDesafio && idxObsRegistro > -1) {
-          rowDesafio = extrairIdDesafioObservacao_(row[idxObsRegistro]);
-        }
+        var rowDesafio = obterIdDesafioRegistro_(row, idxIdDesafio, idxObsRegistro);
         if (rowDesafio !== idDesafio) continue;
 
         var rowItem = idxIdItem > -1 ? normalizeText_(row[idxIdItem]) : '';
