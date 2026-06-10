@@ -162,6 +162,7 @@ function buscarAtividadesUsuario_(idDgmb) {
     return [];
   }
   var out = [];
+  var activityIdsIncluidos = {};
 
   for (var i = 0; i < items.length; i++) {
     var row = items[i];
@@ -174,9 +175,14 @@ function buscarAtividadesUsuario_(idDgmb) {
       var timestampOriginal = painelMG_firstFilled_(row, ['Timestamp', 'timestamp']);
       var chaveEdicao = normalizarTimestampEdicao_(timestampOriginal);
 
-      var activityIdOriginal = painelMG_firstFilled_(row, ['activity_id', 'Activity_ID', 'activity id', 'id_atividade', 'ID_Atividade']);
+      var activityId = obterActivityIdRegistroKm_(row);
+      if (activityId) {
+        if (activityIdsIncluidos[activityId]) continue;
+        activityIdsIncluidos[activityId] = true;
+      }
+
       out.push({
-        activity_id: painelMG_norm_(activityIdOriginal),
+        activity_id: activityId,
         chave_edicao: String(chaveEdicao || '').trim(),
         data: dataNormalizada || painelMG_norm_(dataOriginal),
         km: painelMG_round1_(painelMG_toNumber_(painelMG_firstFilled_(row, ['KM', 'km'])))
