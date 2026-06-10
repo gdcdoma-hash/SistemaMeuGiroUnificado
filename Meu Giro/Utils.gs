@@ -223,8 +223,9 @@ function obterDadosInscricaoUsuario_(idDgmb) {
   var id = normalizeText_(idDgmb);
   if (!id) return null;
 
-  var localizacao = localizarAbaDesafioUsuario_(id);
-  var abaDesafio = localizacao.abaDesafio;
+  // A inscrição do atleta é identificada diretamente na base consolidada.
+  // ListaDesafios é catálogo operacional e não deve autorizar ou bloquear o login.
+  var abaDesafio = SHEETS.DESAFIO || 'dgmbDesafios';
   var sh = getSheetByName_(abaDesafio);
   var values = sh.getDataRange().getValues();
 
@@ -239,8 +240,10 @@ function obterDadosInscricaoUsuario_(idDgmb) {
   var idxRealizado = getOptionalColumnIndex_(map, ['distancia_realizada', 'distancia realizada']);
   var idxFrase = getOptionalColumnIndex_(map, ['frase_incentivo']);
   var idxStatus = getOptionalColumnIndex_(map, ['status_inscricao', 'status inscrição', 'status', 'situacao', 'situação']);
+  var idxStatusUsuarioDesafio = getOptionalColumnIndex_(map, ['status_usuario_desafio', 'status usuário desafio', 'status usuario desafio']);
   var idxConfirmacao = getOptionalColumnIndex_(map, ['confirmacao', 'confirmação', 'confirmado', 'inscricao_confirmada']);
   var idxPagamento = getOptionalColumnIndex_(map, ['status_pagamento', 'pagamento_status', 'pagto_status', 'pagamento', 'pix_status']);
+  var primeiraInscricaoInvalida = null;
 
   for (var i = 1; i < values.length; i++) {
     var row = values[i];
@@ -248,6 +251,9 @@ function obterDadosInscricaoUsuario_(idDgmb) {
 
     if (rowId === id) {
       var statusInscricao = idxStatus > -1 ? normalizeText_(row[idxStatus]) : '';
+      if (!statusInscricao && idxStatusUsuarioDesafio > -1) {
+        statusInscricao = normalizeText_(row[idxStatusUsuarioDesafio]);
+      }
       var statusConfirmacao = idxConfirmacao > -1 ? normalizeText_(row[idxConfirmacao]) : '';
       var statusPagamento = idxPagamento > -1 ? normalizeText_(row[idxPagamento]) : '';
       var validacao = validarInscricaoMinima_({
@@ -255,8 +261,7 @@ function obterDadosInscricaoUsuario_(idDgmb) {
         status_confirmacao: statusConfirmacao,
         status_pagamento: statusPagamento
       });
-
-      return {
+      var inscricao = {
         id_dgmb: rowId,
         aba_desafio: abaDesafio,
         status_inscricao: statusInscricao || 'inscrito',
@@ -268,10 +273,18 @@ function obterDadosInscricaoUsuario_(idDgmb) {
         distancia_realizada: idxRealizado > -1 ? row[idxRealizado] : '',
         frase_incentivo: idxFrase > -1 ? normalizeText_(row[idxFrase]) : ''
       };
+
+      if (validacao.valida) {
+        return inscricao;
+      }
+
+      if (!primeiraInscricaoInvalida) {
+        primeiraInscricaoInvalida = inscricao;
+      }
     }
   }
 
-  return null;
+  return primeiraInscricaoInvalida;
 }
 
 function montarErroInscricaoInvalida_(inscricao) {
@@ -279,7 +292,7 @@ function montarErroInscricaoInvalida_(inscricao) {
     return {
       code: 'NAO_INSCRITO',
       motivo: 'inscricao_nao_localizada',
-      msg: 'Seu cadastro foi localizado, mas não há inscrição válida na aba do desafio atual.'
+      msg: 'Seu cadastro foi localizado, mas não há inscrição válida registrada para acesso ao Meu Giro.'
     };
   }
 
