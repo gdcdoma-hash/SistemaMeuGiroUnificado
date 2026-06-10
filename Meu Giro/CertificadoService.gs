@@ -476,7 +476,7 @@ function certificadoBuscarContextoDesafio_(payload) {
 
   var map = buildHeaderMap_(values[0]);
   var idxId = getRequiredColumnIndex_(map, ['id_dgmb'], sheetName);
-  var idxIdDesafio = getOptionalColumnIndex_(map, ['id_desafio']);
+  var idxIdDesafio = getIdDesafioColumnIndex_(map);
   var idxIdItem = getOptionalColumnIndex_(map, ['id_item_estoque', 'id item estoque']);
   var idxObservacao = getOptionalColumnIndex_(map, ['observacao', 'observação']);
   var idxStatusApuracao = getOptionalColumnIndex_(map, ['status_apuracao', 'status apuracao', 'status apuração', 'status_desafio', 'status desafio']);
@@ -495,12 +495,7 @@ function certificadoBuscarContextoDesafio_(payload) {
     var rowId = normalizeText_(row[idxId]);
     if (rowId !== idDgmb) continue;
 
-    var rowDesafio = idxIdDesafio > -1 ? normalizeText_(row[idxIdDesafio]) : '';
-    if (!rowDesafio && idxObservacao > -1) {
-      var observacao = String(row[idxObservacao] || '');
-      var matchDesafio = observacao.match(/\[\s*ID_DESAFIO\s*:\s*([0-9]+)\s*\]/i);
-      rowDesafio = matchDesafio && matchDesafio[1] ? normalizeText_(matchDesafio[1]) : '';
-    }
+    var rowDesafio = obterIdDesafioRegistro_(row, idxIdDesafio, idxObservacao);
     var rowItem = idxIdItem > -1 ? normalizeText_(row[idxIdItem]) : '';
 
     if (idDesafioFiltro && rowDesafio !== idDesafioFiltro) continue;

@@ -399,6 +399,20 @@ function extrairIdDesafioObservacao_(observacao) {
   return match ? String(match[1]).trim() : '';
 }
 
+function getIdDesafioColumnIndex_(map) {
+  return getOptionalColumnIndex_(map, ['id_desafio', 'id desafio']);
+}
+
+function obterIdDesafioRegistro_(row, idxIdDesafio, idxObservacao) {
+  if (idxIdDesafio > -1) {
+    return normalizeText_(row[idxIdDesafio]);
+  }
+
+  return idxObservacao > -1
+    ? extrairIdDesafioObservacao_(row[idxObservacao])
+    : '';
+}
+
 function normalizarDataISO_(value) {
   if (!value) return '';
   if (Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value.getTime())) {
@@ -603,6 +617,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
   if (idxId === -1) return [];
 
   var idxMeta = getOptionalColumnIndex_(map, ['distancia_km', 'distancia km']);
+  var idxIdDesafio = getIdDesafioColumnIndex_(map);
   var idxObs = getOptionalColumnIndex_(map, ['observacao', 'observação']);
   var idxItem = getOptionalColumnIndex_(map, ['id_item_estoque', 'id item estoque']);
   var idxTipoDesafio = getOptionalColumnIndex_(map, ['tipo_do_desafio', 'tipo do desafio', 'tipo_desafio', 'tipo desafio']);
@@ -624,8 +639,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
     var rowId = normalizeText_(row[idxId]);
     if (rowId !== id) continue;
 
-    var observacao = idxObs > -1 ? row[idxObs] : '';
-    var idDesafio = extrairIdDesafioObservacao_(observacao);
+    var idDesafio = obterIdDesafioRegistro_(row, idxIdDesafio, idxObs);
     var idItem = idxItem > -1 ? normalizeText_(row[idxItem]) : '';
     var tipoDesafio = idxTipoDesafio > -1 ? normalizeText_(row[idxTipoDesafio]) : '';
     var tipoSemAcento = tipoDesafio.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -640,7 +654,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
     var statusValidacaoCertificado = idxStatusValidacaoCertificado > -1 ? normalizeText_(row[idxStatusValidacaoCertificado]) : '';
 
     if (!idDesafio) {
-      logMeuGiroDiagnostico_('Vínculo sem marcador [ID_DESAFIO:###].', {
+      logMeuGiroDiagnostico_('Vínculo sem ID_DESAFIO identificável.', {
         id_dgmb: id,
         linha: i + 1,
         id_item_estoque: idItem || ''
