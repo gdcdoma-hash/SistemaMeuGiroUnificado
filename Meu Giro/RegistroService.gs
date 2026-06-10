@@ -45,7 +45,7 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
     }
 
     var rowLength = Math.max(sheet.getLastColumn(), maiorIndiceRegistroKm_(cols) + 1);
-    var row = preencherLinhaRegistroKm_(rowLength, cols, {
+    var row = preencherLinhaRegistroKmBruto_(rowLength, cols, {
       timestamp: new Date(),
       id_dgmb: idDgmb,
       data_atividade: dataAtividade,
@@ -118,16 +118,14 @@ function maiorIndiceRegistroKm_(cols) {
   return maior;
 }
 
-function preencherLinhaRegistroKm_(rowLength, cols, registro) {
+function preencherLinhaRegistroKmBruto_(rowLength, cols, registro) {
   var row = [];
   for (var i = 0; i < rowLength; i++) row[i] = '';
 
+  // REGISTRO_KM representa a pedalada real, não o vínculo com inscrição/desafio.
+  // A linha começa vazia para preservar, sem preencher, eventuais colunas legadas.
   row[cols.idxTimestamp] = registro.timestamp;
   row[cols.idxId] = registro.id_dgmb;
-  if (cols.idxInscricao > -1) row[cols.idxInscricao] = registro.id_inscricao || '';
-  if (cols.idxDesafio > -1) row[cols.idxDesafio] = registro.id_desafio || '';
-  if (cols.idxItemEstoque > -1) row[cols.idxItemEstoque] = registro.id_item_estoque || '';
-  if (cols.idxPeriodoDesafio > -1) row[cols.idxPeriodoDesafio] = registro.periodo_desafio || '';
   row[cols.idxData] = registro.data_atividade;
   row[cols.idxKm] = registro.km;
   if (cols.idxOrigemRegistro > -1) row[cols.idxOrigemRegistro] = registro.origem_registro || '';
