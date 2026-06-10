@@ -641,6 +641,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
     if (rowId !== id) continue;
 
     var idDesafio = obterIdDesafioRegistro_(row, idxIdDesafio, idxObs);
+    var idInscricao = idxInscricao > -1 ? normalizeText_(row[idxInscricao]) : '';
     var idItem = idxItem > -1 ? normalizeText_(row[idxItem]) : '';
     var tipoDesafio = idxTipoDesafio > -1 ? normalizeText_(row[idxTipoDesafio]) : '';
     var tipoSemAcento = tipoDesafio.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -695,13 +696,13 @@ function obterVinculosDesafioUsuario_(idDgmb) {
       linha: i + 1
     });
 
-    var chave = [id, idDesafio, idItem || ('META_' + Math.round((metaKm + Number.EPSILON) * 10) / 10)].join('|');
+    var chave = [id, idInscricao, idDesafio, idItem || ('META_' + Math.round((metaKm + Number.EPSILON) * 10) / 10)].join('|');
     if (chaves[chave]) continue;
     chaves[chave] = true;
 
     vinculos.push({
       id_dgmb: id,
-      id_inscricao: idxInscricao > -1 ? normalizeText_(row[idxInscricao]) : '',
+      id_inscricao: idInscricao,
       id_desafio: idDesafio,
       id_item_estoque: idItem,
       meta_km: metaKm,
@@ -722,17 +723,30 @@ function obterVinculosDesafioUsuario_(idDgmb) {
   return vinculos;
 }
 
+function obterActivityIdRegistroKm_(registro) {
+  return normalizeText_(firstFilledValue_(registro || {}, [
+    'activity_id', 'Activity_ID', 'activity id', 'id_atividade', 'ID_Atividade'
+  ]));
+}
+
 function obterRegistrosKmUsuario_(idDgmb) {
   var id = normalizeText_(idDgmb);
   if (!id) return [];
 
   var registros = getAllObjects_(SHEETS.REGISTRO_KM);
   var out = [];
+  var activityIdsIncluidos = {};
 
   for (var i = 0; i < registros.length; i++) {
     var r = registros[i];
     var rowId = normalizeText_(firstFilledValue_(r, ['ID_DGMB', 'id_dgmb']));
     if (rowId !== id) continue;
+
+    var activityId = obterActivityIdRegistroKm_(r);
+    if (activityId) {
+      if (activityIdsIncluidos[activityId]) continue;
+      activityIdsIncluidos[activityId] = true;
+    }
 
     out.push({
       data_atividade: normalizarDataISO_(firstFilledValue_(r, ['Data_Atividade', 'Data', 'data_atividade', 'data'])),
