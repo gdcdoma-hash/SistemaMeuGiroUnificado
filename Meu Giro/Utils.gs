@@ -617,6 +617,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
   if (idxId === -1) return [];
 
   var idxMeta = getOptionalColumnIndex_(map, ['distancia_km', 'distancia km']);
+  var idxInscricao = getOptionalColumnIndex_(map, ['id_inscricao', 'id inscrição', 'id inscricao']);
   var idxIdDesafio = getIdDesafioColumnIndex_(map);
   var idxObs = getOptionalColumnIndex_(map, ['observacao', 'observação']);
   var idxItem = getOptionalColumnIndex_(map, ['id_item_estoque', 'id item estoque']);
@@ -700,6 +701,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
 
     vinculos.push({
       id_dgmb: id,
+      id_inscricao: idxInscricao > -1 ? normalizeText_(row[idxInscricao]) : '',
       id_desafio: idDesafio,
       id_item_estoque: idItem,
       meta_km: metaKm,
@@ -741,12 +743,10 @@ function obterRegistrosKmUsuario_(idDgmb) {
   return out;
 }
 
-function ensureMeuGiroResumoSheet_() {
-  var ss = getSpreadsheet_();
-  var sheetName = SHEETS.MEU_GIRO_RESUMO || 'MEU_GIRO_RESUMO';
-  var sh = ss.getSheetByName(sheetName);
-  var headers = [
+function meuGiroResumoHeaders_() {
+  return [
     'Timestamp_Atualizacao',
+    'ID_INSCRICAO',
     'ID_DGMB',
     'ID_DESAFIO',
     'id_item_estoque',
@@ -755,23 +755,66 @@ function ensureMeuGiroResumoSheet_() {
     'Percentual_Concluido',
     'Status_Apuracao'
   ];
+}
+
+function meuGiroResumoObterLayout_(headerRow, sheetName) {
+  var map = buildHeaderMap_(headerRow || []);
+  var camposObrigatorios = [
+    ['timestamp_atualizacao'],
+    ['id_dgmb'],
+    ['id_desafio'],
+    ['id_item_estoque', 'id item estoque'],
+    ['meta_km', 'meta km'],
+    ['distancia_realizada', 'distancia realizada'],
+    ['percentual_concluido', 'percentual concluido', 'percentual concluído'],
+    ['status_apuracao', 'status apuracao', 'status apuração']
+  ];
+
+  for (var i = 0; i < camposObrigatorios.length; i++) {
+    if (getOptionalColumnIndex_(map, camposObrigatorios[i]) === -1) {
+      throw new Error(
+        'Estrutura inválida na aba ' + sheetName +
+        '. Cabeçalho obrigatório não encontrado: ' + camposObrigatorios[i][0]
+      );
+    }
+  }
+
+  return {
+    map: map,
+    possuiIdInscricao: getOptionalColumnIndex_(map, ['id_inscricao', 'id inscrição', 'id inscricao']) > -1
+  };
+}
+
+function ensureMeuGiroResumoSheet_() {
+  var ss = getSpreadsheet_();
+  var sheetName = SHEETS.MEU_GIRO_RESUMO || 'MEU_GIRO_RESUMO';
+  var sh = ss.getSheetByName(sheetName);
+  var headers = meuGiroResumoHeaders_();
 
   if (!sh) {
     sh = ss.insertSheet(sheetName);
+    sh.getRange(1, 1, 1, headers.length).setValues([headers]);
+    return sh;
   }
 
-  var atual = sh.getRange(1, 1, 1, headers.length).getValues()[0];
-  var ok = true;
-  for (var i = 0; i < headers.length; i++) {
-    if (normalizeText_(atual[i]) !== headers[i]) {
-      ok = false;
+  var ultimaColuna = Math.max(sh.getLastColumn(), 1);
+  var atual = sh.getRange(1, 1, 1, ultimaColuna).getValues()[0];
+  var possuiCabecalho = false;
+  for (var i = 0; i < atual.length; i++) {
+    if (normalizeText_(atual[i])) {
+      possuiCabecalho = true;
       break;
     }
   }
-  if (!ok) {
+
+  if (!possuiCabecalho) {
     sh.getRange(1, 1, 1, headers.length).setValues([headers]);
+    return sh;
   }
 
+  // Aceita tanto a estrutura legada quanto a futura. A validação por nome evita
+  // sobrescrever ou deslocar dados durante a inserção manual de ID_INSCRICAO.
+  meuGiroResumoObterLayout_(atual, sheetName);
   return sh;
 }
 
@@ -795,7 +838,13 @@ function atualizarMeuGiroResumo_(idDgmb) {
   var registros = obterRegistrosKmUsuario_(id);
   var shResumo = ensureMeuGiroResumoSheet_();
   var valoresResumo = shResumo.getDataRange().getValues();
-  var mapResumo = buildHeaderMap_(valoresResumo[0] || []);
+  var layoutResumo = meuGiroResumoObterLayout_(
+    valoresResumo[0] || [],
+    SHEETS.MEU_GIRO_RESUMO || 'MEU_GIRO_RESUMO'
+  );
+  var mapResumo = layoutResumo.map;
+  var idxTimestamp = getOptionalColumnIndex_(mapResumo, ['timestamp_atualizacao']);
+  var idxInscricaoResumo = getOptionalColumnIndex_(mapResumo, ['id_inscricao', 'id inscrição', 'id inscricao']);
   var idxId = getOptionalColumnIndex_(mapResumo, ['id_dgmb']);
   var idxDesafio = getOptionalColumnIndex_(mapResumo, ['id_desafio']);
   var idxItem = getOptionalColumnIndex_(mapResumo, ['id_item_estoque', 'id item estoque']);
@@ -803,6 +852,7 @@ function atualizarMeuGiroResumo_(idDgmb) {
   var idxDistanciaResumo = getOptionalColumnIndex_(mapResumo, ['distancia_realizada', 'distancia realizada']);
   var idxPercentualResumo = getOptionalColumnIndex_(mapResumo, ['percentual_concluido', 'percentual concluido', 'percentual concluído']);
   var idxStatusResumo = getOptionalColumnIndex_(mapResumo, ['status_apuracao', 'status apuracao', 'status apuração']);
+  var totalColunasResumo = Math.max(shResumo.getLastColumn(), (valoresResumo[0] || []).length);
   var linhasPorChave = {};
 
   for (var i = 1; i < valoresResumo.length; i++) {
@@ -811,8 +861,8 @@ function atualizarMeuGiroResumo_(idDgmb) {
     var chaveExistente = meuGiroResumoBuildChave_(
       row[idxId],
       row[idxDesafio],
-      idxItem > -1 ? row[idxItem] : '',
-      idxMetaResumo > -1 ? row[idxMetaResumo] : ''
+      row[idxItem],
+      row[idxMetaResumo]
     );
     linhasPorChave[chaveExistente] = i + 1;
   }
@@ -822,6 +872,7 @@ function atualizarMeuGiroResumo_(idDgmb) {
 
   for (var v = 0; v < vinculos.length; v++) {
     var vinculo = vinculos[v];
+    var idInscricao = normalizeText_(vinculo.id_inscricao);
     var meta = Number(vinculo.meta_km || 0);
     var metaArredondada = Math.round((meta + Number.EPSILON) * 10) / 10;
     var chave = meuGiroResumoBuildChave_(id, vinculo.id_desafio, vinculo.id_item_estoque, metaArredondada);
@@ -855,42 +906,46 @@ function atualizarMeuGiroResumo_(idDgmb) {
 
     var distanciaArredondada = Math.round((distancia + Number.EPSILON) * 10) / 10;
     var percentualArredondado = Math.round((percentual + Number.EPSILON) * 10) / 10;
+    var numeroLinha = linhasPorChave[chave] || 0;
+    var rowAtual = numeroLinha ? (valoresResumo[numeroLinha - 1] || []) : [];
+    var houveMudanca = !numeroLinha ||
+      (idxInscricaoResumo > -1 && normalizeText_(rowAtual[idxInscricaoResumo]) !== idInscricao) ||
+      parseLocalizedNumber_(rowAtual[idxMetaResumo]) !== metaArredondada ||
+      parseLocalizedNumber_(rowAtual[idxDistanciaResumo]) !== distanciaArredondada ||
+      parseLocalizedNumber_(rowAtual[idxPercentualResumo]) !== percentualArredondado ||
+      normalizeText_(rowAtual[idxStatusResumo]) !== status;
 
-    var linha = [
-      new Date(),
-      id,
-      vinculo.id_desafio,
-      vinculo.id_item_estoque,
-      metaArredondada,
-      distanciaArredondada,
-      percentualArredondado,
-      status
-    ];
-
-    if (linhasPorChave[chave]) {
-      var numeroLinha = linhasPorChave[chave];
-      var rowAtual = valoresResumo[numeroLinha - 1] || [];
-      var houveMudanca =
-        (idxMetaResumo > -1 ? parseLocalizedNumber_(rowAtual[idxMetaResumo]) : 0) !== metaArredondada ||
-        (idxDistanciaResumo > -1 ? parseLocalizedNumber_(rowAtual[idxDistanciaResumo]) : 0) !== distanciaArredondada ||
-        (idxPercentualResumo > -1 ? parseLocalizedNumber_(rowAtual[idxPercentualResumo]) : 0) !== percentualArredondado ||
-        normalizeText_(idxStatusResumo > -1 ? rowAtual[idxStatusResumo] : '') !== status;
-
-      if (houveMudanca) {
-        shResumo.getRange(numeroLinha, 1, 1, linha.length).setValues([linha]);
+    if (houveMudanca) {
+      var linha = [];
+      for (var c = 0; c < totalColunasResumo; c++) {
+        linha[c] = numeroLinha ? rowAtual[c] : '';
       }
-    } else {
-      shResumo.appendRow(linha);
+      linha[idxTimestamp] = new Date();
+      if (idxInscricaoResumo > -1) linha[idxInscricaoResumo] = idInscricao;
+      linha[idxId] = id;
+      linha[idxDesafio] = vinculo.id_desafio;
+      linha[idxItem] = vinculo.id_item_estoque;
+      linha[idxMetaResumo] = metaArredondada;
+      linha[idxDistanciaResumo] = distanciaArredondada;
+      linha[idxPercentualResumo] = percentualArredondado;
+      linha[idxStatusResumo] = status;
+
+      if (numeroLinha) {
+        shResumo.getRange(numeroLinha, 1, 1, totalColunasResumo).setValues([linha]);
+      } else {
+        shResumo.appendRow(linha);
+      }
     }
 
     saida.push({
+      id_inscricao: idInscricao,
       id_dgmb: id,
       id_desafio: vinculo.id_desafio,
       id_item_estoque: vinculo.id_item_estoque,
       nome_desafio: vinculo.nome_desafio || '',
-      meta_km: linha[4],
-      distancia_realizada: linha[5],
-      percentual_concluido: linha[6],
+      meta_km: metaArredondada,
+      distancia_realizada: distanciaArredondada,
+      percentual_concluido: percentualArredondado,
       status_apuracao: status,
       status_validacao_certificado: normalizeText_(vinculo.status_validacao_certificado).toUpperCase(),
       status_desafio: normalizeText_(vinculo.status_desafio),
