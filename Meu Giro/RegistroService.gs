@@ -44,59 +44,33 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
       }
     }
 
-    var vinculos = obterVinculosDesafioUsuario_(idDgmb).filter(function(vinculo) {
-      return !!vinculo.apto &&
-        !!normalizeText_(vinculo.id_desafio) &&
-        atividadeDentroPeriodoOficial_(
-          dataAtividade,
-          normalizarDataISO_(vinculo.periodo_inicio),
-          normalizarDataISO_(vinculo.periodo_fim)
-        );
-    });
-
-    if (!vinculos.length) {
-      return {
-        ok:false,
-        code:'SEM_INSCRICAO_VALIDA',
-        msg:'Nenhuma inscrição válida foi encontrada para a data da atividade.'
-      };
-    }
-
     var rowLength = Math.max(sheet.getLastColumn(), maiorIndiceRegistroKm_(cols) + 1);
-    var timestamp = new Date();
-    var rows = vinculos.map(function(vinculo) {
-      var row = preencherLinhaRegistroKm_(rowLength, cols, {
-        timestamp: timestamp,
-        id_dgmb: idDgmb,
-        id_inscricao: vinculo.id_inscricao,
-        id_desafio: vinculo.id_desafio,
-        id_item_estoque: vinculo.id_item_estoque,
-        periodo_desafio: vinculo.periodo_desafio,
-        data_atividade: dataAtividade,
-        km: km,
-        origem_registro: 'MANUAL',
-        observacao: 'Lançamento manual Meu Giro',
-        status_validacao: 'PENDENTE',
-        activity_id: activityId
-      });
-      return row;
+    var row = preencherLinhaRegistroKm_(rowLength, cols, {
+      timestamp: new Date(),
+      id_dgmb: idDgmb,
+      data_atividade: dataAtividade,
+      km: km,
+      origem_registro: 'MANUAL',
+      observacao: 'Lançamento manual Meu Giro',
+      status_validacao: 'PENDENTE',
+      activity_id: activityId
     });
 
-    var primeiraLinhaInserida = sheet.getLastRow() + 1;
-    sheet.getRange(primeiraLinhaInserida, 1, rows.length, rowLength).setValues(rows);
+    var linhaInserida = sheet.getLastRow() + 1;
+    sheet.getRange(linhaInserida, 1, 1, rowLength).setValues([row]);
 
     try {
       atualizarDistanciaRealizada_(idDgmb);
       atualizarMeuGiroResumo_(idDgmb);
     } catch (syncErr) {
-      sheet.deleteRows(primeiraLinhaInserida, rows.length);
+      sheet.deleteRow(linhaInserida);
       throw syncErr;
     }
 
     return {
       ok:true,
       activity_id: activityId,
-      registros_criados: rows.length,
+      registros_criados: 1,
       msg:'Atividade registrada com sucesso.'
     };
 
