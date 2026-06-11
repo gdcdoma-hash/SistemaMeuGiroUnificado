@@ -59,7 +59,8 @@ function getPainelUsuario(idDgmb) {
     var rankingInfo = painelMG_calcularPosicaoRanking_(
       id,
       desafioPrincipalPainel && desafioPrincipalPainel.id_desafio,
-      desafioPrincipalPainel && desafioPrincipalPainel.id_item_estoque
+      desafioPrincipalPainel && desafioPrincipalPainel.id_item_estoque,
+      desafioPrincipalPainel && desafioPrincipalPainel.id_inscricao
     );
     var rankingPorDesafio = painelMG_montarRankingPorDesafio_(id, desafiosConsolidados);
 
@@ -383,10 +384,11 @@ function painelMG_obterPeriodoOficialPorAba_(abaDesafio) {
   }
 }
 
-function painelMG_calcularPosicaoRanking_(idDgmb, idDesafio, idItemEstoque) {
+function painelMG_calcularPosicaoRanking_(idDgmb, idDesafio, idItemEstoque, idInscricao) {
   var idUsuario = painelMG_norm_(idDgmb);
   var desafioPrincipal = painelMG_norm_(idDesafio);
   var itemPrincipal = painelMG_norm_(idItemEstoque);
+  var inscricaoPrincipal = painelMG_norm_(idInscricao);
   var grupoBasePrincipal = painelMG_extrairGrupoBaseDesafio_(itemPrincipal);
 
   if (!idUsuario || !desafioPrincipal) {
@@ -421,6 +423,7 @@ function painelMG_calcularPosicaoRanking_(idDgmb, idDesafio, idItemEstoque) {
     if (!statusValidos[rowStatus]) continue;
 
     lista.push({
+      id_inscricao: painelMG_norm_(painelMG_firstFilled_(row, ['ID_INSCRICAO', 'id_inscricao'])),
       id_dgmb: did,
       distancia_realizada: painelMG_round1_(painelMG_toNumber_(painelMG_firstFilled_(row, ['Distancia_Realizada', 'distancia_realizada']))),
       percentual_concluido: painelMG_round1_(painelMG_toNumber_(painelMG_firstFilled_(row, ['Percentual_Concluido', 'percentual_concluido'])))
@@ -438,8 +441,16 @@ function painelMG_calcularPosicaoRanking_(idDgmb, idDesafio, idItemEstoque) {
   });
 
   for (var j = 0; j < lista.length; j++) {
-    if (lista[j].id_dgmb === idUsuario) {
+    if (inscricaoPrincipal && lista[j].id_inscricao === inscricaoPrincipal) {
       return { posicao: j + 1, total: lista.length };
+    }
+  }
+
+  if (!inscricaoPrincipal) {
+    for (var k = 0; k < lista.length; k++) {
+      if (lista[k].id_dgmb === idUsuario) {
+        return { posicao: k + 1, total: lista.length };
+      }
     }
   }
 
@@ -467,7 +478,7 @@ function painelMG_montarRankingPorDesafio_(idDgmb, desafios) {
     var chave = painelMG_chaveDesafioPainel_(item);
     if (out[chave]) continue;
 
-    out[chave] = painelMG_calcularPosicaoRanking_(idDgmb, idDesafio, idItem);
+    out[chave] = painelMG_calcularPosicaoRanking_(idDgmb, idDesafio, idItem, item.id_inscricao);
   }
 
   return out;
@@ -475,12 +486,14 @@ function painelMG_montarRankingPorDesafio_(idDgmb, desafios) {
 
 function painelMG_chaveDesafioPainel_(desafio) {
   var item = desafio || {};
+  var idInscricao = painelMG_norm_(item.id_inscricao);
   var idDesafio = painelMG_norm_(item.id_desafio);
   var idItem = painelMG_norm_(item.id_item_estoque);
   var inicio = painelMG_norm_(item.periodo_inicio);
   var fim = painelMG_norm_(item.periodo_fim);
   var meta = painelMG_norm_(item.meta_km);
 
+  if (idInscricao) return ['INSCRICAO', idInscricao].join('|');
   if (!idDesafio) return '';
   if (idItem) return [idDesafio, idItem].join('|');
   if (inicio || fim || meta) return [idDesafio, inicio, fim, meta].join('|');

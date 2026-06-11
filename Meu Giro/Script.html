@@ -1716,11 +1716,13 @@ function renderPainel(p) {
 
 function getDesafioKey(desafio) {
   if (!desafio) return '';
+  var idInscricao = String(desafio.id_inscricao || '').trim();
   var idDesafio = String(desafio.id_desafio || '').trim();
   var idItem = String(desafio.id_item_estoque || '').trim();
   var inicio = String(desafio.periodo_inicio || '').trim();
   var fim = String(desafio.periodo_fim || '').trim();
   var meta = String(desafio.meta_km || '').trim();
+  if (idInscricao) return 'INSCRICAO|' + idInscricao;
   if (!idDesafio) return '';
   if (idItem) return idDesafio + '|' + idItem;
   if (inicio || fim || meta) return [idDesafio, inicio, fim, meta].join('|');
@@ -2525,11 +2527,13 @@ function normalizarListaDesafiosPainel_(lista) {
 
 function getDesafioBaseKey_(desafio) {
   if (!desafio) return '';
+  var idInscricao = String(desafio.id_inscricao || '').trim();
   var idDesafio = String(desafio.id_desafio || '').trim();
   var idItem = String(desafio.id_item_estoque || '').trim();
   var inicio = String(desafio.periodo_inicio || '').trim();
   var fim = String(desafio.periodo_fim || '').trim();
   var meta = String(desafio.meta_km || '').trim();
+  if (idInscricao) return 'INSCRICAO|' + idInscricao;
   if (!idDesafio && !idItem) return '';
   return [idDesafio, idItem, inicio, fim, meta].join('|');
 }
@@ -3431,7 +3435,10 @@ function carregarRanking(triggerSource) {
           }
 
           setRankingMsg('Ranking do desafio atualizado com sucesso. Confira a lista abaixo.', 'success', 2600);
-          renderRanking(Array.isArray(res.data) ? res.data : []);
+          renderRanking(
+            Array.isArray(res.data) ? res.data : [],
+            String((res && res.id_inscricao_referencia) || (desafioAtual && desafioAtual.id_inscricao) || '').trim()
+          );
           showRankingLoadSuccessFeedback();
         } catch (errSuccess) {
           setRankingMsg('Erro ao processar ranking.', 'error');
@@ -3466,7 +3473,8 @@ function carregarRanking(triggerSource) {
       .getRanking(
         idDgmb,
         desafioAtual && desafioAtual.id_desafio,
-        desafioAtual && desafioAtual.id_item_estoque
+        desafioAtual && desafioAtual.id_item_estoque,
+        desafioAtual && desafioAtual.id_inscricao
       );
   } catch (errRun) {
     if (requestId !== rankingLoadRequestId) {
@@ -3508,12 +3516,13 @@ function renderRankingState(variant, title, description) {
     '</div>';
 }
 
-function renderRanking(lista) {
+function renderRanking(lista, idInscricaoReferencia) {
   const box = document.getElementById('ranking-lista');
   if (!box) return;
 
   box.innerHTML = '';
   const currentUserId = currentUser && currentUser.id_dgmb ? String(currentUser.id_dgmb).trim() : '';
+  const inscricaoEmFoco = String(idInscricaoReferencia || '').trim();
 
   if (!Array.isArray(lista) || !lista.length) {
     renderRankingState('empty', 'Ainda não há participantes com km registrado.', 'Assim que as primeiras quilometragens forem lançadas, o ranking do desafio aparecerá aqui.');
@@ -3523,7 +3532,10 @@ function renderRanking(lista) {
   lista.forEach(function(item, index) {
     item = item || {};
     const itemId = item.id_dgmb ? String(item.id_dgmb).trim() : '';
-    const isCurrentUser = !!currentUserId && !!itemId && currentUserId === itemId;
+    const itemInscricao = item.id_inscricao ? String(item.id_inscricao).trim() : '';
+    const isCurrentUser = inscricaoEmFoco
+      ? !!itemInscricao && inscricaoEmFoco === itemInscricao
+      : !!currentUserId && !!itemId && currentUserId === itemId;
     const div = document.createElement('div');
     div.className = 'atividade ranking-item' + (isCurrentUser ? ' ranking-item-self' : '');
     div.innerHTML =
