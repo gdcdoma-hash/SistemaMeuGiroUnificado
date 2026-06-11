@@ -450,6 +450,68 @@ function atividadeDentroPeriodoOficial_(dataAtividadeIso, periodoInicioIso, peri
   return dataAtividade >= inicio && dataAtividade <= fim;
 }
 
+function normalizarPeriodoMensal_(value) {
+  if (!value) return { inicio: '', fim: '' };
+
+  var ano = 0;
+  var mes = 0;
+
+  if (Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value.getTime())) {
+    ano = Number(Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy'));
+    mes = Number(Utilities.formatDate(value, Session.getScriptTimeZone(), 'MM'));
+  } else {
+    var texto = normalizeText_(value).toLowerCase();
+    var numerico = texto.match(/^(\d{2})\/(\d{4})$/);
+    var iso = texto.match(/^(\d{4})-(\d{2})$/);
+
+    if (numerico) {
+      mes = Number(numerico[1]);
+      ano = Number(numerico[2]);
+    } else if (iso) {
+      ano = Number(iso[1]);
+      mes = Number(iso[2]);
+    } else {
+      var porExtenso = texto.match(/^([a-zçãáàâéêíóôõú]+)\s*\/\s*(\d{4})$/i);
+      if (porExtenso) {
+        var nomeMes = porExtenso[1]
+          .replace(/[áàâã]/g, 'a')
+          .replace(/[éê]/g, 'e')
+          .replace(/í/g, 'i')
+          .replace(/[óôõ]/g, 'o')
+          .replace(/ú/g, 'u')
+          .replace(/ç/g, 'c');
+        var meses = {
+          janeiro: 1,
+          fevereiro: 2,
+          marco: 3,
+          abril: 4,
+          maio: 5,
+          junho: 6,
+          julho: 7,
+          agosto: 8,
+          setembro: 9,
+          outubro: 10,
+          novembro: 11,
+          dezembro: 12
+        };
+        mes = meses[nomeMes] || 0;
+        ano = Number(porExtenso[2]);
+      }
+    }
+  }
+
+  if (!ano || mes < 1 || mes > 12) return { inicio: '', fim: '' };
+
+  var bissexto = ano % 4 === 0 && (ano % 100 !== 0 || ano % 400 === 0);
+  var diasPorMes = [31, bissexto ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  var mesTexto = String(mes).padStart(2, '0');
+
+  return {
+    inicio: String(ano) + '-' + mesTexto + '-01',
+    fim: String(ano) + '-' + mesTexto + '-' + String(diasPorMes[mes - 1]).padStart(2, '0')
+  };
+}
+
 function buildPeriodoOficialPorAbaEId_(ss) {
   var out = { byAba: {}, byId: {} };
   var lista = ss.getSheetByName(SHEETS.LISTA_DESAFIOS || 'ListaDesafios');
@@ -469,8 +531,7 @@ function buildPeriodoOficialPorAbaEId_(ss) {
     'id_desafio_base',
     'id desafio base'
   ]);
-  var idxInicio = getOptionalColumnIndex_(map, ['data_inicio', 'data início', 'inicio', 'início', 'dt_inicio']);
-  var idxFim = getOptionalColumnIndex_(map, ['data_fim', 'data fim', 'fim', 'dt_fim']);
+  var idxPeriodo = getOptionalColumnIndex_(map, ['periodo', 'período']);
   var idxNome = getOptionalColumnIndex_(map, [
     'nome_desafio',
     'nome desafio',
@@ -488,9 +549,14 @@ function buildPeriodoOficialPorAbaEId_(ss) {
     if (!aba) continue;
 
     var nomeDesafio = idxNome > -1 ? normalizeText_(row[idxNome]) : '';
+    var periodoTexto = idxPeriodo > -1 ? normalizeText_(row[idxPeriodo]) : '';
+    var periodoMensal = idxPeriodo > -1
+      ? normalizarPeriodoMensal_(row[idxPeriodo])
+      : { inicio: '', fim: '' };
     var periodo = {
-      inicio: idxInicio > -1 ? normalizarDataISO_(row[idxInicio]) : '',
-      fim: idxFim > -1 ? normalizarDataISO_(row[idxFim]) : '',
+      inicio: periodoMensal.inicio,
+      fim: periodoMensal.fim,
+      periodo_desafio: periodoTexto,
       nome_desafio: nomeDesafio || aba
     };
 
@@ -558,42 +624,47 @@ function extrairPeriodoDesafioTexto_(texto) {
   var br = bruto.match(/(\d{2}\/\d{2}\/\d{4}).*?(\d{2}\/\d{2}\/\d{4})/);
   if (br) return { inicio: normalizarDataISO_(br[1]), fim: normalizarDataISO_(br[2]) };
 
-  return { inicio: '', fim: '' };
+  return normalizarPeriodoMensal_(bruto);
+}
+
+function periodoCompletoValido_(periodo) {
+  return !!periodo &&
+    isDataIsoValida_(periodo.inicio) &&
+    isDataIsoValida_(periodo.fim) &&
+    periodo.inicio <= periodo.fim;
 }
 
 function montarPeriodoHistoricoVinculo_(row, indices, periodoLista, contextoLog) {
   var periodoTexto = indices.periodo > -1 ? normalizeText_(row[indices.periodo]) : '';
-  var inicioHistorico = indices.inicio > -1 ? normalizarDataISO_(row[indices.inicio]) : '';
-  var fimHistorico = indices.fim > -1 ? normalizarDataISO_(row[indices.fim]) : '';
-
-  if ((!inicioHistorico || !fimHistorico) && periodoTexto) {
-    var periodoExtraido = extrairPeriodoDesafioTexto_(periodoTexto);
-    inicioHistorico = inicioHistorico || periodoExtraido.inicio;
-    fimHistorico = fimHistorico || periodoExtraido.fim;
-  }
-
-  var inicio = inicioHistorico;
-  var fim = fimHistorico;
+  var periodoDatasEspecificas = {
+    inicio: indices.inicio > -1 ? normalizarDataISO_(row[indices.inicio]) : '',
+    fim: indices.fim > -1 ? normalizarDataISO_(row[indices.fim]) : ''
+  };
+  var periodoTextoEspecifico = extrairPeriodoDesafioTexto_(periodoTexto);
+  var periodo = { inicio: '', fim: '' };
   var usouFallbackLista = false;
 
-  if ((!inicio || !fim) && periodoLista) {
-    inicio = inicio || periodoLista.inicio || '';
-    fim = fim || periodoLista.fim || '';
-    usouFallbackLista = !!(periodoLista.inicio || periodoLista.fim);
+  if (periodoCompletoValido_(periodoDatasEspecificas)) {
+    periodo = periodoDatasEspecificas;
+  } else if (periodoCompletoValido_(periodoTextoEspecifico)) {
+    periodo = periodoTextoEspecifico;
+  } else if (periodoCompletoValido_(periodoLista)) {
+    periodo = periodoLista;
+    usouFallbackLista = true;
   }
 
   if (usouFallbackLista) {
-    logMeuGiroDiagnostico_('Fallback de período via ListaDesafios usado.', contextoLog);
+    logMeuGiroDiagnostico_('Fallback de período via ListaDesafios.Periodo usado.', contextoLog);
   }
 
-  if (!inicio || !fim) {
-    logMeuGiroDiagnostico_('Desafio sem data_inicio/data_fim para filtro histórico.', contextoLog);
+  if (!periodoCompletoValido_(periodo)) {
+    logMeuGiroDiagnostico_('Desafio sem período de apuração válido para filtro histórico.', contextoLog);
   }
 
   return {
-    inicio: inicio || '',
-    fim: fim || '',
-    periodo_desafio: periodoTexto,
+    inicio: periodo.inicio || '',
+    fim: periodo.fim || '',
+    periodo_desafio: periodoTexto || (periodoLista && periodoLista.periodo_desafio) || '',
     nome_desafio: (periodoLista && periodoLista.nome_desafio) || ''
   };
 }
