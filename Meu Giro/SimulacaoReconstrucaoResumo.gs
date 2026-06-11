@@ -45,6 +45,121 @@ function simularReconstrucaoMeuGiroResumo() {
   return comparativo;
 }
 
+/**
+ * Reconstrói o resumo em uma aba temporária para validação, sem tocar na aba
+ * oficial MEU_GIRO_RESUMO ou nas abas de origem.
+ *
+ * As únicas operações de escrita desta rotina são clearContents() e
+ * setValues() na aba MEU_GIRO_RESUMO_REBUILD_TESTE. A aba é criada somente
+ * quando ainda não existe.
+ */
+function reconstruirMeuGiroResumoEmAbaTeste() {
+  var nomeAbaTeste = 'MEU_GIRO_RESUMO_REBUILD_TESTE';
+  var cabecalho = [
+    'Timestamp_Atualizacao',
+    'ID_INSCRICAO',
+    'ID_DGMB',
+    'ID_DESAFIO',
+    'id_item_estoque',
+    'Meta_KM',
+    'Distancia_Realizada',
+    'Percentual_Concluido',
+    'Status_Apuracao'
+  ];
+  var ss = getSpreadsheet_();
+  var dadosDesafios = simularResumoLerAba_(ss, SHEETS.DESAFIO || 'dgmbDesafios');
+  var dadosRegistros = simularResumoLerAba_(ss, SHEETS.REGISTRO_KM || 'REGISTRO_KM');
+  var dadosLista = simularResumoLerAba_(ss, SHEETS.LISTA_DESAFIOS || 'ListaDesafios');
+
+  // O layout da aba de teste é sempre canônico e inclui ID_INSCRICAO.
+  var esperado = simularResumoCalcularEsperado_(
+    dadosDesafios,
+    dadosRegistros,
+    dadosLista,
+    true
+  );
+  var itens = [];
+
+  for (var i = 0; i < esperado.chaves.length; i++) {
+    itens.push(esperado.porChave[esperado.chaves[i]]);
+  }
+
+  itens.sort(reconstruirResumoCompararItens_);
+
+  var timestampAtualizacao = new Date();
+  var valores = [cabecalho];
+  var relatorio = {
+    total_linhas_gravadas: itens.length,
+    total_com_id_inscricao: 0,
+    total_sem_id_inscricao: 0,
+    total_ativo: 0,
+    total_concluido: 0,
+    total_expirado: 0,
+    total_inapto: 0
+  };
+
+  for (var j = 0; j < itens.length; j++) {
+    var item = itens[j];
+    var idInscricao = normalizeText_(item.id_inscricao);
+    var status = normalizeText_(item.status_apuracao).toUpperCase();
+
+    if (idInscricao) {
+      relatorio.total_com_id_inscricao++;
+    } else {
+      relatorio.total_sem_id_inscricao++;
+    }
+
+    if (status === 'ATIVO') relatorio.total_ativo++;
+    if (status === 'CONCLUIDO') relatorio.total_concluido++;
+    if (status === 'EXPIRADO') relatorio.total_expirado++;
+    if (status === 'INAPTO') relatorio.total_inapto++;
+
+    valores.push([
+      timestampAtualizacao,
+      idInscricao,
+      item.id_dgmb,
+      item.id_desafio,
+      item.id_item_estoque,
+      item.meta_km,
+      item.distancia_realizada,
+      item.percentual_concluido,
+      status
+    ]);
+  }
+
+  var abaTeste = ss.getSheetByName(nomeAbaTeste);
+  if (!abaTeste) abaTeste = ss.insertSheet(nomeAbaTeste);
+
+  abaTeste.clearContents();
+  abaTeste.getRange(1, 1, valores.length, cabecalho.length).setValues(valores);
+
+  Logger.log('[Meu Giro][rebuild teste] total de linhas gravadas: ' + relatorio.total_linhas_gravadas);
+  Logger.log('[Meu Giro][rebuild teste] total com ID_INSCRICAO: ' + relatorio.total_com_id_inscricao);
+  Logger.log('[Meu Giro][rebuild teste] total sem ID_INSCRICAO: ' + relatorio.total_sem_id_inscricao);
+  Logger.log('[Meu Giro][rebuild teste] total ATIVO: ' + relatorio.total_ativo);
+  Logger.log('[Meu Giro][rebuild teste] total CONCLUIDO: ' + relatorio.total_concluido);
+  Logger.log('[Meu Giro][rebuild teste] total EXPIRADO: ' + relatorio.total_expirado);
+  Logger.log('[Meu Giro][rebuild teste] total INAPTO: ' + relatorio.total_inapto);
+
+  return relatorio;
+}
+
+function reconstruirResumoCompararItens_(a, b) {
+  var camposTexto = ['id_dgmb', 'id_desafio', 'id_item_estoque'];
+
+  for (var i = 0; i < camposTexto.length; i++) {
+    var comparacao = normalizeText_(a[camposTexto[i]]).localeCompare(
+      normalizeText_(b[camposTexto[i]])
+    );
+    if (comparacao !== 0) return comparacao;
+  }
+
+  var diferencaMeta = Number(a.meta_km || 0) - Number(b.meta_km || 0);
+  if (diferencaMeta !== 0) return diferencaMeta;
+
+  return normalizeText_(a.id_inscricao).localeCompare(normalizeText_(b.id_inscricao));
+}
+
 function simularResumoLerAba_(ss, nomeAba) {
   var sheet = ss.getSheetByName(nomeAba);
   if (!sheet) throw new Error('Aba não encontrada: ' + nomeAba);
