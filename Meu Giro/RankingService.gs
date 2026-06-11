@@ -1,10 +1,13 @@
-function getRanking(idDgmb, idDesafio, idItemEstoque) {
+function getRanking(idDgmb, idDesafio, idItemEstoque, idInscricao) {
   try {
     var idUsuario = rankingMG_norm_(idDgmb);
     var desafioSolicitado = rankingMG_norm_(idDesafio);
     var itemSolicitado = rankingMG_norm_(idItemEstoque);
+    var inscricaoSolicitada = rankingMG_norm_(idInscricao);
+    var diagnosticos = rankingMG_criarDiagnosticos_(inscricaoSolicitada);
+
     if (!idUsuario) {
-      return { ok: false, data: [], total: 0, msg: 'ID do usuário não informado.' };
+      return { ok: false, data: [], total: 0, msg: 'ID do usuário não informado.', diagnosticos: diagnosticos };
     }
 
     var pessoas = getAllObjects_(SHEETS.PESSOAS);
@@ -15,32 +18,60 @@ function getRanking(idDgmb, idDesafio, idItemEstoque) {
         ok: true,
         data: [],
         total: 0,
-        msg: 'Nenhum atleta encontrado no ranking.'
+        msg: 'Nenhum atleta encontrado no ranking.',
+        diagnosticos: diagnosticos
       };
     }
 
     var statusValidos = { ATIVO: true, CONCLUIDO: true };
     var referencia = null;
 
-    for (var r = 0; r < resumo.length; r++) {
-      var rowRef = resumo[r] || {};
-      var rowIdRef = rankingMG_norm_(rankingMG_firstFilled_(rowRef, ['ID_DGMB', 'id_dgmb']));
-      if (rowIdRef !== idUsuario) continue;
-
-      var statusRef = rankingMG_norm_(rankingMG_firstFilled_(rowRef, ['Status_Apuracao', 'status_apuracao'])).toUpperCase();
-      if (!statusValidos[statusRef]) continue;
-
-      var rowDesafioRef = rankingMG_norm_(rankingMG_firstFilled_(rowRef, ['ID_DESAFIO', 'id_desafio']));
-      var rowItemRef = rankingMG_norm_(rankingMG_firstFilled_(rowRef, ['id_item_estoque', 'id item estoque']));
-      if (desafioSolicitado && rowDesafioRef !== desafioSolicitado) continue;
-      if (desafioSolicitado && itemSolicitado && rowItemRef !== itemSolicitado) continue;
-
-      if (statusRef === 'ATIVO') {
-        referencia = rowRef;
-        break;
+    if (inscricaoSolicitada) {
+      for (var ri = 0; ri < resumo.length; ri++) {
+        var rowInscricao = resumo[ri] || {};
+        var idInscricaoRef = rankingMG_obterIdInscricao_(rowInscricao);
+        var idDgmbInscricaoRef = rankingMG_norm_(rankingMG_firstFilled_(rowInscricao, ['ID_DGMB', 'id_dgmb']));
+        if (idInscricaoRef === inscricaoSolicitada && idDgmbInscricaoRef === idUsuario) {
+          referencia = rowInscricao;
+          diagnosticos.referencia_por = 'ID_INSCRICAO';
+          break;
+        }
       }
 
-      if (!referencia) referencia = rowRef;
+      if (!referencia) {
+        diagnosticos.id_inscricao_nao_encontrado = true;
+        rankingMG_logDiagnostico_('ID_INSCRICAO recebido, mas não encontrado no MEU_GIRO_RESUMO.', {
+          id_dgmb: idUsuario,
+          id_inscricao: inscricaoSolicitada,
+          id_desafio: desafioSolicitado,
+          id_item_estoque: itemSolicitado
+        });
+      }
+    }
+
+    // Compatibilidade com chamadas antigas e com inscrições legadas sem ID_INSCRICAO.
+    if (!referencia) {
+      diagnosticos.referencia_por = 'LEGADO';
+      for (var r = 0; r < resumo.length; r++) {
+        var rowRef = resumo[r] || {};
+        var rowIdRef = rankingMG_norm_(rankingMG_firstFilled_(rowRef, ['ID_DGMB', 'id_dgmb']));
+        if (rowIdRef !== idUsuario) continue;
+
+        var statusRef = rankingMG_norm_(rankingMG_firstFilled_(rowRef, ['Status_Apuracao', 'status_apuracao'])).toUpperCase();
+        if (!statusValidos[statusRef]) continue;
+
+        var rowDesafioRef = rankingMG_norm_(rankingMG_firstFilled_(rowRef, ['ID_DESAFIO', 'id_desafio']));
+        var rowItemRef = rankingMG_norm_(rankingMG_firstFilled_(rowRef, ['id_item_estoque', 'id item estoque']));
+        if (desafioSolicitado && rowDesafioRef !== desafioSolicitado) continue;
+        if (desafioSolicitado && itemSolicitado && rowItemRef !== itemSolicitado) continue;
+
+        if (statusRef === 'ATIVO') {
+          referencia = rowRef;
+          break;
+        }
+
+        if (!referencia) referencia = rowRef;
+      }
     }
 
     if (!referencia) {
@@ -48,31 +79,40 @@ function getRanking(idDgmb, idDesafio, idItemEstoque) {
         ok: true,
         data: [],
         total: 0,
-        msg: 'Usuário sem desafio elegível para o ranking.'
+        msg: 'Usuário sem desafio elegível para o ranking.',
+        diagnosticos: diagnosticos
       };
     }
 
+    var idInscricaoReferencia = rankingMG_obterIdInscricao_(referencia);
     var desafioPrincipal = rankingMG_norm_(rankingMG_firstFilled_(referencia, ['ID_DESAFIO', 'id_desafio']));
     var itemPrincipal = rankingMG_norm_(rankingMG_firstFilled_(referencia, ['id_item_estoque', 'id item estoque']));
     var grupoBasePrincipal = rankingMG_extrairGrupoBaseDesafio_(itemPrincipal);
+
+    diagnosticos.id_inscricao_referencia = idInscricaoReferencia;
+    diagnosticos.id_desafio_referencia = desafioPrincipal;
+    diagnosticos.grupo_base_referencia = grupoBasePrincipal;
 
     if (!desafioPrincipal) {
       return {
         ok: true,
         data: [],
         total: 0,
-        msg: 'Desafio-base não identificado para o ranking.'
+        msg: 'Desafio-base não identificado para o ranking.',
+        diagnosticos: diagnosticos
       };
     }
 
     var pessoasMap = rankingMG_buildPessoasMap_(pessoas);
     var ranking = [];
+    var ocorrenciasPorDgmb = {};
+    var metasMap = {};
 
     for (var i = 0; i < resumo.length; i++) {
       var row = resumo[i] || {};
 
-      var idDgmb = rankingMG_norm_(rankingMG_firstFilled_(row, ['ID_DGMB', 'id_dgmb']));
-      if (!idDgmb) continue;
+      var idDgmbRanking = rankingMG_norm_(rankingMG_firstFilled_(row, ['ID_DGMB', 'id_dgmb']));
+      if (!idDgmbRanking) continue;
 
       var rowDesafio = rankingMG_norm_(rankingMG_firstFilled_(row, ['ID_DESAFIO', 'id_desafio']));
       var rowItem = rankingMG_norm_(rankingMG_firstFilled_(row, ['id_item_estoque', 'id item estoque']));
@@ -99,10 +139,14 @@ function getRanking(idDgmb, idDesafio, idItemEstoque) {
         percentual = rankingMG_round1_((realizado / meta) * 100);
       }
 
-      var pessoa = pessoasMap[idDgmb] || {};
+      var pessoa = pessoasMap[idDgmbRanking] || {};
+      var rowIdInscricao = rankingMG_obterIdInscricao_(row);
+      ocorrenciasPorDgmb[idDgmbRanking] = (ocorrenciasPorDgmb[idDgmbRanking] || 0) + 1;
+      metasMap[String(meta)] = meta;
 
       ranking.push({
-        id_dgmb: idDgmb,
+        id_inscricao: rowIdInscricao,
+        id_dgmb: idDgmbRanking,
         nome: pessoa.nome || rankingMG_norm_(rankingMG_firstFilled_(row, ['Nome_Avatar', 'nome_avatar'])) || 'Participante',
         cidade_uf: pessoa.cidade_uf || '',
         distancia_realizada: realizado,
@@ -120,15 +164,34 @@ function getRanking(idDgmb, idDesafio, idItemEstoque) {
       return String(a.id_dgmb || '').localeCompare(String(b.id_dgmb || ''));
     });
 
+    var posicaoUsuario = 0;
     for (var p = 0; p < ranking.length; p++) {
       ranking[p].posicao = p + 1;
       ranking[p].posicao_ranking = p + 1;
+
+      if (!posicaoUsuario && idInscricaoReferencia && ranking[p].id_inscricao === idInscricaoReferencia) {
+        posicaoUsuario = p + 1;
+      }
     }
+
+    if (!posicaoUsuario && !idInscricaoReferencia) {
+      for (var pu = 0; pu < ranking.length; pu++) {
+        if (ranking[pu].id_dgmb === idUsuario) {
+          posicaoUsuario = pu + 1;
+          break;
+        }
+      }
+    }
+
+    rankingMG_finalizarDiagnosticos_(diagnosticos, ocorrenciasPorDgmb, metasMap);
 
     return {
       ok: true,
       data: ranking,
-      total: ranking.length
+      total: ranking.length,
+      posicao_usuario: posicaoUsuario,
+      id_inscricao_referencia: idInscricaoReferencia,
+      diagnosticos: diagnosticos
     };
   } catch (err) {
     return {
@@ -138,6 +201,68 @@ function getRanking(idDgmb, idDesafio, idItemEstoque) {
       msg: err && err.message ? err.message : 'Erro ao carregar ranking.'
     };
   }
+}
+
+function rankingMG_obterIdInscricao_(row) {
+  return rankingMG_norm_(rankingMG_firstFilled_(row || {}, [
+    'ID_INSCRICAO', 'id_inscricao', 'ID Inscricao', 'ID Inscrição', 'id inscricao', 'id inscrição'
+  ]));
+}
+
+function rankingMG_criarDiagnosticos_(idInscricaoSolicitada) {
+  return {
+    id_inscricao_recebido: rankingMG_norm_(idInscricaoSolicitada),
+    id_inscricao_nao_encontrado: false,
+    referencia_por: '',
+    id_inscricao_referencia: '',
+    id_desafio_referencia: '',
+    grupo_base_referencia: '',
+    dgmb_duplicados: [],
+    metas_distintas: [],
+    possui_dgmb_duplicado: false,
+    possui_multiplas_metas: false,
+    metas_diferentes_no_ranking: false,
+    grupo_competitivo_multiplas_metas: false
+  };
+}
+
+function rankingMG_finalizarDiagnosticos_(diagnosticos, ocorrenciasPorDgmb, metasMap) {
+  var duplicados = [];
+  var metas = [];
+  var id;
+
+  for (id in ocorrenciasPorDgmb) {
+    if (Object.prototype.hasOwnProperty.call(ocorrenciasPorDgmb, id) && ocorrenciasPorDgmb[id] > 1) {
+      duplicados.push({ id_dgmb: id, quantidade: ocorrenciasPorDgmb[id] });
+    }
+  }
+
+  for (var metaKey in metasMap) {
+    if (Object.prototype.hasOwnProperty.call(metasMap, metaKey)) metas.push(metasMap[metaKey]);
+  }
+
+  duplicados.sort(function(a, b) { return String(a.id_dgmb).localeCompare(String(b.id_dgmb)); });
+  metas.sort(function(a, b) { return a - b; });
+
+  diagnosticos.dgmb_duplicados = duplicados;
+  diagnosticos.metas_distintas = metas;
+  diagnosticos.possui_dgmb_duplicado = duplicados.length > 0;
+  diagnosticos.possui_multiplas_metas = metas.length > 1;
+  diagnosticos.metas_diferentes_no_ranking = metas.length > 1;
+  diagnosticos.grupo_competitivo_multiplas_metas = metas.length > 1;
+
+  if (diagnosticos.possui_dgmb_duplicado) {
+    rankingMG_logDiagnostico_('Mais de uma linha do mesmo ID_DGMB no ranking.', duplicados);
+  }
+  if (diagnosticos.possui_multiplas_metas) {
+    rankingMG_logDiagnostico_('Grupo competitivo formado por mais de uma meta.', metas);
+  }
+}
+
+function rankingMG_logDiagnostico_(mensagem, dados) {
+  try {
+    Logger.log('[Meu Giro][Ranking] ' + mensagem + ' ' + JSON.stringify(dados || {}));
+  } catch (e) {}
 }
 
 function rankingMG_resolverAbaDesafio_(idDgmb) {
