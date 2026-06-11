@@ -832,15 +832,17 @@ function ensureMeuGiroResumoSheet_() {
   return sh;
 }
 
-function meuGiroResumoBuildChave_(idDgmb, idDesafio, idItemEstoque, metaKm) {
+function meuGiroResumoBuildChave_(idDgmb, idDesafio, idItemEstoque, metaKm, idInscricao) {
+  var inscricao = normalizeText_(idInscricao);
+  if (inscricao) return 'INSCRICAO|' + inscricao;
+
   var id = normalizeText_(idDgmb);
   var desafio = normalizeText_(idDesafio);
   var item = normalizeText_(idItemEstoque);
   var meta = Math.round((parseLocalizedNumber_(metaKm) + Number.EPSILON) * 10) / 10;
 
-  // id_item_estoque continua sendo o identificador preferencial do vínculo.
-  // Quando ele não existe, a Meta_KM já presente na aba diferencia múltiplos
-  // desafios do mesmo atleta no mesmo ID/período sem criar novas colunas.
+  // Fallback legado para abas sem a coluna ID_INSCRICAO e para linhas ou
+  // vínculos em que esse identificador ainda não esteja preenchido.
   return [id, desafio, item || ('META_' + meta)].join('|');
 }
 
@@ -871,12 +873,17 @@ function atualizarMeuGiroResumo_(idDgmb) {
 
   for (var i = 1; i < valoresResumo.length; i++) {
     var row = valoresResumo[i];
-    if (normalizeText_(row[idxId]) !== id) continue;
+    var idInscricaoExistente = idxInscricaoResumo > -1
+      ? normalizeText_(row[idxInscricaoResumo])
+      : '';
+    if (!idInscricaoExistente && normalizeText_(row[idxId]) !== id) continue;
+
     var chaveExistente = meuGiroResumoBuildChave_(
       row[idxId],
       row[idxDesafio],
       row[idxItem],
-      row[idxMetaResumo]
+      row[idxMetaResumo],
+      idInscricaoExistente
     );
     linhasPorChave[chaveExistente] = i + 1;
   }
@@ -889,7 +896,13 @@ function atualizarMeuGiroResumo_(idDgmb) {
     var idInscricao = normalizeText_(vinculo.id_inscricao);
     var meta = Number(vinculo.meta_km || 0);
     var metaArredondada = Math.round((meta + Number.EPSILON) * 10) / 10;
-    var chave = meuGiroResumoBuildChave_(id, vinculo.id_desafio, vinculo.id_item_estoque, metaArredondada);
+    var chave = meuGiroResumoBuildChave_(
+      id,
+      vinculo.id_desafio,
+      vinculo.id_item_estoque,
+      metaArredondada,
+      idxInscricaoResumo > -1 ? idInscricao : ''
+    );
     var inicio = normalizarDataISO_(vinculo.periodo_inicio);
     var fim = normalizarDataISO_(vinculo.periodo_fim);
     var apto = !!vinculo.apto && !!inicio && !!fim && !!vinculo.id_desafio;
