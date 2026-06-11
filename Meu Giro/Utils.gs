@@ -643,18 +643,24 @@ function montarPeriodoHistoricoVinculo_(row, indices, periodoLista, contextoLog)
   var periodoTextoEspecifico = extrairPeriodoDesafioTexto_(periodoTexto);
   var periodo = { inicio: '', fim: '' };
   var usouFallbackLista = false;
+  var usouFallbackDatasEspecificas = false;
 
-  if (periodoCompletoValido_(periodoDatasEspecificas)) {
-    periodo = periodoDatasEspecificas;
-  } else if (periodoCompletoValido_(periodoTextoEspecifico)) {
+  if (periodoCompletoValido_(periodoTextoEspecifico)) {
     periodo = periodoTextoEspecifico;
   } else if (periodoCompletoValido_(periodoLista)) {
     periodo = periodoLista;
     usouFallbackLista = true;
+  } else if (periodoCompletoValido_(periodoDatasEspecificas)) {
+    periodo = periodoDatasEspecificas;
+    usouFallbackDatasEspecificas = true;
   }
 
   if (usouFallbackLista) {
     logMeuGiroDiagnostico_('Fallback de período via ListaDesafios.Periodo usado.', contextoLog);
+  }
+
+  if (usouFallbackDatasEspecificas) {
+    logMeuGiroDiagnostico_('Fallback legado de período via data_inicio_desafio/data_fim_desafio usado.', contextoLog);
   }
 
   if (!periodoCompletoValido_(periodo)) {
