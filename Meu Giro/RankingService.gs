@@ -23,7 +23,8 @@ function getRanking(idDgmb, idDesafio, idItemEstoque, idInscricao) {
       };
     }
 
-    var statusValidos = { ATIVO: true, CONCLUIDO: true };
+    // Sem ID_INSCRICAO, o fallback legado não consegue confirmar um foco histórico.
+    var statusLocalizacaoLegada = { ATIVO: true, CONCLUIDO: true };
     var referencia = null;
 
     if (inscricaoSolicitada) {
@@ -54,7 +55,7 @@ function getRanking(idDgmb, idDesafio, idItemEstoque, idInscricao) {
         idUsuario,
         desafioSolicitado,
         itemSolicitado,
-        statusValidos
+        statusLocalizacaoLegada
       );
     }
 
@@ -68,10 +69,14 @@ function getRanking(idDgmb, idDesafio, idItemEstoque, idInscricao) {
       };
     }
 
+    var statusReferencia = rankingMG_obterStatus_(referencia);
+    var statusValidos = rankingMG_obterStatusElegiveis_(statusReferencia);
     var idInscricaoReferencia = rankingMG_obterIdInscricao_(referencia);
     var desafioPrincipal = rankingMG_norm_(rankingMG_firstFilled_(referencia, ['ID_DESAFIO', 'id_desafio']));
     var itemPrincipal = rankingMG_norm_(rankingMG_firstFilled_(referencia, ['id_item_estoque', 'id item estoque']));
     diagnosticos.id_inscricao_referencia = idInscricaoReferencia;
+    diagnosticos.status_referencia = statusReferencia;
+    diagnosticos.status_elegiveis = rankingMG_chavesMapa_(statusValidos);
     diagnosticos.id_desafio_referencia = desafioPrincipal;
 
     if (!desafioPrincipal) {
@@ -216,7 +221,7 @@ function rankingMG_montarChaveCompetitiva_(atributos) {
     rankingMG_normalizarDataCompetitiva_(src.periodo_inicio),
     rankingMG_normalizarDataCompetitiva_(src.periodo_fim),
     rankingMG_formatarMetaCompetitiva_(src.meta_km),
-    rankingMG_norm_(src.id_item_estoque)
+    rankingMG_obterItemCompetitivo_(src)
   ].join('|');
 }
 
@@ -424,7 +429,9 @@ function rankingMG_validarAtributosCompetitivos_(atributos) {
     camposInvalidos.push('PERIODO_FIM');
   }
   if (!(rankingMG_toNumber_(src.meta_km) > 0)) camposInvalidos.push('META_KM');
-  if (!rankingMG_norm_(src.id_item_estoque)) camposInvalidos.push('ID_ITEM_ESTOQUE');
+  if (!rankingMG_tipoNormal_(src.tipo_desafio) && !rankingMG_norm_(src.id_item_estoque)) {
+    camposInvalidos.push('ID_ITEM_ESTOQUE');
+  }
 
   return {
     valido: camposInvalidos.length === 0,
@@ -441,8 +448,8 @@ function rankingMG_registrarDiferencasCompetitivas_(mapas, referencia, candidato
     rankingMG_normalizarDataCompetitiva_(referencia.periodo_fim);
   var periodoCandidato = rankingMG_normalizarDataCompetitiva_(candidato.periodo_inicio) + '|' +
     rankingMG_normalizarDataCompetitiva_(candidato.periodo_fim);
-  var itemReferencia = rankingMG_norm_(referencia.id_item_estoque);
-  var itemCandidato = rankingMG_norm_(candidato.id_item_estoque);
+  var itemReferencia = rankingMG_obterItemCompetitivo_(referencia);
+  var itemCandidato = rankingMG_obterItemCompetitivo_(candidato);
 
   if (metaCandidato !== metaReferencia) mapas.metas[metaCandidato] = rankingMG_toNumber_(candidato.meta_km);
   if (tipoCandidato !== tipoReferencia) mapas.tipos[tipoCandidato] = tipoCandidato;
@@ -581,6 +588,21 @@ function rankingMG_normalizarTipo_(value) {
   return tipo.normalize ? tipo.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : tipo;
 }
 
+function rankingMG_tipoNormal_(value) {
+  return rankingMG_normalizarTipo_(value) === 'NORMAL';
+}
+
+function rankingMG_obterItemCompetitivo_(atributos) {
+  var src = atributos || {};
+  return rankingMG_tipoNormal_(src.tipo_desafio) ? '' : rankingMG_norm_(src.id_item_estoque);
+}
+
+function rankingMG_obterStatusElegiveis_(statusReferencia) {
+  var status = rankingMG_norm_(statusReferencia).toUpperCase();
+  if (status === 'EXPIRADO') return { EXPIRADO: true, CONCLUIDO: true };
+  return { ATIVO: true, CONCLUIDO: true };
+}
+
 function rankingMG_normalizarDataCompetitiva_(value) {
   if (!value) return '';
   if (Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value.getTime())) {
@@ -600,6 +622,14 @@ function rankingMG_normalizarDataCompetitiva_(value) {
 
 function rankingMG_formatarMetaCompetitiva_(value) {
   return rankingMG_round1_(rankingMG_toNumber_(value)).toFixed(1);
+}
+
+function rankingMG_chavesMapa_(map) {
+  var out = [];
+  for (var key in map) {
+    if (Object.prototype.hasOwnProperty.call(map, key)) out.push(key);
+  }
+  return out.sort();
 }
 
 function rankingMG_valoresMapa_(map, numerico) {
@@ -622,6 +652,8 @@ function rankingMG_criarDiagnosticos_(idInscricaoSolicitada) {
     referencia_por: '',
     id_inscricao_referencia: '',
     id_desafio_referencia: '',
+    status_referencia: '',
+    status_elegiveis: [],
     grupo_base_referencia: '',
     chave_competitiva: '',
     atributos_competitivos_referencia: null,
