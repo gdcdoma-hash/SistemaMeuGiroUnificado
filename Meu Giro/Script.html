@@ -26,6 +26,7 @@ let rankingPreviewFeedbackTimer = null;
 let ritmoAgoraFeedbackTimer = null;
 let atividadeRecenteFeedbackTimer = null;
 let totalPedaladoFeedbackTimer = null;
+let totalPedaladoAnimationToken = 0;
 let painelManualSuccessFeedbackTimer = null;
 let pendingRecentActivityHighlight = null;
 let pendingTotalPedaladoFeedback = false;
@@ -1437,6 +1438,7 @@ function clearRankingPreviewFeedback() {
 }
 
 function clearTotalPedaladoFeedback() {
+  totalPedaladoAnimationToken += 1;
   if (totalPedaladoFeedbackTimer) {
     clearTimeout(totalPedaladoFeedbackTimer);
     totalPedaladoFeedbackTimer = null;
@@ -1451,6 +1453,7 @@ function clearTotalPedaladoFeedback() {
 function animateTotalPedaladoValue(fromValue, toValue, durationMs) {
   var totalEl = document.getElementById('total-pedalado');
   if (!totalEl) return;
+  var animationToken = totalPedaladoAnimationToken;
 
   var start = Number(fromValue);
   var end = Number(toValue);
@@ -1464,6 +1467,7 @@ function animateTotalPedaladoValue(fromValue, toValue, durationMs) {
   var maxDuration = Math.min(durationMs || 960, 1200);
 
   function step(timestamp) {
+    if (animationToken !== totalPedaladoAnimationToken) return;
     if (startAt === null) startAt = timestamp;
 
     var progress = Math.min((timestamp - startAt) / maxDuration, 1);
@@ -1482,7 +1486,7 @@ function animateTotalPedaladoValue(fromValue, toValue, durationMs) {
   window.requestAnimationFrame(step);
 }
 
-function playTotalPedaladoFeedback(previousPainel, nextPainel) {
+function playTotalPedaladoFeedback(previousContexto, nextContexto) {
   if (!pendingTotalPedaladoFeedback) {
     return;
   }
@@ -1490,15 +1494,15 @@ function playTotalPedaladoFeedback(previousPainel, nextPainel) {
   pendingTotalPedaladoFeedback = false;
 
   var totalEl = document.getElementById('total-pedalado');
-  if (!totalEl || !nextPainel) {
+  if (!totalEl || !nextContexto) {
     return;
   }
 
   var previousTotal = toFiniteNumber(
-    previousPainel && (previousPainel.totalPedalado || previousPainel.realizado),
+    previousContexto && (previousContexto.totalPedalado || previousContexto.realizado),
     0
   );
-  var nextTotal = toFiniteNumber(nextPainel.totalPedalado || nextPainel.realizado, previousTotal);
+  var nextTotal = toFiniteNumber(nextContexto.totalPedalado || nextContexto.realizado, previousTotal);
   var totalDiff = Math.abs(nextTotal - previousTotal);
   var shouldAnimateValue = totalDiff > 0 && totalDiff <= 60;
 
@@ -1647,6 +1651,8 @@ function carregarPainel(triggerSource) {
         playManualPainelSuccessFeedback();
       }
       var previousPainel = currentPainel;
+      var focoAntesDaAtualizacao = String(desafioEmFocoKey || '').trim();
+      var previousPainelContextual = montarPainelContextualPorChave(previousPainel, focoAntesDaAtualizacao);
       var shouldPlayRankingPreviewFeedback = painelProgressFeedbackMode === 'activity-registered';
       var shouldPlayRitmoAgoraFeedback = painelProgressFeedbackMode === 'activity-registered';
       currentPainel = res.data || {};
@@ -1656,8 +1662,9 @@ function carregarPainel(triggerSource) {
         persistirSessaoLogin(currentUser);
       }
       renderPainel(currentPainel);
-      playTotalPedaladoFeedback(previousPainel, currentPainel);
-      playPainelProgressFeedback(previousPainel, currentPainel);
+      var nextPainelContextual = montarPainelContextual(currentPainel, getDesafioEmFocoAtual());
+      playTotalPedaladoFeedback(previousPainelContextual, nextPainelContextual);
+      playPainelProgressFeedback(previousPainelContextual, nextPainelContextual);
       if (shouldPlayRankingPreviewFeedback) {
         playRankingPreviewFeedback(previousPainel, currentPainel);
       }
@@ -1703,10 +1710,8 @@ function renderPainel(p) {
     idHidden.value = String(p.id_dgmb || (currentUser && currentUser.id_dgmb) || '').trim();
   }
 
-  setTextById('frase-box', p.frase || 'Cada quilômetro conta. Continue no seu ritmo.');
   renderDesafiosPainel(p || {});
   sincronizarPainelComDesafioEmFoco();
-  setTextById('total-pedalado', formatNumber(p.totalPedalado || p.realizado || 0));
 }
 
 function getDesafioKey(desafio) {
@@ -1866,18 +1871,61 @@ function filtrarAtividadesPorPeriodoDesafio(atividades, desafio) {
   };
 }
 
+function getDesafioPainelPorChave(painel, chave) {
+  var chaveBusca = String(chave || '').trim();
+  if (!painel || !chaveBusca) return null;
+
+  var listas = [painel.desafios, painel.desafios_ativos, painel.desafios_historico];
+  for (var i = 0; i < listas.length; i++) {
+    var itens = Array.isArray(listas[i]) ? listas[i] : [];
+    for (var j = 0; j < itens.length; j++) {
+      if (getDesafioKey(itens[j]) === chaveBusca) return itens[j] || null;
+    }
+  }
+
+  return null;
+}
+
+function montarPainelContextualPorChave(painel, chave) {
+  if (!painel) return null;
+  return montarPainelContextual(painel, getDesafioPainelPorChave(painel, chave));
+}
+
+function montarFraseContextual(painel, desafio, contexto, fraseBackend) {
+  var frasePadrao = 'Cada quilômetro conta. Continue no seu ritmo.';
+  if (!desafio) return String(fraseBackend || painel.frase || frasePadrao).trim() || frasePadrao;
+
+  var chaveFocoBackend = getDesafioKey(painel && painel.desafio_em_foco);
+  var chaveFocoVisual = getDesafioKey(desafio);
+  if (chaveFocoBackend && chaveFocoBackend === chaveFocoVisual) {
+    return String(fraseBackend || painel.frase || frasePadrao).trim() || frasePadrao;
+  }
+
+  if (toFiniteNumber(contexto && contexto.percentual, 0) >= 100) {
+    return 'Meta deste desafio alcançada. Parabéns por cada quilômetro!';
+  }
+
+  return 'Cada quilômetro conta neste desafio. Continue no seu ritmo.';
+}
+
 function montarPainelContextual(basePainel, desafio) {
   var painel = basePainel || {};
   var desafioAtual = desafio || null;
-  var meta = toFiniteNumber(desafioAtual && desafioAtual.meta_km, toFiniteNumber(painel.meta, 0));
-  var realizado = toFiniteNumber(desafioAtual && desafioAtual.distancia_realizada, toFiniteNumber(painel.realizado, 0));
+  var possuiDesafioEmFoco = !!desafioAtual;
+  var meta = possuiDesafioEmFoco
+    ? toFiniteNumber(desafioAtual.meta_km, 0)
+    : toFiniteNumber(painel.meta, 0);
+  var realizado = possuiDesafioEmFoco
+    ? toFiniteNumber(desafioAtual.distancia_realizada, 0)
+    : toFiniteNumber(painel.realizado, 0);
+  var periodoInicio = possuiDesafioEmFoco
+    ? String(desafioAtual.periodo_inicio || '').trim()
+    : String(painel.periodo_inicio || '').trim();
+  var periodoFim = possuiDesafioEmFoco
+    ? String(desafioAtual.periodo_fim || '').trim()
+    : String(painel.periodo_fim || '').trim();
   var progresso = calcularProgressoDesafio(meta, realizado);
-  var ritmo = calcularRitmoDesafio(
-    meta,
-    realizado,
-    desafioAtual && desafioAtual.periodo_inicio ? desafioAtual.periodo_inicio : painel.periodo_inicio,
-    desafioAtual && desafioAtual.periodo_fim ? desafioAtual.periodo_fim : painel.periodo_fim
-  );
+  var ritmo = calcularRitmoDesafio(meta, realizado, periodoInicio, periodoFim);
 
   var rankingPorDesafio = painel.ranking_por_desafio || {};
   var rankingDesafio = rankingPorDesafio[getDesafioKey(desafioAtual)] || {};
@@ -1885,12 +1933,14 @@ function montarPainelContextual(basePainel, desafio) {
   var totalParticipantes = rankingDesafio.total !== undefined ? rankingDesafio.total : painel.total_participantes;
 
   var atividadesFiltradas = filtrarAtividadesPorPeriodoDesafio(painel.atividades || [], desafioAtual);
-
-  return {
+  var contexto = {
     meta: meta,
     realizado: realizado,
+    totalPedalado: realizado,
     restante: progresso.restante,
     percentual: progresso.percentual,
+    periodo_inicio: periodoInicio,
+    periodo_fim: periodoFim,
     diaAtual: ritmo.diaAtual,
     diasRestantes: ritmo.diasRestantes,
     kmIdealAtual: ritmo.kmIdealAtual,
@@ -1903,6 +1953,9 @@ function montarPainelContextual(basePainel, desafio) {
     atividades_erro_periodo: !!(atividadesFiltradas && atividadesFiltradas.erro_periodo),
     atividades_mensagem: (atividadesFiltradas && atividadesFiltradas.mensagem) || ''
   };
+  contexto.frase = montarFraseContextual(painel, desafioAtual, contexto);
+
+  return contexto;
 }
 
 function atualizarContextoVisualRanking(desafioAtual) {
@@ -1939,6 +1992,8 @@ function sincronizarPainelComDesafioEmFoco() {
   var contexto = montarPainelContextual(painel, desafioAtual);
   atualizarContextoVisualRanking(desafioAtual);
 
+  setTextById('frase-box', contexto.frase);
+  setTextById('total-pedalado', formatNumber(contexto.totalPedalado));
   setTextById('meta-km', formatNumber(contexto.meta));
   setTextById('realizado-km', formatNumber(contexto.realizado));
   setTextById('restante-km', formatNumber(contexto.restante));
@@ -2179,6 +2234,8 @@ function aplicarDesafioEmFoco(chave, options) {
     return;
   }
 
+  clearPainelProgressFeedback();
+  clearTotalPedaladoFeedback();
   desafioEmFocoKey = chaveSelecionada;
   salvarDesafioEmFocoNaSessao(desafioEmFocoKey);
 
@@ -3314,7 +3371,10 @@ function novaFrase() {
       syncGlobalBusyState();
       setPhraseButtonLoading(false);
       if (res && res.ok && res.data && res.data.frase) {
-        setTextById('frase-box', res.data.frase);
+        var desafioAtual = getDesafioEmFocoAtual();
+        var contextoAtual = montarPainelContextual(currentPainel || {}, desafioAtual);
+        var fraseContextual = montarFraseContextual(currentPainel || {}, desafioAtual, contextoAtual, res.data.frase);
+        setTextById('frase-box', fraseContextual);
         setPhraseFeedback('Mensagem atualizada com sucesso.', 'success');
         return;
       }
