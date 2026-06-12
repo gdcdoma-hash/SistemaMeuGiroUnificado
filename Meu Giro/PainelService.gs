@@ -31,7 +31,20 @@ function getPainelUsuario(idDgmb) {
     }
 
     var desafioData = desafio.data;
-    var desafiosConsolidados = desafio.desafios || [];
+    var desafiosConsolidados = (desafio.desafios || []).map(function(item) {
+      var desafioPainel = {};
+      Object.keys(item || {}).forEach(function(chave) {
+        desafioPainel[chave] = item[chave];
+      });
+
+      var operacional = painelMG_montarMensagemOperacional_(
+        desafioPainel.status_apuracao,
+        desafioPainel.status_usuario_desafio
+      );
+      desafioPainel.status_operacional = operacional.codigo_operacional;
+      desafioPainel.mensagem_operacional = operacional.mensagem_operacional;
+      return desafioPainel;
+    });
 
     var meta = painelMG_toNumber_(desafioData.meta);
     var realizado = painelMG_toNumber_(desafioData.realizado);
@@ -53,6 +66,12 @@ function getPainelUsuario(idDgmb) {
       desafioPrincipalPainel = desafiosConsolidados[0];
     }
 
+    var statusOperacionalPainel = desafioPrincipalPainel
+      ? {
+          codigo_operacional: desafioPrincipalPainel.status_operacional,
+          mensagem_operacional: desafioPrincipalPainel.mensagem_operacional
+        }
+      : painelMG_montarMensagemOperacional_('', '');
     var progresso = painelMG_calcularProgresso_(meta, realizadoPainel);
     var ritmo = painelMG_calcularRitmo_(meta, realizadoPainel, desafioData.periodo_inicio, desafioData.periodo_fim);
     var atividades = buscarAtividadesUsuario_(id);
@@ -111,6 +130,8 @@ function getPainelUsuario(idDgmb) {
 
         ritmo_status: ritmo.status,
         ritmo_mensagem: ritmo.mensagem,
+        status_operacional: statusOperacionalPainel.codigo_operacional,
+        mensagem_operacional: statusOperacionalPainel.mensagem_operacional,
 
         posicao_ranking: rankingInfo.posicao,
         total_participantes: rankingInfo.total,
@@ -138,6 +159,59 @@ function getPainelUsuario(idDgmb) {
       msg: err && err.message ? err.message : 'Erro interno ao carregar o painel do usuário.'
     };
   }
+}
+
+
+function painelMG_montarMensagemOperacional_(statusApuracao, statusUsuarioDesafio) {
+  var apuracao = painelMG_norm_(statusApuracao).toUpperCase();
+  var usuario = painelMG_norm_(statusUsuarioDesafio).toUpperCase();
+
+  if (usuario === 'CANCELADO') {
+    return {
+      codigo_operacional: 'INSCRICAO_CANCELADA',
+      mensagem_operacional: 'Inscrição cancelada.'
+    };
+  }
+
+  if (apuracao === 'INAPTO') {
+    return {
+      codigo_operacional: 'APURACAO_INAPTA',
+      mensagem_operacional: 'Não foi possível apurar este desafio. Entre em contato com a organização.'
+    };
+  }
+
+  if (usuario === 'EM_ANDAMENTO' && apuracao === 'ATIVO') {
+    return {
+      codigo_operacional: 'DESAFIO_EM_ANDAMENTO',
+      mensagem_operacional: 'Desafio em andamento. Continue registrando suas atividades.'
+    };
+  }
+
+  if (usuario === 'EM_ANDAMENTO' && apuracao === 'CONCLUIDO') {
+    return {
+      codigo_operacional: 'META_ATINGIDA_AGUARDANDO_VALIDACAO',
+      mensagem_operacional: 'Meta atingida. Aguardando validação da organização.'
+    };
+  }
+
+  if (usuario === 'CONCLUIDO' && apuracao === 'CONCLUIDO') {
+    return {
+      codigo_operacional: 'DESAFIO_CONCLUIDO_OFICIALMENTE',
+      mensagem_operacional: 'Desafio concluído oficialmente.'
+    };
+  }
+
+  if (usuario === 'NAO_CONCLUIDO' && apuracao === 'EXPIRADO') {
+    return {
+      codigo_operacional: 'DESAFIO_ENCERRADO_SEM_CONCLUSAO',
+      mensagem_operacional: 'Desafio encerrado sem conclusão da meta.'
+    };
+  }
+
+  return {
+    codigo_operacional: 'STATUS_EM_ANALISE',
+    mensagem_operacional: 'Status do desafio em análise.'
+  };
 }
 
 function painelMG_montarBaseFrase_(dados) {

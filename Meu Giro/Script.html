@@ -1949,6 +1949,12 @@ function montarPainelContextual(basePainel, desafio) {
     kmPorDiaRestante: ritmo.kmPorDiaRestante,
     ritmo_status: ritmo.ritmo_status,
     ritmo_mensagem: ritmo.ritmo_mensagem,
+    status_operacional: String(
+      possuiDesafioEmFoco ? desafioAtual.status_operacional : painel.status_operacional || ''
+    ).trim(),
+    mensagem_operacional: String(
+      possuiDesafioEmFoco ? desafioAtual.mensagem_operacional : painel.mensagem_operacional || ''
+    ).trim() || 'Status do desafio em análise.',
     posicao_ranking: posicaoRanking,
     total_participantes: totalParticipantes,
     atividades: Array.isArray(atividadesFiltradas) ? atividadesFiltradas : atividadesFiltradas.items,
@@ -1995,6 +2001,7 @@ function sincronizarPainelComDesafioEmFoco() {
   atualizarContextoVisualRanking(desafioAtual);
 
   setTextById('frase-box', contexto.frase);
+  setTextById('desafio-foco-operacional', contexto.mensagem_operacional);
   setTextById('total-pedalado', formatNumber(contexto.totalPedalado));
   setTextById('meta-km', formatNumber(contexto.meta));
   setTextById('realizado-km', formatNumber(contexto.realizado));
