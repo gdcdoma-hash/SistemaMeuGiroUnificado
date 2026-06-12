@@ -2460,6 +2460,7 @@ function buildDesafioCard(item, options) {
   var periodoLabel = getDesafioPeriodoLabel(desafio);
   var podeBaixarCertificado = isDesafioElegivelCertificado_(desafio);
   var payloadCertificado = encodeURIComponent(JSON.stringify({
+    id_inscricao: desafio.id_inscricao || '',
     id_desafio: desafio.id_desafio || '',
     id_item_estoque: desafio.id_item_estoque || ''
   }));
@@ -2649,6 +2650,7 @@ function solicitarCertificadoDesafio(payloadEncoded, localStatusId, buttonId, im
       setCertificadoLocalMsg(localStatusId, 'Não foi possível gerar seu certificado agora. Tente novamente.', 'error');
     })
     .gerarOuObterCertificadoDesafio({
+      id_inscricao: payload.id_inscricao || '',
       id_dgmb: idDgmb,
       id_desafio: payload.id_desafio || '',
       id_item_estoque: payload.id_item_estoque || ''
@@ -3682,6 +3684,7 @@ function carregarAdminValidacaoPendencias() {
       itensRecebidos.forEach(function(item, idx) {
         console.log('[ADMIN_CERT][LISTAR][ITEM]', idx, {
           row_number: item.row_number,
+          id_inscricao: item.id_inscricao,
           id_dgmb: item.id_dgmb,
           id_desafio: item.id_desafio,
           id_item_estoque: item.id_item_estoque,
@@ -3707,6 +3710,7 @@ function renderAdminValidacaoLista(lista) {
   itens.forEach(function(item, idx) {
     console.log('[ADMIN_CERT][RENDER][ITEM]', idx, {
       row_number: item.row_number,
+      id_inscricao: item.id_inscricao,
       id_dgmb: item.id_dgmb,
       id_desafio: item.id_desafio,
       id_item_estoque: item.id_item_estoque,
@@ -3788,6 +3792,7 @@ function atualizarStatusAdminValidacao(item, novoStatus, obsInputId) {
   setAdminCertMsg('Atualizando validação...', 'loading');
   var payloadAtualizacao = {
     admin_id_dgmb: String(currentUser.id_dgmb || '').trim(),
+    id_inscricao: item.id_inscricao || '',
     id_dgmb: item.id_dgmb || '',
     id_desafio: item.id_desafio || '',
     id_item_estoque: item.id_item_estoque || '',

@@ -39,6 +39,7 @@ function listarPendenciasValidacaoCertificado(adminIdDgmb) {
 
     var map = buildHeaderMap_(values[0]);
     var idxIdDgmb = getRequiredColumnIndex_(map, ['id_dgmb'], sheetName);
+    var idxIdInscricao = getOptionalColumnIndex_(map, ['id_inscricao', 'id inscrição', 'id inscricao']);
     var idxIdDesafio = getIdDesafioColumnIndex_(map);
     var idxIdItem = getOptionalColumnIndex_(map, ['id_item_estoque', 'id item estoque']);
     var idxObsRegistro = getOptionalColumnIndex_(map, ['observacao', 'observação']);
@@ -70,6 +71,7 @@ function listarPendenciasValidacaoCertificado(adminIdDgmb) {
       if (!statusValidacao) statusValidacao = 'PENDENTE';
 
       var idDgmb = normalizeText_(row[idxIdDgmb]);
+      var idInscricao = idxIdInscricao > -1 ? normalizeText_(row[idxIdInscricao]) : '';
       var idDesafio = obterIdDesafioRegistro_(row, idxIdDesafio, idxObsRegistro);
       var idItem = idxIdItem > -1 ? normalizeText_(row[idxIdItem]) : '';
 
@@ -83,9 +85,12 @@ function listarPendenciasValidacaoCertificado(adminIdDgmb) {
         continue;
       }
 
+      var chaveInscricao = idInscricao ? ('INSCRICAO|' + idInscricao + '|' + idDgmb) : '';
       var chaveExata = [idDgmb, idDesafio, idItem].join('|');
       var chaveSemItem = [idDgmb, idDesafio, ''].join('|');
-      var resumo = resumoPorChave[chaveExata] || resumoPorChave[chaveSemItem] || null;
+      var resumo = (chaveInscricao && resumoPorChave[chaveInscricao]) ||
+        resumoPorChave[chaveExata] ||
+        (!idInscricao ? resumoPorChave[chaveSemItem] : null) || null;
 
       var metaKmPlanilha = idxMeta > -1 ? parseLocalizedNumber_(row[idxMeta]) : 0;
       var kmRealizadoPlanilha = idxRealizado > -1 ? parseLocalizedNumber_(row[idxRealizado]) : 0;
@@ -109,6 +114,7 @@ function listarPendenciasValidacaoCertificado(adminIdDgmb) {
 
       out.push({
         row_number: rowNumber,
+        id_inscricao: idInscricao,
         id_dgmb: idDgmb,
         nome_participante: nomesPorId[idDgmb] || '',
         id_desafio: idDesafio,
@@ -151,29 +157,23 @@ function atualizarStatusValidacaoCertificadoAdmin(payload) {
     var acesso = validarAcessoAdminCertificado_(data.admin_id_dgmb);
     if (!acesso.ok) return acesso;
 
+    var idInscricao = normalizeText_(data.id_inscricao);
     var idDgmb = normalizeText_(data.id_dgmb);
     var idDesafio = normalizeText_(data.id_desafio);
     var idItem = normalizeText_(data.id_item_estoque);
     var rowNumberPayload = Number(data.row_number || 0);
     var novoStatus = adminCertificadoNormalizarStatusValidacao_(data.novo_status);
     var observacao = normalizeText_(data.observacao);
-    Logger.log('[ADMIN_CERT_ATUALIZAR][INPUT] row_number=%s id_dgmb=%s id_desafio=%s id_item_estoque=%s novo_status=%s', rowNumberPayload, idDgmb, idDesafio, idItem, novoStatus);
+    Logger.log('[ADMIN_CERT_ATUALIZAR][INPUT] row_number=%s id_inscricao=%s id_dgmb=%s id_desafio=%s id_item_estoque=%s novo_status=%s', rowNumberPayload, idInscricao, idDgmb, idDesafio, idItem, novoStatus);
 
-    if (!idDgmb || !idDesafio) {
-      return { ok: false, code: 'PARAMETROS_INVALIDOS', msg: 'ID_DGMB e ID_DESAFIO são obrigatórios.' };
+    if (!idDgmb || (!idInscricao && !idDesafio)) {
+      return { ok: false, code: 'PARAMETROS_INVALIDOS', msg: 'ID_DGMB e ID_INSCRICAO são obrigatórios; registros legados também exigem ID_DESAFIO.' };
     }
 
-    var statusPermitidos = {
-      PENDENTE: true,
-      EM_ANALISE: true,
-      APROVADO: true,
-      REPROVADO: true
-    };
-
+    var statusPermitidos = { PENDENTE: true, EM_ANALISE: true, APROVADO: true, REPROVADO: true };
     if (!statusPermitidos[novoStatus]) {
       return { ok: false, code: 'STATUS_INVALIDO', msg: 'Status de validação inválido.' };
     }
-
     if (novoStatus === 'REPROVADO' && !observacao) {
       return { ok: false, code: 'OBS_OBRIGATORIA_REPROVACAO', msg: 'Informe uma observação ao reprovar o certificado.' };
     }
@@ -181,17 +181,14 @@ function atualizarStatusValidacaoCertificadoAdmin(payload) {
     var ss = getSpreadsheet_();
     var sheetName = SHEETS.DESAFIO || 'dgmbDesafios';
     var sh = ss.getSheetByName(sheetName);
-    if (!sh) {
-      return { ok: false, code: 'ABA_DESAFIO_NAO_ENCONTRADA', msg: 'Aba dgmbDesafios não encontrada.' };
-    }
+    if (!sh) return { ok: false, code: 'ABA_DESAFIO_NAO_ENCONTRADA', msg: 'Aba dgmbDesafios não encontrada.' };
 
     var values = sh.getDataRange().getValues();
-    if (!values || values.length < 2) {
-      return { ok: false, code: 'DESAFIOS_VAZIO', msg: 'Não há dados para atualização.' };
-    }
+    if (!values || values.length < 2) return { ok: false, code: 'DESAFIOS_VAZIO', msg: 'Não há dados para atualização.' };
 
     var map = buildHeaderMap_(values[0]);
     var idxIdDgmb = getRequiredColumnIndex_(map, ['id_dgmb'], sheetName);
+    var idxIdInscricao = getOptionalColumnIndex_(map, ['id_inscricao', 'id inscrição', 'id inscricao']);
     var idxIdDesafio = getIdDesafioColumnIndex_(map);
     var idxIdItem = getOptionalColumnIndex_(map, ['id_item_estoque', 'id item estoque']);
     var idxObsRegistro = getOptionalColumnIndex_(map, ['observacao', 'observação']);
@@ -200,55 +197,66 @@ function atualizarStatusValidacaoCertificadoAdmin(payload) {
     var idxObsValidacao = getRequiredColumnIndex_(map, ['obs_validacao_certificado'], sheetName);
 
     var linhaAtualizacao = -1;
-    if (rowNumberPayload > 1 && rowNumberPayload <= values.length) {
-      var rowByNumber = values[rowNumberPayload - 1] || [];
-      var rowByNumberId = normalizeText_(rowByNumber[idxIdDgmb]);
-      var rowByNumberDesafio = obterIdDesafioRegistro_(rowByNumber, idxIdDesafio, idxObsRegistro);
-      var rowByNumberItem = idxIdItem > -1 ? normalizeText_(rowByNumber[idxIdItem]) : '';
-
-      if (rowByNumberId === idDgmb && rowByNumberDesafio === idDesafio && rowByNumberItem === idItem) {
-        linhaAtualizacao = rowNumberPayload;
+    if (idInscricao && idxIdInscricao > -1) {
+      if (rowNumberPayload > 1 && rowNumberPayload <= values.length) {
+        var rowNumero = values[rowNumberPayload - 1] || [];
+        if (normalizeText_(rowNumero[idxIdDgmb]) === idDgmb && normalizeText_(rowNumero[idxIdInscricao]) === idInscricao) {
+          linhaAtualizacao = rowNumberPayload;
+        }
+      }
+      if (linhaAtualizacao === -1) {
+        var candidatasInscricao = [];
+        for (var i = 1; i < values.length; i++) {
+          if (normalizeText_(values[i][idxIdDgmb]) !== idDgmb) continue;
+          if (normalizeText_(values[i][idxIdInscricao]) !== idInscricao) continue;
+          candidatasInscricao.push(i + 1);
+        }
+        if (candidatasInscricao.length > 1) {
+          return { ok: false, code: 'CERTIFICADO_INSCRICAO_AMBIGUA', msg: 'Mais de uma linha possui o mesmo ID_INSCRICAO para este participante.' };
+        }
+        if (candidatasInscricao.length === 1) linhaAtualizacao = candidatasInscricao[0];
       }
     }
 
     if (linhaAtualizacao === -1) {
-      for (var i = 1; i < values.length; i++) {
-        var row = values[i];
+      var candidatasLegadas = [];
+      for (var j = 1; j < values.length; j++) {
+        var row = values[j] || [];
         if (normalizeText_(row[idxIdDgmb]) !== idDgmb) continue;
-
-        var rowDesafio = obterIdDesafioRegistro_(row, idxIdDesafio, idxObsRegistro);
-        if (rowDesafio !== idDesafio) continue;
-
+        if (idInscricao && idxIdInscricao > -1 && normalizeText_(row[idxIdInscricao])) continue;
+        if (obterIdDesafioRegistro_(row, idxIdDesafio, idxObsRegistro) !== idDesafio) continue;
         var rowItem = idxIdItem > -1 ? normalizeText_(row[idxIdItem]) : '';
         if (rowItem !== idItem) continue;
-
-        linhaAtualizacao = i + 1;
-        break;
+        candidatasLegadas.push(j + 1);
       }
+      if (candidatasLegadas.length > 1) {
+        return { ok: false, code: 'CERTIFICADO_INSCRICAO_AMBIGUA', msg: 'Mais de uma inscrição corresponde aos identificadores legados informados.' };
+      }
+      if (candidatasLegadas.length === 1) linhaAtualizacao = candidatasLegadas[0];
     }
 
     if (linhaAtualizacao === -1) {
       return { ok: false, code: 'LINHA_NAO_ENCONTRADA', msg: 'Registro do desafio não encontrado para atualização.' };
     }
 
+    var rowConfirmacao = values[linhaAtualizacao - 1] || [];
+    var inscricaoConfirmada = idxIdInscricao > -1 ? normalizeText_(rowConfirmacao[idxIdInscricao]) : '';
+    if (normalizeText_(rowConfirmacao[idxIdDgmb]) !== idDgmb || (idInscricao && inscricaoConfirmada !== idInscricao)) {
+      return { ok: false, code: 'CERTIFICADO_INSCRICAO_ALTERADA', msg: 'A inscrição foi alterada antes da atualização administrativa.' };
+    }
+
     sh.getRange(linhaAtualizacao, idxStatusValidacao + 1).setValue(novoStatus);
     SpreadsheetApp.flush();
     var statusFinalSalvo = adminCertificadoNormalizarStatusValidacao_(sh.getRange(linhaAtualizacao, idxStatusValidacao + 1).getValue());
-    Logger.log('[ADMIN_CERT_ATUALIZAR][WRITE] row_number_payload=%s linha_atualizada=%s id_dgmb=%s id_desafio=%s id_item_estoque=%s novo_status=%s status_salvo_final=%s', rowNumberPayload, linhaAtualizacao, idDgmb, idDesafio, idItem, novoStatus, statusFinalSalvo);
+    Logger.log('[ADMIN_CERT_ATUALIZAR][WRITE] row_number_payload=%s linha_atualizada=%s id_inscricao=%s id_dgmb=%s id_desafio=%s id_item_estoque=%s novo_status=%s status_salvo_final=%s', rowNumberPayload, linhaAtualizacao, inscricaoConfirmada, idDgmb, idDesafio, idItem, novoStatus, statusFinalSalvo);
 
-    if (novoStatus === 'APROVADO') {
-      sh.getRange(linhaAtualizacao, idxDataAprovacao + 1).setValue(new Date());
-    }
-
-    if (idxObsValidacao > -1) {
-      if (novoStatus === 'REPROVADO' || observacao) {
-        sh.getRange(linhaAtualizacao, idxObsValidacao + 1).setValue(observacao);
-      }
-    }
+    if (novoStatus === 'APROVADO') sh.getRange(linhaAtualizacao, idxDataAprovacao + 1).setValue(new Date());
+    if (novoStatus === 'REPROVADO' || observacao) sh.getRange(linhaAtualizacao, idxObsValidacao + 1).setValue(observacao);
 
     return {
       ok: true,
       data: {
+        id_inscricao: inscricaoConfirmada,
         id_dgmb: idDgmb,
         id_desafio: idDesafio,
         id_item_estoque: idItem,
@@ -258,11 +266,7 @@ function atualizarStatusValidacaoCertificadoAdmin(payload) {
       }
     };
   } catch (err) {
-    return {
-      ok: false,
-      code: 'ADMIN_CERTIFICADO_ATUALIZAR_ERROR',
-      msg: err && err.message ? err.message : 'Erro interno ao atualizar validação de certificado.'
-    };
+    return { ok: false, code: 'ADMIN_CERTIFICADO_ATUALIZAR_ERROR', msg: err && err.message ? err.message : 'Erro interno ao atualizar validação de certificado.' };
   }
 }
 
@@ -318,17 +322,19 @@ function adminCertificadoBuildResumoPorChave_() {
 
   for (var i = 0; i < itens.length; i++) {
     var row = itens[i] || {};
+    var idInscricao = normalizeText_(firstFilledValue_(row, ['ID_INSCRICAO', 'id_inscricao', 'id inscrição', 'id inscricao']));
     var id = normalizeText_(firstFilledValue_(row, ['ID_DGMB', 'id_dgmb']));
     var idDesafio = normalizeText_(firstFilledValue_(row, ['ID_DESAFIO', 'id_desafio']));
     var idItem = normalizeText_(firstFilledValue_(row, ['id_item_estoque', 'ID_ITEM_ESTOQUE', 'id item estoque']));
+    if (!id || (!idInscricao && !idDesafio)) continue;
 
-    if (!id || !idDesafio) continue;
-
-    out[[id, idDesafio, idItem].join('|')] = {
+    var dados = {
       meta_km: parseLocalizedNumber_(firstFilledValue_(row, ['Meta_KM', 'meta_km', 'meta km'])),
       distancia_realizada: parseLocalizedNumber_(firstFilledValue_(row, ['Distancia_Realizada', 'distancia_realizada', 'distancia realizada'])),
       status_apuracao: normalizeText_(firstFilledValue_(row, ['Status_Apuracao', 'status_apuracao', 'status apuração']))
     };
+    if (idInscricao) out['INSCRICAO|' + idInscricao + '|' + id] = dados;
+    else out[[id, idDesafio, idItem].join('|')] = dados;
   }
 
   return out;
