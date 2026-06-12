@@ -127,11 +127,13 @@ function certificadoMontarExtrasImagem_(contexto) {
 
 function gerarCertificadoDesafio_(contexto) {
   var ctx = contexto || {};
-  var nomeArquivo = [
+  var nomeArquivoPartes = [
     'certificado',
     ctx.id_dgmb || 'sem-id',
     ctx.id_desafio || 'desafio'
-  ].join('_') + '.pdf';
+  ];
+  if (ctx.id_inscricao) nomeArquivoPartes.push(ctx.id_inscricao);
+  var nomeArquivo = nomeArquivoPartes.join('_') + '.pdf';
   var dadosVisuais = certificadoBuscarDadosVisuais_(ctx);
   var pastaDestino = certificadoGetOuCriarPastaDesafio_(ctx.id_desafio);
   var arquivoExistente = certificadoBuscarArquivoExistente_(pastaDestino, nomeArquivo);
@@ -307,6 +309,10 @@ function certificadoSalvarLinkPlanilha_(ctx, url) {
       msg: 'Não foi possível salvar o LINK_CERTIFICADO: aba de desafios não encontrada.'
     };
   }
+
+  var identidadeAtual = certificadoRevalidarLinhaInscricao_(sh, ctx);
+  if (!identidadeAtual.ok) return identidadeAtual;
+
   var range = sh.getRange(ctx.rowNumber, ctx.idx_link_certificado + 1);
   var atual = String(range.getValue() || '').trim();
   if (atual === String(url || '').trim()) return { ok: true };
@@ -323,6 +329,36 @@ function certificadoSalvarLinkPlanilha_(ctx, url) {
   return { ok: true };
 }
 
+function certificadoRevalidarLinhaInscricao_(sh, ctx) {
+  var lastColumn = Math.max(Number(sh.getLastColumn() || 0), Number(ctx.idx_link_certificado || 0) + 1);
+  var row = sh.getRange(ctx.rowNumber, 1, 1, lastColumn).getValues()[0] || [];
+  var rowIdDgmb = normalizeText_(row[ctx.idx_id_dgmb]);
+  var rowIdInscricao = ctx.idx_id_inscricao > -1 ? normalizeText_(row[ctx.idx_id_inscricao]) : '';
+
+  if (rowIdDgmb !== normalizeText_(ctx.id_dgmb) ||
+      (ctx.id_inscricao && rowIdInscricao !== normalizeText_(ctx.id_inscricao))) {
+    return {
+      ok: false,
+      code: 'CERTIFICADO_INSCRICAO_ALTERADA',
+      msg: 'A inscrição do certificado foi alterada antes da gravação. Recarregue os dados e tente novamente.'
+    };
+  }
+
+  if (!ctx.id_inscricao) {
+    var rowDesafio = obterIdDesafioRegistro_(row, ctx.idx_id_desafio, ctx.idx_observacao);
+    var rowItem = ctx.idx_id_item > -1 ? normalizeText_(row[ctx.idx_id_item]) : '';
+    if (rowDesafio !== normalizeText_(ctx.id_desafio) || rowItem !== normalizeText_(ctx.id_item_estoque)) {
+      return {
+        ok: false,
+        code: 'CERTIFICADO_INSCRICAO_ALTERADA',
+        msg: 'O registro legado do certificado foi alterado antes da gravação. Recarregue os dados e tente novamente.'
+      };
+    }
+  }
+
+  return { ok: true };
+}
+
 function certificadoBuscarArquivoExistente_(pasta, nomeArquivo) {
   if (!pasta || !nomeArquivo) return null;
   var arquivos = pasta.getFilesByName(nomeArquivo);
@@ -331,7 +367,7 @@ function certificadoBuscarArquivoExistente_(pasta, nomeArquivo) {
 }
 
 function certificadoBuscarDadosVisuais_(ctx) {
-  var resumo = certificadoBuscarResumoDesafio_(ctx.id_dgmb, ctx.id_desafio, ctx.id_item_estoque);
+  var resumo = certificadoBuscarResumoDesafio_(ctx);
   var nome = certificadoBuscarNomeParticipante_(ctx.id_dgmb);
   var status = normalizeText_(resumo.status_apuracao || ctx.status_apuracao).toUpperCase();
 
@@ -340,16 +376,21 @@ function certificadoBuscarDadosVisuais_(ctx) {
     nome_desafio: resumo.nome_desafio || ('Desafio ' + String(ctx.id_desafio || '')),
     meta_km: certFormatKm_(resumo.meta_km),
     km_realizado: certFormatKm_(resumo.distancia_realizada),
+    percentual_concluido: parseLocalizedNumber_(resumo.percentual_concluido),
     status_desafio: status || 'CONCLUÍDO',
     periodo: certFormatPeriodo_(resumo.periodo_inicio, resumo.periodo_fim)
   };
 }
 
-function certificadoBuscarResumoDesafio_(idDgmb, idDesafio, idItemEstoque) {
-  var id = normalizeText_(idDgmb);
-  var desafio = normalizeText_(idDesafio);
-  var item = normalizeText_(idItemEstoque);
-  if (!id || !desafio) return {};
+function certificadoBuscarResumoDesafio_(contextoOuIdDgmb, idDesafio, idItemEstoque) {
+  var ctx = typeof contextoOuIdDgmb === 'object'
+    ? (contextoOuIdDgmb || {})
+    : { id_dgmb: contextoOuIdDgmb, id_desafio: idDesafio, id_item_estoque: idItemEstoque };
+  var id = normalizeText_(ctx.id_dgmb);
+  var inscricao = normalizeText_(ctx.id_inscricao);
+  var desafio = normalizeText_(ctx.id_desafio);
+  var item = normalizeText_(ctx.id_item_estoque);
+  if (!id || (!inscricao && !desafio)) return {};
 
   var resumo = [];
   try {
@@ -358,10 +399,20 @@ function certificadoBuscarResumoDesafio_(idDgmb, idDesafio, idItemEstoque) {
     resumo = [];
   }
 
-  for (var i = 0; i < resumo.length; i++) {
-    var row = resumo[i] || {};
+  if (inscricao) {
+    for (var i = 0; i < resumo.length; i++) {
+      var rowInscricao = resumo[i] || {};
+      if (normalizeText_(rowInscricao.id_inscricao) !== inscricao) continue;
+      if (normalizeText_(rowInscricao.id_dgmb || id) !== id) continue;
+      return rowInscricao;
+    }
+    return {};
+  }
+
+  for (var j = 0; j < resumo.length; j++) {
+    var row = resumo[j] || {};
     if (normalizeText_(row.id_desafio) !== desafio) continue;
-    if (item && normalizeText_(row.id_item_estoque) !== item) continue;
+    if (normalizeText_(row.id_item_estoque) !== item) continue;
     return row;
   }
 
@@ -471,6 +522,7 @@ function extrairDriveFileIdCertificado_(urlOuId) {
 
 function certificadoBuscarContextoDesafio_(payload) {
   var params = payload || {};
+  var idInscricao = normalizeText_(params.id_inscricao || params.idInscricao);
   var idDgmb = normalizeText_(params.id_dgmb || params.idDgmb);
   var idDesafioFiltro = normalizeText_(params.id_desafio || params.idDesafio);
   var idItemFiltro = normalizeText_(params.id_item_estoque || params.idItemEstoque);
@@ -493,76 +545,115 @@ function certificadoBuscarContextoDesafio_(payload) {
 
   var map = buildHeaderMap_(values[0]);
   var idxId = getRequiredColumnIndex_(map, ['id_dgmb'], sheetName);
+  var idxIdInscricao = getOptionalColumnIndex_(map, ['id_inscricao', 'id inscrição', 'id inscricao']);
   var idxIdDesafio = getIdDesafioColumnIndex_(map);
   var idxIdItem = getOptionalColumnIndex_(map, ['id_item_estoque', 'id item estoque']);
   var idxObservacao = getOptionalColumnIndex_(map, ['observacao', 'observação']);
   var idxStatusApuracao = getOptionalColumnIndex_(map, ['status_apuracao', 'status apuracao', 'status apuração', 'status_desafio', 'status desafio']);
   var idxStatusUsuarioDesafio = getRequiredColumnIndex_(map, ['status_usuario_desafio', 'status usuário desafio', 'status usuario desafio'], sheetName);
   var idxStatusValidacao = getRequiredColumnIndex_(map, ['status_validacao_certificado'], sheetName);
-
   var idxPrintCert = getRequiredColumnIndex_(map, ['print_strava_certificado'], sheetName);
   var idxLinkPrint = getRequiredColumnIndex_(map, ['link_print_strava'], sheetName);
   var idxDataEnvio = getRequiredColumnIndex_(map, ['data_envio_print_strava'], sheetName);
   var idxDataAprov = getRequiredColumnIndex_(map, ['data_aprovacao_certificado'], sheetName);
   var idxObs = getRequiredColumnIndex_(map, ['obs_validacao_certificado'], sheetName);
-
   var idxLinkCert = getOptionalColumnIndex_(map, ['link_certificado', 'url_certificado', 'certificado_url']);
 
-  for (var i = 1; i < values.length; i++) {
-    var row = values[i];
-    var rowId = normalizeText_(row[idxId]);
-    if (rowId !== idDgmb) continue;
-
-    var rowDesafio = obterIdDesafioRegistro_(row, idxIdDesafio, idxObservacao);
-    var rowItem = idxIdItem > -1 ? normalizeText_(row[idxIdItem]) : '';
-
-    if (idDesafioFiltro && rowDesafio !== idDesafioFiltro) continue;
-    if (idItemFiltro && rowItem !== idItemFiltro) continue;
-
-    var statusApuracao = certificadoBuscarStatusApuracaoResumo_(rowId, rowDesafio, rowItem);
-    if (!statusApuracao && idxStatusApuracao > -1) {
-      statusApuracao = normalizeText_(row[idxStatusApuracao]).toUpperCase();
+  var linhaSelecionada = -1;
+  if (idInscricao && idxIdInscricao > -1) {
+    var candidatasInscricao = [];
+    for (var i = 1; i < values.length; i++) {
+      if (normalizeText_(values[i][idxId]) !== idDgmb) continue;
+      if (normalizeText_(values[i][idxIdInscricao]) !== idInscricao) continue;
+      candidatasInscricao.push(i);
     }
-
-    var statusUsuarioDesafio = normalizeText_(row[idxStatusUsuarioDesafio]).toUpperCase();
-    var statusValidacaoCertificado = normalizeText_(row[idxStatusValidacao]).toUpperCase();
-    var desafioElegivel = statusApuracao === 'CONCLUIDO' &&
-      statusUsuarioDesafio === 'CONCLUIDO' &&
-      statusValidacaoCertificado === 'APROVADO';
-
-    return {
-      ok: true,
-      rowNumber: i + 1,
-      id_dgmb: rowId,
-      id_desafio: rowDesafio,
-      id_item_estoque: rowItem,
-      status_apuracao: statusApuracao,
-      status_usuario_desafio: statusUsuarioDesafio,
-      desafio_elegivel: desafioElegivel,
-      status_validacao_certificado: statusValidacaoCertificado,
-      print_strava_certificado: normalizeText_(row[idxPrintCert]),
-      link_print_strava: normalizeText_(row[idxLinkPrint]),
-      data_envio_print_strava: row[idxDataEnvio] || '',
-      data_aprovacao_certificado: row[idxDataAprov] || '',
-      obs_validacao_certificado: normalizeText_(row[idxObs]),
-      link_certificado_existente: idxLinkCert > -1 ? normalizeText_(row[idxLinkCert]) : '',
-      sheet_name: sheetName,
-      idx_link_certificado: idxLinkCert
-    };
+    if (candidatasInscricao.length > 1) {
+      return {
+        ok: false,
+        code: 'CERTIFICADO_INSCRICAO_AMBIGUA',
+        msg: 'Mais de uma linha possui o mesmo ID_INSCRICAO para este participante.'
+      };
+    }
+    if (candidatasInscricao.length === 1) linhaSelecionada = candidatasInscricao[0];
   }
 
+  if (linhaSelecionada === -1) {
+    var candidatasLegadas = [];
+    for (var j = 1; j < values.length; j++) {
+      var rowLegada = values[j] || [];
+      if (normalizeText_(rowLegada[idxId]) !== idDgmb) continue;
+      if (idInscricao && idxIdInscricao > -1 && normalizeText_(rowLegada[idxIdInscricao])) continue;
+
+      var desafioLegado = obterIdDesafioRegistro_(rowLegada, idxIdDesafio, idxObservacao);
+      var itemLegado = idxIdItem > -1 ? normalizeText_(rowLegada[idxIdItem]) : '';
+      if (idDesafioFiltro && desafioLegado !== idDesafioFiltro) continue;
+      if (idItemFiltro && itemLegado !== idItemFiltro) continue;
+      candidatasLegadas.push(j);
+    }
+
+    if (candidatasLegadas.length > 1) {
+      return {
+        ok: false,
+        code: 'CERTIFICADO_INSCRICAO_AMBIGUA',
+        msg: 'Mais de uma inscrição corresponde aos identificadores legados informados.'
+      };
+    }
+    if (candidatasLegadas.length === 1) linhaSelecionada = candidatasLegadas[0];
+  }
+
+  if (linhaSelecionada === -1) {
+    return { ok: false, code: 'DESAFIO_NAO_ENCONTRADO', msg: 'Desafio não encontrado para este usuário.' };
+  }
+
+  var row = values[linhaSelecionada] || [];
+  var rowId = normalizeText_(row[idxId]);
+  var rowInscricao = idxIdInscricao > -1 ? normalizeText_(row[idxIdInscricao]) : '';
+  var rowDesafio = obterIdDesafioRegistro_(row, idxIdDesafio, idxObservacao);
+  var rowItem = idxIdItem > -1 ? normalizeText_(row[idxIdItem]) : '';
+  var statusApuracao = certificadoBuscarStatusApuracaoResumo_(rowInscricao, rowId, rowDesafio, rowItem);
+  if (!statusApuracao && !rowInscricao && idxStatusApuracao > -1) {
+    statusApuracao = normalizeText_(row[idxStatusApuracao]).toUpperCase();
+  }
+
+  var statusUsuarioDesafio = normalizeText_(row[idxStatusUsuarioDesafio]).toUpperCase();
+  var statusValidacaoCertificado = normalizeText_(row[idxStatusValidacao]).toUpperCase();
+  var desafioElegivel = statusApuracao === 'CONCLUIDO' &&
+    statusUsuarioDesafio === 'CONCLUIDO' &&
+    statusValidacaoCertificado === 'APROVADO';
+
   return {
-    ok: false,
-    code: 'DESAFIO_NAO_ENCONTRADO',
-    msg: 'Desafio não encontrado para este usuário.'
+    ok: true,
+    rowNumber: linhaSelecionada + 1,
+    id_inscricao: rowInscricao,
+    id_dgmb: rowId,
+    id_desafio: rowDesafio,
+    id_item_estoque: rowItem,
+    status_apuracao: statusApuracao,
+    status_usuario_desafio: statusUsuarioDesafio,
+    desafio_elegivel: desafioElegivel,
+    status_validacao_certificado: statusValidacaoCertificado,
+    print_strava_certificado: normalizeText_(row[idxPrintCert]),
+    link_print_strava: normalizeText_(row[idxLinkPrint]),
+    data_envio_print_strava: row[idxDataEnvio] || '',
+    data_aprovacao_certificado: row[idxDataAprov] || '',
+    obs_validacao_certificado: normalizeText_(row[idxObs]),
+    link_certificado_existente: idxLinkCert > -1 ? normalizeText_(row[idxLinkCert]) : '',
+    sheet_name: sheetName,
+    idx_id_dgmb: idxId,
+    idx_id_inscricao: idxIdInscricao,
+    idx_id_desafio: idxIdDesafio,
+    idx_id_item: idxIdItem,
+    idx_observacao: idxObservacao,
+    idx_link_certificado: idxLinkCert
   };
 }
 
-function certificadoBuscarStatusApuracaoResumo_(idDgmb, idDesafio, idItemEstoque) {
+function certificadoBuscarStatusApuracaoResumo_(idInscricao, idDgmb, idDesafio, idItemEstoque) {
+  var inscricao = normalizeText_(idInscricao);
   var id = normalizeText_(idDgmb);
   var desafio = normalizeText_(idDesafio);
   var item = normalizeText_(idItemEstoque);
-  if (!id || !desafio) return '';
+  if (!id || (!inscricao && !desafio)) return '';
 
   var resumo = [];
   try {
@@ -571,20 +662,21 @@ function certificadoBuscarStatusApuracaoResumo_(idDgmb, idDesafio, idItemEstoque
     resumo = [];
   }
 
-  for (var i = 0; i < resumo.length; i++) {
-    var row = resumo[i] || {};
-    var rowDesafio = normalizeText_(row.id_desafio);
-    var rowItem = normalizeText_(row.id_item_estoque);
-    if (rowDesafio !== desafio) continue;
-    if (item && rowItem !== item) continue;
-    if (!item && rowItem) continue;
-    return normalizeText_(row.status_apuracao).toUpperCase();
+  if (inscricao) {
+    for (var i = 0; i < resumo.length; i++) {
+      var rowInscricao = resumo[i] || {};
+      if (normalizeText_(rowInscricao.id_inscricao) !== inscricao) continue;
+      if (normalizeText_(rowInscricao.id_dgmb || id) !== id) continue;
+      return normalizeText_(rowInscricao.status_apuracao).toUpperCase();
+    }
+    return '';
   }
 
   for (var j = 0; j < resumo.length; j++) {
-    var rowFallback = resumo[j] || {};
-    if (normalizeText_(rowFallback.id_desafio) !== desafio) continue;
-    return normalizeText_(rowFallback.status_apuracao).toUpperCase();
+    var row = resumo[j] || {};
+    if (normalizeText_(row.id_desafio) !== desafio) continue;
+    if (normalizeText_(row.id_item_estoque) !== item) continue;
+    return normalizeText_(row.status_apuracao).toUpperCase();
   }
 
   return '';

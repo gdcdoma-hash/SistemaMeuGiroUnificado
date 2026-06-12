@@ -4,11 +4,13 @@ function gerarCertificadoImagem_(contexto) {
   var ctx = contexto || {};
   var dadosVisuais = certificadoBuscarDadosVisuais_(ctx);
   var pastaDestino = certificadoGetOuCriarPastaDesafio_(ctx.id_desafio);
-  var nomeArquivo = [
+  var nomeArquivoPartes = [
     'certificado_imagem',
     ctx.id_dgmb || 'sem-id',
     ctx.id_desafio || 'desafio'
-  ].join('_') + '.png';
+  ];
+  if (ctx.id_inscricao) nomeArquivoPartes.push(ctx.id_inscricao);
+  var nomeArquivo = nomeArquivoPartes.join('_') + '.png';
 
   var arquivoExistente = certificadoBuscarArquivoExistente_(pastaDestino, nomeArquivo);
   if (arquivoExistente) {
