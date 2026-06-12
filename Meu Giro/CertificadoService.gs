@@ -13,20 +13,37 @@ function gerarOuObterCertificadoDesafio(payload) {
       };
     }
 
-    if (!contexto.desafio_elegivel) {
+    if (contexto.status_usuario_desafio === 'CANCELADO') {
       return {
         ok: false,
-        code: 'DESAFIO_NAO_ELEGIVEL_CERTIFICADO',
-        msg: 'O certificado só fica disponível para desafios concluídos, finalizados ou encerrados.'
+        code: 'INSCRICAO_CANCELADA',
+        msg: 'Inscrição cancelada.'
       };
     }
 
-    var statusValidacao = String(contexto.status_validacao_certificado || '').trim().toUpperCase();
-    if (statusValidacao !== 'APROVADO') {
+    if (contexto.status_apuracao !== 'CONCLUIDO') {
       return {
         ok: false,
-        code: 'CERTIFICADO_NAO_LIBERADO',
-        msg: 'Seu certificado ainda não foi liberado pela administração.'
+        code: 'DESAFIO_NAO_ELEGIVEL_CERTIFICADO',
+        msg: contexto.status_apuracao === 'EXPIRADO' && contexto.status_usuario_desafio === 'NAO_CONCLUIDO'
+          ? 'Desafio encerrado sem conclusão da meta.'
+          : 'Conclua sua meta para liberar seu certificado.'
+      };
+    }
+
+    if (contexto.status_usuario_desafio !== 'CONCLUIDO') {
+      return {
+        ok: false,
+        code: 'CONCLUSAO_ADMINISTRATIVA_PENDENTE',
+        msg: 'Meta atingida. Aguardando validação da organização.'
+      };
+    }
+
+    if (contexto.status_validacao_certificado !== 'APROVADO') {
+      return {
+        ok: false,
+        code: 'CERTIFICADO_EM_PROCESSAMENTO',
+        msg: 'Conclusão confirmada. Certificado em processamento.'
       };
     }
 
@@ -480,6 +497,7 @@ function certificadoBuscarContextoDesafio_(payload) {
   var idxIdItem = getOptionalColumnIndex_(map, ['id_item_estoque', 'id item estoque']);
   var idxObservacao = getOptionalColumnIndex_(map, ['observacao', 'observação']);
   var idxStatusApuracao = getOptionalColumnIndex_(map, ['status_apuracao', 'status apuracao', 'status apuração', 'status_desafio', 'status desafio']);
+  var idxStatusUsuarioDesafio = getRequiredColumnIndex_(map, ['status_usuario_desafio', 'status usuário desafio', 'status usuario desafio'], sheetName);
   var idxStatusValidacao = getRequiredColumnIndex_(map, ['status_validacao_certificado'], sheetName);
 
   var idxPrintCert = getRequiredColumnIndex_(map, ['print_strava_certificado'], sheetName);
@@ -506,11 +524,11 @@ function certificadoBuscarContextoDesafio_(payload) {
       statusApuracao = normalizeText_(row[idxStatusApuracao]).toUpperCase();
     }
 
-    var desafioElegivel = {
-      CONCLUIDO: true,
-      FINALIZADO: true,
-      ENCERRADO: true
-    }[statusApuracao] === true;
+    var statusUsuarioDesafio = normalizeText_(row[idxStatusUsuarioDesafio]).toUpperCase();
+    var statusValidacaoCertificado = normalizeText_(row[idxStatusValidacao]).toUpperCase();
+    var desafioElegivel = statusApuracao === 'CONCLUIDO' &&
+      statusUsuarioDesafio === 'CONCLUIDO' &&
+      statusValidacaoCertificado === 'APROVADO';
 
     return {
       ok: true,
@@ -519,8 +537,9 @@ function certificadoBuscarContextoDesafio_(payload) {
       id_desafio: rowDesafio,
       id_item_estoque: rowItem,
       status_apuracao: statusApuracao,
+      status_usuario_desafio: statusUsuarioDesafio,
       desafio_elegivel: desafioElegivel,
-      status_validacao_certificado: normalizeText_(row[idxStatusValidacao]).toUpperCase(),
+      status_validacao_certificado: statusValidacaoCertificado,
       print_strava_certificado: normalizeText_(row[idxPrintCert]),
       link_print_strava: normalizeText_(row[idxLinkPrint]),
       data_envio_print_strava: row[idxDataEnvio] || '',

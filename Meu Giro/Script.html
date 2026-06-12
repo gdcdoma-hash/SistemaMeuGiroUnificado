@@ -2458,10 +2458,6 @@ function buildDesafioCard(item, options) {
   var percentual = formatNumber(percentualNormalizado);
   var restante = formatNumber(Math.max(0, toFiniteNumber(desafio.meta_km, 0) - toFiniteNumber(desafio.distancia_realizada, 0)));
   var periodoLabel = getDesafioPeriodoLabel(desafio);
-  var statusDesafioCertificado = String((desafio && desafio.status_apuracao) || '').trim().toUpperCase();
-  var statusValidacaoCertificado = String((desafio && desafio.status_validacao_certificado) || '').trim().toUpperCase();
-  var concluido = statusDesafioCertificado === 'CONCLUIDO';
-  var aguardandoValidacaoCertificado = concluido && statusValidacaoCertificado !== 'APROVADO';
   var podeBaixarCertificado = isDesafioElegivelCertificado_(desafio);
   var payloadCertificado = encodeURIComponent(JSON.stringify({
     id_desafio: desafio.id_desafio || '',
@@ -2470,12 +2466,9 @@ function buildDesafioCard(item, options) {
   var certificadoStatusId = buildDesafioCertificadoDomId('certificado-status', desafio);
   var certificadoBtnId = buildDesafioCertificadoDomId('certificado-btn', desafio);
   var certificadoImagemAcoesId = buildDesafioCertificadoDomId('certificado-imagem-acoes', desafio);
-  var mensagemLocalCertificado = !concluido
-    ? 'Conclua sua meta para liberar seu certificado.'
-    : (aguardandoValidacaoCertificado ? 'Aguardando validação do seu desempenho pela equipe.' : '');
-  var varianteLocalCertificado = !concluido
-    ? ''
-    : (aguardandoValidacaoCertificado ? 'loading' : '');
+  var mensagemCertificado = getMensagemCertificado_(desafio);
+  var mensagemLocalCertificado = mensagemCertificado.texto;
+  var varianteLocalCertificado = mensagemCertificado.variante;
 
   card.innerHTML =
     '<div class="desafio-resumo-head">' +
@@ -2573,14 +2566,36 @@ function isDesafioHistoricoElegivel_(desafio) {
 
 function isDesafioElegivelCertificado_(desafio) {
   if (!desafio) return false;
-  var status = String((desafio && desafio.status_apuracao) || '').trim().toUpperCase();
-  var statusConclusao = {
-    CONCLUIDO: true,
-    FINALIZADO: true,
-    ENCERRADO: true
-  };
-  var statusValidacao = String((desafio && desafio.status_validacao_certificado) || '').trim().toUpperCase();
-  return !!statusConclusao[status] && statusValidacao === 'APROVADO';
+  var statusApuracao = String(desafio.status_apuracao || '').trim().toUpperCase();
+  var statusUsuarioDesafio = String(desafio.status_usuario_desafio || '').trim().toUpperCase();
+  var statusValidacao = String(desafio.status_validacao_certificado || '').trim().toUpperCase();
+  return statusApuracao === 'CONCLUIDO' &&
+    statusUsuarioDesafio === 'CONCLUIDO' &&
+    statusValidacao === 'APROVADO';
+}
+
+function getMensagemCertificado_(desafio) {
+  var item = desafio || {};
+  var statusApuracao = String(item.status_apuracao || '').trim().toUpperCase();
+  var statusUsuarioDesafio = String(item.status_usuario_desafio || '').trim().toUpperCase();
+  var statusValidacao = String(item.status_validacao_certificado || '').trim().toUpperCase();
+
+  if (statusUsuarioDesafio === 'CANCELADO') {
+    return { texto: 'Inscrição cancelada.', variante: '' };
+  }
+  if (statusApuracao === 'EXPIRADO' && statusUsuarioDesafio === 'NAO_CONCLUIDO') {
+    return { texto: 'Desafio encerrado sem conclusão da meta.', variante: '' };
+  }
+  if (statusApuracao !== 'CONCLUIDO') {
+    return { texto: 'Conclua sua meta para liberar seu certificado.', variante: '' };
+  }
+  if (statusUsuarioDesafio !== 'CONCLUIDO') {
+    return { texto: 'Meta atingida. Aguardando validação da organização.', variante: 'loading' };
+  }
+  if (statusValidacao !== 'APROVADO') {
+    return { texto: 'Conclusão confirmada. Certificado em processamento.', variante: 'loading' };
+  }
+  return { texto: 'Certificado disponível.', variante: 'success' };
 }
 
 function solicitarCertificadoDesafio(payloadEncoded, localStatusId, buttonId, imageActionsId) {
@@ -2612,9 +2627,9 @@ function solicitarCertificadoDesafio(payloadEncoded, localStatusId, buttonId, im
       }
 
       if (!res || res.ok !== true || !(res.pdfDownloadUrl || res.url)) {
-        if (res && res.code === 'CERTIFICADO_NAO_LIBERADO') {
-          setPainelMsg('Aguardando validação do seu desempenho pela equipe.', 'loading');
-          setCertificadoLocalMsg(localStatusId, 'Aguardando validação do seu desempenho pela equipe.', 'loading');
+        if (res && (res.code === 'CONCLUSAO_ADMINISTRATIVA_PENDENTE' || res.code === 'CERTIFICADO_EM_PROCESSAMENTO')) {
+          setPainelMsg(res.msg, 'loading');
+          setCertificadoLocalMsg(localStatusId, res.msg, 'loading');
           return;
         }
         var mensagemErro = (res && res.msg) ? res.msg : 'Não foi possível gerar o certificado agora.';
