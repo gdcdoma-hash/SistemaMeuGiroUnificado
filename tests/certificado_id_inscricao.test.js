@@ -103,15 +103,38 @@ function modernRow(inscricao, link = '') {
   return [inscricao, '10', 'D1', 'ITEM1', 'CONCLUIDO', 'CONCLUIDO', 'APROVADO', '', '', '', '', '', link];
 }
 
-// Cenário 1: uma inscrição continua elegível com a mesma regra de três status.
-{
-  const sheet = new FakeSheet([headers, modernRow('INS-1')]);
-  const ctx = loadCertificate(sheet, [{ id_inscricao: 'INS-1', id_dgmb: '10', status_apuracao: 'CONCLUIDO' }]);
-  const result = ctx.certificadoBuscarContextoDesafio_({ id_inscricao: 'INS-1', id_dgmb: '10', id_desafio: 'D1', id_item_estoque: 'ITEM1' });
+// Cenário 1: a validação administrativa não participa da elegibilidade do certificado.
+[
+  ['PENDENTE', true],
+  ['EM_ANALISE', true],
+  ['APROVADO', true],
+  ['REPROVADO', true],
+  ['', true]
+].forEach(([statusValidacao, esperado], index) => {
+  const row = modernRow(`INS-1-${index}`);
+  row[6] = statusValidacao;
+  const sheet = new FakeSheet([headers, row]);
+  const ctx = loadCertificate(sheet, [{ id_inscricao: row[0], id_dgmb: '10', status_apuracao: 'CONCLUIDO' }]);
+  const result = ctx.certificadoBuscarContextoDesafio_({ id_inscricao: row[0], id_dgmb: '10', id_desafio: 'D1', id_item_estoque: 'ITEM1' });
   assert.equal(result.ok, true);
-  assert.equal(result.id_inscricao, 'INS-1');
-  assert.equal(result.desafio_elegivel, true);
-}
+  assert.equal(result.id_inscricao, row[0]);
+  assert.equal(result.status_validacao_certificado, statusValidacao);
+  assert.equal(result.desafio_elegivel, esperado);
+});
+
+// Status de apuração ou do usuário ainda impedem a elegibilidade, independentemente da validação administrativa.
+[
+  ['ATIVO', 'CONCLUIDO'],
+  ['CONCLUIDO', 'EM_ANDAMENTO']
+].forEach(([statusApuracao, statusUsuario], index) => {
+  const row = modernRow(`INS-NE-${index}`);
+  row[5] = statusUsuario;
+  row[6] = 'APROVADO';
+  const sheet = new FakeSheet([headers, row]);
+  const ctx = loadCertificate(sheet, [{ id_inscricao: row[0], id_dgmb: '10', status_apuracao: statusApuracao }]);
+  const result = ctx.certificadoBuscarContextoDesafio_({ id_inscricao: row[0], id_dgmb: '10', id_desafio: 'D1', id_item_estoque: 'ITEM1' });
+  assert.equal(result.desafio_elegivel, false);
+});
 
 // Cenário 2: duas inscrições iguais na chave legada selecionam, aprovam e gravam o link da inscrição indicada.
 {
@@ -190,4 +213,4 @@ assert.match(CERT, /if \(ctx\.id_inscricao\) nomeArquivoPartes\.push\(ctx\.id_in
 const imageSource = fs.readFileSync(path.join(ROOT, 'Meu Giro/CertificadoImagemService.gs'), 'utf8');
 assert.match(imageSource, /if \(ctx\.id_inscricao\) nomeArquivoPartes\.push\(ctx\.id_inscricao\)/);
 
-console.log('OK: 5 cenários de certificado por ID_INSCRICAO validados.');
+console.log('OK: regra de elegibilidade e cenários de certificado por ID_INSCRICAO validados.');
