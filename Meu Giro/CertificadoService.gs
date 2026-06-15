@@ -151,8 +151,8 @@ function gerarCertificadoDesafio_(contexto) {
     }
   }
 
-  var templateId = String(TEMPLATE_CERTIFICADO_SLIDES_ID_ || '').trim();
-  if (!templateId) {
+  var templatePadraoId = String(TEMPLATE_CERTIFICADO_SLIDES_ID_ || '').trim();
+  if (!templatePadraoId) {
     return {
       ok: false,
       code: 'CERTIFICADO_TEMPLATE_SLIDES_NAO_CONFIGURADO',
@@ -160,8 +160,109 @@ function gerarCertificadoDesafio_(contexto) {
     };
   }
 
+  var resolucao = certificadoResolverTemplateSlides_(ctx.id_desafio, ctx.id_item_estoque);
+  var geracao = certificadoGerarPdfComTemplate_(
+    resolucao.templateId || templatePadraoId,
+    nomeArquivo,
+    pastaDestino,
+    ctx,
+    dadosVisuais
+  );
+  if (!geracao.ok && resolucao.source !== 'PADRAO') {
+    geracao = certificadoGerarPdfComTemplate_(templatePadraoId, nomeArquivo, pastaDestino, ctx, dadosVisuais);
+  }
+  if (!geracao.ok) return geracao;
+
+  var arquivo = geracao.arquivo;
+  arquivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  var url = String(arquivo.getUrl() || '').trim();
+  if (!url) {
+    return { ok: false, code: 'CERTIFICADO_URL_INVALIDA', msg: 'Não foi possível gerar a URL do certificado.' };
+  }
+
+  var saveNovo = certificadoSalvarLinkPlanilha_(ctx, url);
+  if (!saveNovo.ok) return saveNovo;
+
+  return {
+    ok: true,
+    url: url,
+    pdfDownloadUrl: montarUrlDownloadPdfCertificado_(arquivo.getId() || url)
+  };
+}
+
+function certificadoResolverTemplateSlides_(idDesafio, idItemEstoque) {
+  var templatePadrao = String(TEMPLATE_CERTIFICADO_SLIDES_ID_ || '').trim();
+  var padrao = function(reason) {
+    return { templateId: templatePadrao, source: 'PADRAO', fallback: true, reason: reason };
+  };
+  var desafio = String(idDesafio == null ? '' : idDesafio).trim();
+  var item = String(idItemEstoque == null ? '' : idItemEstoque).trim();
+  if (!desafio) return padrao('ID_DESAFIO_VAZIO');
+
+  try {
+    var nomeAba = (typeof SHEETS !== 'undefined' && SHEETS.CONFIG_CERTIFICADO_TEMPLATE)
+      ? SHEETS.CONFIG_CERTIFICADO_TEMPLATE
+      : 'CONFIG_CERTIFICADO_TEMPLATE';
+    var sh = getSpreadsheet_().getSheetByName(nomeAba);
+    if (!sh) return padrao('ABA_AUSENTE');
+    var values = sh.getDataRange().getValues();
+    if (!values || !values.length) return padrao('ABA_VAZIA');
+
+    var layout = certificadoTemplateObterLayout_(values[0] || []);
+    if (!layout) return padrao('CABECALHO_INCOMPLETO');
+
+    var especificas = [];
+    var gerais = [];
+    for (var i = 1; i < values.length; i++) {
+      var row = values[i] || [];
+      if (!certificadoTemplateAtivo_(row[layout.ativo])) continue;
+      if (String(row[layout.idDesafio] == null ? '' : row[layout.idDesafio]).trim() !== desafio) continue;
+      var templateId = String(row[layout.templateId] == null ? '' : row[layout.templateId]).trim();
+      if (!templateId) continue;
+      var rowItem = String(row[layout.idItemEstoque] == null ? '' : row[layout.idItemEstoque]).trim();
+      if (item && rowItem === item) especificas.push(templateId);
+      if (!rowItem) gerais.push(templateId);
+    }
+
+    if (item && especificas.length > 1) return padrao('DUPLICIDADE_ATIVA_ITEM');
+    if (item && especificas.length === 1) {
+      return { templateId: especificas[0], source: 'ITEM', fallback: false, reason: 'CONFIG_ITEM' };
+    }
+    if (gerais.length > 1) return padrao('DUPLICIDADE_ATIVA_DESAFIO');
+    if (gerais.length === 1) {
+      return { templateId: gerais[0], source: 'DESAFIO', fallback: false, reason: 'CONFIG_DESAFIO' };
+    }
+    return padrao('CONFIGURACAO_NAO_ENCONTRADA');
+  } catch (e) {
+    return padrao('ERRO_LEITURA_CONFIGURACAO');
+  }
+}
+
+function certificadoTemplateAtivo_(valor) {
+  if (valor === true || valor === 1) return true;
+  var texto = String(valor == null ? '' : valor).trim().toUpperCase();
+  return texto === 'TRUE' || texto === 'VERDADEIRO' || texto === 'SIM' || texto === '1';
+}
+
+function certificadoTemplateObterLayout_(headers) {
+  var indices = {};
+  for (var i = 0; i < headers.length; i++) {
+    indices[String(headers[i] == null ? '' : headers[i]).trim().toUpperCase()] = i;
+  }
+  var obrigatorios = ['ID_DESAFIO', 'ID_ITEM_ESTOQUE', 'ID_SLIDE_TEMPLATE', 'ATIVO'];
+  for (var j = 0; j < obrigatorios.length; j++) {
+    if (!Object.prototype.hasOwnProperty.call(indices, obrigatorios[j])) return null;
+  }
+  return {
+    idDesafio: indices.ID_DESAFIO,
+    idItemEstoque: indices.ID_ITEM_ESTOQUE,
+    templateId: indices.ID_SLIDE_TEMPLATE,
+    ativo: indices.ATIVO
+  };
+}
+
+function certificadoGerarPdfComTemplate_(templateId, nomeArquivo, pastaDestino, ctx, dadosVisuais) {
   var arquivoTemporario = null;
-  var arquivo = null;
   try {
     var templateFile = DriveApp.getFileById(templateId);
     arquivoTemporario = templateFile.makeCopy('tmp_' + nomeArquivo.replace(/\.pdf$/i, '') + '_' + new Date().getTime(), pastaDestino);
@@ -197,7 +298,7 @@ function gerarCertificadoDesafio_(contexto) {
 
     apresentacao.saveAndClose();
     var blobPdf = DriveApp.getFileById(arquivoTemporario.getId()).getBlob().getAs(MimeType.PDF).setName(nomeArquivo);
-    arquivo = pastaDestino.createFile(blobPdf);
+    return { ok: true, arquivo: pastaDestino.createFile(blobPdf) };
   } catch (e) {
     return {
       ok: false,
@@ -211,21 +312,6 @@ function gerarCertificadoDesafio_(contexto) {
       } catch (trashErr) {}
     }
   }
-
-  arquivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-  var url = String(arquivo.getUrl() || '').trim();
-  if (!url) {
-    return { ok: false, code: 'CERTIFICADO_URL_INVALIDA', msg: 'Não foi possível gerar a URL do certificado.' };
-  }
-
-  var saveNovo = certificadoSalvarLinkPlanilha_(ctx, url);
-  if (!saveNovo.ok) return saveNovo;
-
-  return {
-    ok: true,
-    url: url,
-    pdfDownloadUrl: montarUrlDownloadPdfCertificado_(arquivo.getId() || url)
-  };
 }
 
 function gerarHtmlCertificadoDesafio_(ctx, dados) {
