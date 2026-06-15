@@ -41,6 +41,7 @@ let desafiosAtivosCarouselItems = [];
 let desafiosFocoItems = [];
 let desafiosAtivosCarouselIndex = 0;
 let desafioEmFocoKey = '';
+let certificadoProcessandoKey = '';
 const DESAFIO_CARROSSEL_SESSION_KEY = 'meuGiro.desafioEmFocoKey';
 const LOGIN_SESSION_STORAGE_KEY = 'meuGiro.loginSession';
 const PAINEL_STATE_STORAGE_KEY = 'meuGiro.painelState';
@@ -2008,6 +2009,7 @@ function abrirDetalheConquistaV2_(chave) {
   var desafio = encontrarDesafioPorChaveV2_(chave);
   if (!desafio) return;
   setTextById('conquista-detalhe-titulo', getDesafioTitulo(desafio));
+  setTextById('conquista-detalhe-periodo', getDesafioMesExtensoAnoLabel_(desafio));
   renderConquistaDetalheAtividadesV2_(desafio);
   showScreen('conquista-detalhe');
 }
@@ -2038,12 +2040,41 @@ function renderConquistaDetalheAtividadesV2_(desafio) {
   }
   lista.forEach(function(item) {
     var div = document.createElement('div');
-    div.className = 'atividade conquista-atividade-item';
+    div.className = 'conquista-atividade-item';
     div.innerHTML =
-      '<strong>' + escapeHtml(formatDateBR(item && item.data)) + '</strong>' +
-      '<p>' + formatNumber(item && item.km) + ' km</p>';
+      '<span>Dia ' + escapeHtml(getDiaMesAtividade_(item && item.data)) + '</span>' +
+      '<strong>' + formatKmConquistaDetalhe_(item && item.km) + ' km</strong>';
     box.appendChild(div);
   });
+}
+
+function getDiaMesAtividade_(value) {
+  if (!value) return '-';
+  var s = String(value);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return String(Number(s.split('-')[2]));
+  var br = formatDateBR(s);
+  var match = br.match(/^(\d{1,2})\//);
+  return match ? String(Number(match[1])) : br;
+}
+
+function getDesafioMesExtensoAnoLabel_(desafio) {
+  var inicio = String((desafio && desafio.periodo_inicio) || '').trim();
+  var fim = String((desafio && desafio.periodo_fim) || '').trim();
+  var base = inicio || fim;
+  if (!base) return '-';
+  var partes = base.split('-');
+  if (partes.length < 2) return getDesafioMesLabelV2_(desafio);
+  var meses = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+  var mes = Number(partes[1]);
+  var ano = partes[0];
+  return (meses[mes - 1] || partes[1]) + '/' + ano;
+}
+
+function formatKmConquistaDetalhe_(value) {
+  return toFiniteNumber(value, 0).toFixed(2).replace('.', ',');
 }
 
 function criarAcaoDesafioV2_(texto, aoClicar, principal) {
@@ -2867,7 +2898,7 @@ function buildCertificadoDesafioHtml_(desafio, contexto, options) {
   var certificadoImagemAcoesId = buildDesafioCertificadoDomId(prefixo + '-imagem-acoes', desafio);
   var mensagemCertificado = getMensagemCertificado_(desafio);
 
-  return '<div class="atividade-acoes"><button type="button" id="' + certificadoBtnId + '" class="btn-secondary atividade-acao-btn" onclick="solicitarCertificadoDesafio(\'' + payloadCertificado + '\', \'' + certificadoStatusId + '\', \'' + certificadoBtnId + '\', \'' + certificadoImagemAcoesId + '\')">Baixar certificado</button></div>' +
+  return '<div class="atividade-acoes"><button type="button" id="' + certificadoBtnId + '" class="btn-secondary atividade-acao-btn certificado-download-btn" onclick="solicitarCertificadoDesafio(\'' + payloadCertificado + '\', \'' + certificadoStatusId + '\', \'' + certificadoBtnId + '\', \'' + certificadoImagemAcoesId + '\')">Baixar certificado</button></div>' +
     '<div id="' + certificadoImagemAcoesId + '" class="atividade-acoes" style="display:none;">' +
       '<button type="button" class="btn-secondary atividade-acao-btn" onclick="baixarPdfCertificadoDesafio(\'' + payloadCertificado + '\')">Baixar PDF</button>' +
       '<button type="button" class="btn-secondary atividade-acao-btn" onclick="baixarImagemCertificadoDesafio(\'' + payloadCertificado + '\')">Baixar imagem</button>' +
@@ -2974,24 +3005,27 @@ function solicitarCertificadoDesafio(payloadEncoded, localStatusId, buttonId, im
   }
 
   var idDgmb = currentUser && currentUser.id_dgmb ? String(currentUser.id_dgmb).trim() : '';
-  var btn = document.getElementById(String(buttonId || ''));
+  var certificadoKey = buildCertificadoProcessKey_(payload);
+  if (certificadoProcessandoKey) {
+    setPainelMsg('Aguarde: outro certificado está sendo processado.', 'loading');
+    setCertificadoLocalMsg(localStatusId, 'Aguarde a geração do certificado em andamento.', 'loading');
+    return;
+  }
   if (!idDgmb) {
     setPainelMsg('Sessão inválida. Entre novamente para baixar seu certificado.', 'error');
     setCertificadoLocalMsg(localStatusId, 'Sessão inválida. Entre novamente para baixar seu certificado.', 'error');
     return;
   }
 
-  if (btn) {
-    btn.disabled = true;
-  }
+  certificadoProcessandoKey = certificadoKey;
+  setCertificadoProcessingState_(true, buttonId);
 
   setPainelMsg('Gerando certificado...', 'loading');
   setCertificadoLocalMsg(localStatusId, 'Gerando seu certificado...', 'loading');
   google.script.run
     .withSuccessHandler(function(res) {
-      if (btn) {
-        btn.disabled = false;
-      }
+      certificadoProcessandoKey = '';
+      setCertificadoProcessingState_(false);
 
       if (!res || res.ok !== true || !(res.pdfDownloadUrl || res.url)) {
         if (res && (res.code === 'CONCLUSAO_ADMINISTRATIVA_PENDENTE' || res.code === 'CERTIFICADO_EM_PROCESSAMENTO')) {
@@ -3009,9 +3043,8 @@ function solicitarCertificadoDesafio(payloadEncoded, localStatusId, buttonId, im
       atualizarAcoesImagemCertificado_(payload, imageActionsId, res);
     })
     .withFailureHandler(function() {
-      if (btn) {
-        btn.disabled = false;
-      }
+      certificadoProcessandoKey = '';
+      setCertificadoProcessingState_(false);
       setPainelMsg('Erro de conexão ao gerar certificado.', 'error');
       setCertificadoLocalMsg(localStatusId, 'Não foi possível gerar seu certificado agora. Tente novamente.', 'error');
     })
@@ -3021,6 +3054,29 @@ function solicitarCertificadoDesafio(payloadEncoded, localStatusId, buttonId, im
       id_desafio: payload.id_desafio || '',
       id_item_estoque: payload.id_item_estoque || ''
     });
+}
+
+function buildCertificadoProcessKey_(payload) {
+  var item = payload || {};
+  return [
+    String(item.id_inscricao || '').trim(),
+    String(item.id_desafio || '').trim(),
+    String(item.id_item_estoque || '').trim()
+  ].join('|');
+}
+
+function setCertificadoProcessingState_(processing, activeButtonId) {
+  var buttons = document.querySelectorAll('.certificado-download-btn');
+  buttons.forEach(function(button) {
+    button.disabled = !!processing;
+    if (processing && button.id === String(activeButtonId || '')) {
+      button.dataset.originalText = button.dataset.originalText || button.innerText;
+      button.innerText = 'Gerando...';
+    } else if (!processing && button.dataset.originalText) {
+      button.innerText = button.dataset.originalText;
+      delete button.dataset.originalText;
+    }
+  });
 }
 
 function atualizarAcoesImagemCertificado_(payload, imageActionsId, res) {
@@ -3062,6 +3118,7 @@ function baixarPdfCertificadoDesafio(payloadEncoded) {
 }
 
 function baixarImagemCertificadoDesafio(payloadEncoded) {
+  // PENDÊNCIA: Botão “Baixar imagem” do certificado não está funcionando e será tratado em missão separada.
   var payload = {};
   try {
     payload = JSON.parse(decodeURIComponent(String(payloadEncoded || '')));
