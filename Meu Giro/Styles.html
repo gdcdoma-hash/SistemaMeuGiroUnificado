@@ -430,34 +430,46 @@
     font-size: 18px;
   }
 
+  .conquista-detalhe-screen {
+    padding-bottom: 88px;
+  }
+
+  .conquista-detalhe-layout {
+    display: grid;
+    gap: 12px;
+    width: 100%;
+  }
+
   .conquista-detalhe-card {
     display: grid;
     gap: 12px;
-    max-height: calc(100vh - 28px);
-    overflow: auto;
   }
 
   .conquista-detalhe-card h2,
-  .conquista-detalhe-card p {
+  .conquista-detalhe-card p,
+  .conquista-detalhe-topo h2,
+  .conquista-detalhe-topo p {
     margin: 0;
   }
 
   .conquista-detalhe-topo {
     position: sticky;
-    top: -1px;
+    top: 10px;
     z-index: 3;
     display: grid;
-    gap: 10px;
-    padding: 12px;
-    margin: -4px -4px 2px;
+    gap: 12px;
+    margin-bottom: 0;
     border: 1px solid rgba(15, 23, 42, .08);
-    border-radius: 18px;
-    background: rgba(255, 255, 255, .94);
+    background: rgba(255, 255, 255, .96);
     box-shadow: 0 12px 30px rgba(15, 23, 42, .10);
     backdrop-filter: blur(10px);
   }
 
-  .conquista-detalhe-label,
+  .conquista-detalhe-heading {
+    display: grid;
+    gap: 4px;
+  }
+
   .conquista-detalhe-periodo {
     color: #64748b;
     font-size: 13px;
@@ -470,29 +482,37 @@
 
   .conquista-detalhe-voltar {
     justify-self: start;
+    width: auto;
+    min-height: 36px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 14px;
+    line-height: 1;
   }
 
   .conquista-detalhe-lista {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: 10px;
   }
 
   .conquista-atividade-item {
     display: grid;
-    gap: 4px;
-    padding: 12px;
+    gap: 3px;
+    min-height: 58px;
+    align-content: center;
+    padding: 10px 12px;
     border: 1px solid rgba(59, 130, 246, .16);
-    border-radius: 16px;
+    border-radius: 14px;
     background:
-      radial-gradient(circle at top right, rgba(59, 130, 246, .14), transparent 42%),
+      radial-gradient(circle at top right, rgba(59, 130, 246, .12), transparent 42%),
       linear-gradient(135deg, #ffffff, #f8fafc);
-    box-shadow: 0 8px 22px rgba(15, 23, 42, .07);
+    box-shadow: 0 6px 16px rgba(15, 23, 42, .06);
   }
 
   .conquista-atividade-item span {
     color: #64748b;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 800;
     letter-spacing: .02em;
     text-transform: uppercase;
@@ -500,8 +520,9 @@
 
   .conquista-atividade-item strong {
     color: #0f172a;
-    font-size: 18px;
+    font-size: 17px;
   }
+
 
   @media (min-width: 721px) {
     .nav-v2 {
