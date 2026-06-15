@@ -52,6 +52,7 @@ const NAVEGACAO_V2_DESTINOS = {
 };
 const TELAS_RELEVANTES_SESSAO = {
   home: true,
+  challenges: true,
   register: true,
   ranking: true,
   admin: true
@@ -149,6 +150,9 @@ function navigateV2(destino) {
     return;
   }
 
+  if (destinoNormalizado === 'challenges') {
+    renderDesafiosV2();
+  }
   showScreen(tela || NAVEGACAO_V2_DESTINOS.home);
 }
 
@@ -1789,6 +1793,160 @@ function renderPainel(p) {
   sincronizarPainelComDesafioEmFoco();
 }
 
+function renderDesafiosV2() {
+  var mensagem = document.getElementById('desafios-v2-msg');
+  var secoes = {
+    andamento: document.getElementById('desafios-v2-andamento'),
+    concluidos: document.getElementById('desafios-v2-concluidos'),
+    historico: document.getElementById('desafios-v2-historico')
+  };
+  if (!mensagem || !secoes.andamento || !secoes.concluidos || !secoes.historico) return;
+
+  var grupos = { andamento: [], concluidos: [], historico: [] };
+  var desafios = obterTodosDesafiosPainelV2_(currentPainel || {});
+
+  desafios.forEach(function(desafio) {
+    var classificacao = classificarDesafioV2_(desafio);
+    if (classificacao.grupo) {
+      grupos[classificacao.grupo].push({
+        desafio: desafio,
+        statusHumano: classificacao.statusHumano
+      });
+    }
+  });
+
+  var totalClassificado = grupos.andamento.length + grupos.concluidos.length + grupos.historico.length;
+  mensagem.innerText = totalClassificado ? '' : 'Você ainda não possui desafios disponíveis.';
+  mensagem.className = 'msg status-msg desafios-v2-msg' + (totalClassificado ? '' : ' is-visible msg-inline');
+
+  renderGrupoDesafiosV2_(secoes.andamento, grupos.andamento, 'andamento');
+  renderGrupoDesafiosV2_(secoes.concluidos, grupos.concluidos, 'concluidos');
+  renderGrupoDesafiosV2_(secoes.historico, grupos.historico, 'historico');
+}
+
+function obterTodosDesafiosPainelV2_(painel) {
+  var listas = [painel.desafios_ativos, painel.desafios_historico, painel.desafios];
+  var resultado = [];
+  var vistos = {};
+
+  listas.forEach(function(lista) {
+    (Array.isArray(lista) ? lista : []).forEach(function(item) {
+      var chave = getDesafioBaseKey_(item);
+      if (!chave || vistos[chave]) return;
+      vistos[chave] = true;
+      resultado.push(item);
+    });
+  });
+  return resultado;
+}
+
+function classificarDesafioV2_(desafio) {
+  var statusUsuario = String((desafio && desafio.status_usuario_desafio) || '').trim().toUpperCase();
+  var statusApuracao = String((desafio && desafio.status_apuracao) || '').trim().toUpperCase();
+  var porStatusUsuario = {
+    EM_ANDAMENTO: { grupo: 'andamento', statusHumano: 'Em andamento' },
+    CONCLUIDO: { grupo: 'concluidos', statusHumano: 'Concluído' },
+    CANCELADO: { grupo: 'historico', statusHumano: 'Cancelado' },
+    NAO_CONCLUIDO: { grupo: 'historico', statusHumano: 'Não concluído' }
+  };
+
+  if (porStatusUsuario[statusUsuario]) return porStatusUsuario[statusUsuario];
+  if (statusApuracao === 'ATIVO') return { grupo: 'andamento', statusHumano: 'Em andamento' };
+  if (statusApuracao === 'CONCLUIDO') return { grupo: 'concluidos', statusHumano: 'Concluído' };
+  if (statusApuracao === 'CANCELADO') return { grupo: 'historico', statusHumano: 'Cancelado' };
+  if (statusApuracao === 'EXPIRADO' || statusApuracao === 'INAPTO' || statusApuracao === 'DESISTENTE' || statusApuracao === 'ENCERRADO') {
+    return { grupo: 'historico', statusHumano: 'Não concluído' };
+  }
+  return { grupo: '', statusHumano: '' };
+}
+
+function renderGrupoDesafiosV2_(secao, itens, grupo) {
+  var lista = secao.querySelector('.desafios-v2-lista');
+  lista.innerHTML = '';
+  secao.hidden = !itens.length;
+  itens.forEach(function(item) {
+    lista.appendChild(buildDesafioCardV2_(item.desafio, item.statusHumano, grupo));
+  });
+}
+
+function buildDesafioCardV2_(desafio, statusHumano, grupo) {
+  var card = document.createElement('article');
+  var percentualNumero = toFiniteNumber(desafio.percentual_concluido, 0);
+  var percentualNormalizado = Math.max(0, Math.min(100, percentualNumero));
+  var meta = toFiniteNumber(desafio.meta_km, 0);
+  var realizado = toFiniteNumber(desafio.distancia_realizada, 0);
+  var chave = getDesafioKey(desafio);
+
+  card.className = 'desafio-v2-card desafio-v2-card-' + grupo;
+  card.innerHTML =
+    '<div class="desafio-resumo-head">' +
+      '<strong class="desafio-resumo-titulo">' + escapeHtml(getDesafioTitulo(desafio)) + '</strong>' +
+      '<span class="desafio-status-badge">' + escapeHtml(statusHumano) + '</span>' +
+    '</div>' +
+    '<div class="desafio-metricas-grid">' +
+      '<p><span>Meta</span><strong>' + formatNumber(meta) + ' km</strong></p>' +
+      '<p><span>Realizado</span><strong>' + formatNumber(realizado) + ' km</strong></p>' +
+      '<p><span>Falta</span><strong>' + formatNumber(Math.max(0, meta - realizado)) + ' km</strong></p>' +
+      '<p><span>Conclusão</span><strong>' + formatNumber(percentualNormalizado) + '%</strong></p>' +
+    '</div>' +
+    (desafio.periodo_inicio || desafio.periodo_fim
+      ? '<p class="desafio-periodo"><span>Período</span> <strong>' + escapeHtml(getDesafioPeriodoLabelV2_(desafio)) + '</strong></p>'
+      : '') +
+    '<div class="desafio-progress-track" aria-hidden="true"><span class="desafio-progress-fill" style="width:' + percentualNormalizado + '%"></span></div>';
+
+  var acoes = document.createElement('div');
+  acoes.className = 'desafios-v2-acoes';
+  if (grupo === 'andamento') {
+    acoes.appendChild(criarAcaoDesafioV2_('Ver no início', function() {
+      focarDesafioENavegarV2_(chave, 'home');
+    }, false));
+    acoes.appendChild(criarAcaoDesafioV2_('Registrar atividade', function() {
+      focarDesafioENavegarV2_(chave, 'register');
+    }, true));
+  } else if (grupo === 'concluidos') {
+    if (isDesafioElegivelCertificado_(desafio)) {
+      acoes.appendChild(criarAcaoDesafioV2_('Ver certificado', function() {
+        focarDesafioENavegarV2_(chave, 'home');
+      }, true));
+    }
+    acoes.appendChild(criarAcaoDesafioV2_('Ver detalhes', function() {
+      focarDesafioENavegarV2_(chave, 'home');
+    }, false));
+  } else {
+    acoes.appendChild(criarAcaoDesafioV2_('Ver resumo', function() {
+      focarDesafioENavegarV2_(chave, 'home');
+    }, false));
+  }
+  if (acoes.children.length === 1) {
+    acoes.classList.add('desafios-v2-acoes-unica');
+  }
+  card.appendChild(acoes);
+  return card;
+}
+
+function criarAcaoDesafioV2_(texto, aoClicar, principal) {
+  var botao = document.createElement('button');
+  botao.type = 'button';
+  botao.className = principal ? 'btn-main' : 'btn-secondary';
+  botao.innerText = texto;
+  botao.addEventListener('click', aoClicar);
+  return botao;
+}
+
+function getDesafioPeriodoLabelV2_(desafio) {
+  var inicio = String((desafio && desafio.periodo_inicio) || '').trim();
+  var fim = String((desafio && desafio.periodo_fim) || '').trim();
+  if (inicio && fim) return formatDateBR(inicio) + ' a ' + formatDateBR(fim);
+  if (inicio) return 'A partir de ' + formatDateBR(inicio);
+  if (fim) return 'Até ' + formatDateBR(fim);
+  return '';
+}
+
+function focarDesafioENavegarV2_(chave, destino) {
+  aplicarDesafioEmFoco(chave, { silent: true });
+  navigateV2(destino);
+}
+
 function getDesafioKey(desafio) {
   if (!desafio) return '';
   var idInscricao = String(desafio.id_inscricao || '').trim();
@@ -2168,6 +2326,13 @@ function renderDesafiosPainel(painel) {
 
   desafiosHistorico.sort(compareDesafioHistorico_);
   desafiosFocoItems = desafiosAtivos.concat(desafiosHistorico);
+  var chavesFoco = mapearChavesDesafiosBase_(desafiosFocoItems);
+  obterTodosDesafiosPainelV2_(painel).forEach(function(item) {
+    var chave = getDesafioBaseKey_(item);
+    if (!chave || chavesFoco[chave] || !classificarDesafioV2_(item).grupo) return;
+    desafiosFocoItems.push(item);
+    chavesFoco[chave] = true;
+  });
 
   var focoMemorizado = String(desafioEmFocoKey || carregarDesafioEmFocoDaSessao() || '').trim();
   var focoExiste = focoMemorizado && desafiosFocoItems.some(function(item) { return getDesafioKey(item) === focoMemorizado; });
