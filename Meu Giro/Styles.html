@@ -257,29 +257,149 @@
 
   .conquistas-lista {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+    gap: 14px;
+  }
+
+  .conquistas-lista-unica .conquista-card,
+  .conquistas-lista .conquista-card:only-child {
+    grid-column: 1 / -1;
   }
 
   .conquista-card {
-    padding: 14px;
-    border: 1px solid #e5e7eb;
-    border-radius: 14px;
-    background: #fcfcfd;
+    position: relative;
+    overflow: hidden;
+    min-height: 100%;
+    padding: 18px;
+    border: 1px solid rgba(249, 115, 22, 0.18);
+    border-radius: 22px;
+    background:
+      radial-gradient(circle at top right, rgba(249, 115, 22, 0.12), transparent 34%),
+      linear-gradient(180deg, #ffffff 0%, #fffaf5 100%);
+    box-shadow: 0 10px 24px rgba(17, 24, 39, 0.08);
     cursor: pointer;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, background 0.2s ease;
+  }
+
+  .conquista-card::before {
+    content: '';
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    background: rgba(249, 115, 22, 0.12);
+    box-shadow: inset 0 0 0 1px rgba(249, 115, 22, 0.18);
+    pointer-events: none;
+  }
+
+  .conquista-card::after {
+    content: '✓';
+    position: absolute;
+    top: 20px;
+    right: 28px;
+    color: #f97316;
+    font-size: 20px;
+    font-weight: 900;
+    pointer-events: none;
   }
 
   .conquista-card:hover,
   .conquista-card:focus {
-    border-color: #2563eb;
-    box-shadow: 0 12px 28px rgba(37, 99, 235, 0.14);
+    border-color: rgba(249, 115, 22, 0.55);
+    box-shadow: 0 16px 34px rgba(249, 115, 22, 0.16);
     outline: none;
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+  }
+
+  .conquista-card-conteudo {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    gap: 16px;
+    padding-right: 50px;
+  }
+
+  .conquista-card-titulo {
+    color: #111827;
+    font-size: 21px;
+    line-height: 1.22;
+  }
+
+  .conquista-card-metricas {
+    display: grid;
+    gap: 12px;
+  }
+
+  .conquista-card-metrica,
+  .conquista-card-mes {
+    margin: 0;
+  }
+
+  .conquista-card-metrica {
+    display: grid;
+    gap: 2px;
+  }
+
+  .conquista-card-metrica span {
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .conquista-card-metrica strong {
+    color: #111827;
+    font-size: 24px;
+    line-height: 1.15;
+  }
+
+  .conquista-card-realizado strong {
+    color: #f97316;
+  }
+
+  .conquista-card-mes {
+    color: #374151;
+    font-size: 15px;
+    font-weight: 800;
   }
 
   .conquista-card .atividade-acoes {
-    margin-top: 12px;
+    position: relative;
+    z-index: 1;
+    margin-top: 18px;
+  }
+
+  .conquista-card .atividade-acao-btn {
+    background: #111827;
+    color: #ffffff;
+  }
+
+  @media (max-width: 420px) {
+    .conquistas-lista {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .conquista-card {
+      padding: 16px;
+      border-radius: 20px;
+    }
+
+    .conquista-card-conteudo {
+      gap: 14px;
+      padding-right: 44px;
+    }
+
+    .conquista-card-titulo {
+      font-size: 19px;
+    }
+
+    .conquista-card-metrica strong {
+      font-size: 22px;
+    }
   }
 
   .conquista-certificado-pendente {

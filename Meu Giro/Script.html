@@ -1858,6 +1858,7 @@ function renderConquistasV2() {
   mensagem.className = 'msg status-msg conquistas-msg' + (concluidos.length ? '' : ' is-visible msg-inline');
   lista.innerHTML = '';
   secaoConcluidas.hidden = !concluidos.length;
+  lista.classList.toggle('conquistas-lista-unica', concluidos.length === 1);
   concluidos.forEach(function(desafio) {
     lista.appendChild(buildConquistaCard_(desafio));
   });
@@ -1873,16 +1874,16 @@ function buildConquistaCard_(desafio) {
   card.setAttribute('role', 'button');
   card.setAttribute('aria-label', 'Ver atividades de ' + getDesafioTitulo(desafio));
   card.innerHTML =
-    '<div class="desafio-resumo-head">' +
-      '<strong class="desafio-resumo-titulo">' + escapeHtml(getDesafioTitulo(desafio)) + '</strong>' +
-    '</div>' +
-    '<div class="desafio-metricas-grid">' +
-      '<p><span>Meta</span><strong>' + formatNumber(desafio.meta_km) + ' km</strong></p>' +
-      '<p><span>Realizado</span><strong>' + formatNumber(desafio.distancia_realizada) + ' km</strong></p>' +
-      '<p><span>Período</span><strong>' + escapeHtml(getDesafioPeriodoLabelV2_(desafio)) + '</strong></p>' +
+    '<div class="conquista-card-conteudo">' +
+      '<strong class="conquista-card-titulo">' + escapeHtml(getDesafioTitulo(desafio)) + '</strong>' +
+      '<div class="conquista-card-metricas">' +
+        '<p class="conquista-card-metrica"><span>Meta</span><strong>' + formatNumber(desafio.meta_km) + ' km</strong></p>' +
+        '<p class="conquista-card-metrica conquista-card-realizado"><span>Realizado</span><strong>' + formatNumber(desafio.distancia_realizada) + ' km</strong></p>' +
+        '<p class="conquista-card-mes">' + escapeHtml(getDesafioMesAnoPortugues_(desafio)) + '</p>' +
+      '</div>' +
     '</div>' +
     (certificadoDisponivel
-      ? buildCertificadoDesafioHtml_(desafio, 'conquistas-concluidas')
+      ? buildCertificadoDesafioHtml_(desafio, 'conquistas-concluidas', { ocultarMensagemInicial: true })
       : '');
   card.addEventListener('click', function(event) {
     if (event.target && event.target.closest && event.target.closest('button, a')) return;
@@ -1895,6 +1896,30 @@ function buildConquistaCard_(desafio) {
     }
   });
   return card;
+}
+
+
+function getDesafioMesAnoPortugues_(desafio) {
+  var meses = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+  var inicio = String((desafio && desafio.periodo_inicio) || '').trim();
+  var fim = String((desafio && desafio.periodo_fim) || '').trim();
+  var data = parseDesafioPeriodoDate_(inicio) || parseDesafioPeriodoDate_(fim);
+  if (!data) return getDesafioPeriodoLabelV2_(desafio) || '-';
+  return meses[data.getUTCMonth()] + '/' + data.getUTCFullYear();
+}
+
+function parseDesafioPeriodoDate_(valor) {
+  var texto = String(valor || '').trim();
+  var partes;
+  if (!texto) return null;
+  partes = texto.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (partes) return new Date(Date.UTC(Number(partes[1]), Number(partes[2]) - 1, Number(partes[3])));
+  partes = texto.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (partes) return new Date(Date.UTC(Number(partes[3]), Number(partes[2]) - 1, Number(partes[1])));
+  return null;
 }
 
 function obterTodosDesafiosPainelV2_(painel) {
@@ -2829,7 +2854,8 @@ function buildDesafioCard(item, options) {
   return card;
 }
 
-function buildCertificadoDesafioHtml_(desafio, contexto) {
+function buildCertificadoDesafioHtml_(desafio, contexto, options) {
+  options = options || {};
   var payloadCertificado = encodeURIComponent(JSON.stringify({
     id_inscricao: desafio.id_inscricao || '',
     id_desafio: desafio.id_desafio || '',
@@ -2846,7 +2872,7 @@ function buildCertificadoDesafioHtml_(desafio, contexto) {
       '<button type="button" class="btn-secondary atividade-acao-btn" onclick="baixarPdfCertificadoDesafio(\'' + payloadCertificado + '\')">Baixar PDF</button>' +
       '<button type="button" class="btn-secondary atividade-acao-btn" onclick="baixarImagemCertificadoDesafio(\'' + payloadCertificado + '\')">Baixar imagem</button>' +
     '</div>' +
-    '<div id="' + certificadoStatusId + '" class="msg status-msg certificado-status-local is-visible msg-inline msg-' + escapeHtml(mensagemCertificado.variante || 'success') + '">' + escapeHtml(mensagemCertificado.texto) + '</div>';
+    (options.ocultarMensagemInicial ? '<div id="' + certificadoStatusId + '" class="msg status-msg certificado-status-local"></div>' : '<div id="' + certificadoStatusId + '" class="msg status-msg certificado-status-local is-visible msg-inline msg-' + escapeHtml(mensagemCertificado.variante || 'success') + '">' + escapeHtml(mensagemCertificado.texto) + '</div>');
 }
 
 function getDesafioStatusClass(status) {
