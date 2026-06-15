@@ -433,6 +433,8 @@
   .conquista-detalhe-card {
     display: grid;
     gap: 12px;
+    max-height: calc(100vh - 28px);
+    overflow: auto;
   }
 
   .conquista-detalhe-card h2,
@@ -440,8 +442,65 @@
     margin: 0;
   }
 
+  .conquista-detalhe-topo {
+    position: sticky;
+    top: -1px;
+    z-index: 3;
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+    margin: -4px -4px 2px;
+    border: 1px solid rgba(15, 23, 42, .08);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, .94);
+    box-shadow: 0 12px 30px rgba(15, 23, 42, .10);
+    backdrop-filter: blur(10px);
+  }
+
+  .conquista-detalhe-label,
+  .conquista-detalhe-periodo {
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .conquista-detalhe-periodo strong {
+    color: #0f172a;
+  }
+
+  .conquista-detalhe-voltar {
+    justify-self: start;
+  }
+
+  .conquista-detalhe-lista {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+    gap: 10px;
+  }
+
   .conquista-atividade-item {
-    align-items: center;
+    display: grid;
+    gap: 4px;
+    padding: 12px;
+    border: 1px solid rgba(59, 130, 246, .16);
+    border-radius: 16px;
+    background:
+      radial-gradient(circle at top right, rgba(59, 130, 246, .14), transparent 42%),
+      linear-gradient(135deg, #ffffff, #f8fafc);
+    box-shadow: 0 8px 22px rgba(15, 23, 42, .07);
+  }
+
+  .conquista-atividade-item span {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+  }
+
+  .conquista-atividade-item strong {
+    color: #0f172a;
+    font-size: 18px;
   }
 
   @media (min-width: 721px) {

@@ -289,10 +289,16 @@
 
     <section id="screen-conquista-detalhe" class="screen">
       <div class="card conquista-detalhe-card">
-        <h2 id="conquista-detalhe-titulo">Conquista</h2>
-        <p>Atividades registradas neste desafio.</p>
+        <div class="conquista-detalhe-topo">
+          <button class="btn-secondary conquista-detalhe-voltar" type="button" onclick="voltarConquistasV2()">Voltar</button>
+          <div>
+            <span class="conquista-detalhe-label">Nome do desafio</span>
+            <h2 id="conquista-detalhe-titulo">Conquista</h2>
+            <p class="conquista-detalhe-periodo">Período: <strong id="conquista-detalhe-periodo">-</strong></p>
+          </div>
+        </div>
+        <p>Atividades consideradas neste desafio.</p>
         <div id="conquista-detalhe-lista" class="lista conquista-detalhe-lista"></div>
-        <button class="btn-secondary" type="button" onclick="voltarConquistasV2()">Voltar</button>
       </div>
     </section>
 
