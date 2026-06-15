@@ -221,8 +221,24 @@
     </section>
 
     <section id="screen-desafios" class="screen">
-      <div class="card">
-        <h2>Desafios — em preparação</h2>
+      <div class="card desafios-v2-page">
+        <div class="desafios-v2-heading">
+          <h2>Meus desafios</h2>
+          <p>Acompanhe seu progresso e escolha onde continuar.</p>
+        </div>
+        <div id="desafios-v2-msg" class="msg status-msg desafios-v2-msg" aria-live="polite"></div>
+        <section id="desafios-v2-andamento" class="desafios-v2-group" aria-labelledby="desafios-v2-andamento-title">
+          <h3 id="desafios-v2-andamento-title">Em andamento</h3>
+          <div class="desafios-v2-lista"></div>
+        </section>
+        <section id="desafios-v2-concluidos" class="desafios-v2-group" aria-labelledby="desafios-v2-concluidos-title">
+          <h3 id="desafios-v2-concluidos-title">Concluídos</h3>
+          <div class="desafios-v2-lista"></div>
+        </section>
+        <section id="desafios-v2-historico" class="desafios-v2-group" aria-labelledby="desafios-v2-historico-title">
+          <h3 id="desafios-v2-historico-title">Histórico</h3>
+          <div class="desafios-v2-lista"></div>
+        </section>
       </div>
     </section>
 
@@ -301,6 +317,7 @@
 
   <nav id="nav-v2" class="nav-v2" aria-label="Navegação do atleta" hidden>
     <button class="nav-v2-item" type="button" data-v2-destination="home" onclick="navigateV2('home')">Início</button>
+    <button class="nav-v2-item" type="button" data-v2-destination="challenges" onclick="navigateV2('challenges')">Desafios</button>
     <button class="nav-v2-item" type="button" data-v2-destination="register" onclick="navigateV2('register')">Registrar</button>
   </nav>
 

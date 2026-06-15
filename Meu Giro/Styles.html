@@ -208,7 +208,7 @@
     left: 0;
     z-index: 110;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 4px;
     padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
     background: #ffffff;
@@ -1709,6 +1709,87 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+  }
+
+  .desafios-v2-page,
+  .desafios-v2-group,
+  .desafios-v2-lista {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .desafios-v2-page {
+    gap: 20px;
+  }
+
+  .desafios-v2-heading h2,
+  .desafios-v2-heading p,
+  .desafios-v2-group h3 {
+    margin: 0;
+  }
+
+  .desafios-v2-heading p {
+    margin-top: 4px;
+    color: #4b5563;
+    line-height: 1.45;
+  }
+
+  .desafios-v2-msg {
+    margin: 0;
+  }
+
+  .desafios-v2-group {
+    gap: 10px;
+  }
+
+  .desafios-v2-group h3 {
+    color: #1f2937;
+    font-size: 18px;
+  }
+
+  .desafios-v2-lista {
+    gap: 12px;
+  }
+
+  .desafio-v2-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid #e5e7eb;
+    border-left: 4px solid #9ca3af;
+    border-radius: 12px;
+    background: #ffffff;
+  }
+
+  .desafio-v2-card-andamento {
+    border-left-color: #2563eb;
+  }
+
+  .desafio-v2-card-concluidos {
+    border-left-color: #16a34a;
+  }
+
+  .desafios-v2-acoes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .desafios-v2-acoes-unica {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .desafios-v2-acoes button {
+    min-height: 44px;
+    margin: 0;
+    padding: 10px 12px;
+  }
+
+  @media (max-width: 420px) {
+    .desafios-v2-acoes {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 
   .desafios-section-historico {
