@@ -65,6 +65,10 @@
     margin-bottom: 10px;
   }
 
+  body.topbar-authenticated .brand-row {
+    margin-bottom: 0;
+  }
+
   .btn-logout-top {
     border: 1px solid #d1d5db;
     border-radius: 10px;
@@ -82,6 +86,11 @@
     transform: translateY(1px);
   }
 
+  .btn-logout-top[hidden],
+  .menu[hidden] {
+    display: none;
+  }
+
   .brand {
     font-size: 20px;
     font-weight: 700;
@@ -92,9 +101,15 @@
 
   .menu {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
     align-items: stretch;
+  }
+
+  .menu-authenticated {
+    grid-template-columns: minmax(0, 120px);
+    justify-content: end;
+    margin-top: 10px;
   }
 
   .menu-btn {

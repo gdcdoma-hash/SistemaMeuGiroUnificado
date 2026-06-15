@@ -118,9 +118,10 @@ function getDestinoV2PorTela(tela) {
 
 function syncNavegacaoV2(tela) {
   var nav = document.getElementById('nav-v2');
+  var autenticado = !!(currentUser && currentUser.id_dgmb);
+  syncTopNavigation(autenticado);
   if (!nav) return;
 
-  var autenticado = !!(currentUser && currentUser.id_dgmb);
   var nomeTela = String(tela || '').trim();
   var telasSemNavegacaoV2 = {
     inicio: true,
@@ -139,6 +140,21 @@ function syncNavegacaoV2(tela) {
     item.classList.toggle('active', isActive);
     item.setAttribute('aria-current', isActive ? 'page' : 'false');
   });
+}
+
+function syncTopNavigation(autenticado) {
+  var isAuthenticated = autenticado === undefined
+    ? !!(currentUser && currentUser.id_dgmb)
+    : !!autenticado;
+  var menuPublico = document.getElementById('menu-publico-top');
+  var menuAutenticado = document.getElementById('menu-autenticado-top');
+  var btnLogout = document.getElementById('btn-logout-top');
+  var isAdmin = isAuthenticated && isAdminValidacaoUser();
+
+  if (menuPublico) menuPublico.hidden = isAuthenticated;
+  if (menuAutenticado) menuAutenticado.hidden = !isAdmin;
+  if (btnLogout) btnLogout.hidden = !isAuthenticated;
+  document.body.classList.toggle('topbar-authenticated', isAuthenticated);
 }
 
 function navigateV2(destino) {
