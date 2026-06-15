@@ -281,8 +281,15 @@
 
     <section id="screen-conquistas" class="screen">
       <div class="card">
-        <h2>Conquistas — em preparação</h2>
+        <h2>Minhas conquistas</h2>
+        <p>Veja os desafios que você já concluiu.</p>
+        <div id="conquistas-msg" class="msg status-msg" aria-live="polite"></div>
       </div>
+      <section id="conquistas-concluidas" class="conquistas-secao" hidden>
+        <div class="card">
+          <div class="conquistas-lista"></div>
+        </div>
+      </section>
     </section>
 
     <section id="screen-admin-cert" class="screen">
@@ -319,6 +326,7 @@
     <button class="nav-v2-item" type="button" data-v2-destination="home" onclick="navigateV2('home')">Início</button>
     <button class="nav-v2-item" type="button" data-v2-destination="challenges" onclick="navigateV2('challenges')">Desafios</button>
     <button class="nav-v2-item" type="button" data-v2-destination="register" onclick="navigateV2('register')">Registrar</button>
+    <button class="nav-v2-item" type="button" data-v2-destination="achievements" onclick="navigateV2('achievements')">Conquistas</button>
   </nav>
 
   <?!= include('Script'); ?>
