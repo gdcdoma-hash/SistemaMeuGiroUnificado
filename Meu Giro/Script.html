@@ -54,6 +54,7 @@ const TELAS_RELEVANTES_SESSAO = {
   home: true,
   challenges: true,
   register: true,
+  achievements: true,
   ranking: true,
   admin: true
 };
@@ -152,6 +153,8 @@ function navigateV2(destino) {
 
   if (destinoNormalizado === 'challenges') {
     renderDesafiosV2();
+  } else if (destinoNormalizado === 'achievements') {
+    renderConquistasV2();
   }
   showScreen(tela || NAVEGACAO_V2_DESTINOS.home);
 }
@@ -1824,6 +1827,49 @@ function renderDesafiosV2() {
   renderGrupoDesafiosV2_(secoes.historico, grupos.historico, 'historico');
 }
 
+function renderConquistasV2() {
+  var mensagem = document.getElementById('conquistas-msg');
+  var secaoConcluidas = document.getElementById('conquistas-concluidas');
+  if (!mensagem || !secaoConcluidas) return;
+
+  var concluidos = obterTodosDesafiosPainelV2_(currentPainel || {}).filter(function(desafio) {
+    return classificarDesafioV2_(desafio).grupo === 'concluidos';
+  });
+  var lista = secaoConcluidas.querySelector('.conquistas-lista');
+
+  mensagem.innerText = concluidos.length ? '' : 'Você ainda não possui conquistas concluídas.';
+  mensagem.className = 'msg status-msg conquistas-msg' + (concluidos.length ? '' : ' is-visible msg-inline');
+  lista.innerHTML = '';
+  secaoConcluidas.hidden = !concluidos.length;
+  concluidos.forEach(function(desafio) {
+    lista.appendChild(buildConquistaCard_(desafio));
+  });
+}
+
+function buildConquistaCard_(desafio) {
+  var card = document.createElement('article');
+  var percentual = Math.max(0, Math.min(100, toFiniteNumber(desafio.percentual_concluido, 0)));
+  var certificadoDisponivel = isDesafioElegivelCertificado_(desafio);
+
+  card.className = 'conquista-card conquista-concluida-card';
+  card.innerHTML =
+    '<div class="desafio-resumo-head">' +
+      '<strong class="desafio-resumo-titulo">' + escapeHtml(getDesafioTitulo(desafio)) + '</strong>' +
+      '<span class="desafio-status-badge">Concluído</span>' +
+    '</div>' +
+    '<div class="desafio-metricas-grid">' +
+      '<p><span>Meta</span><strong>' + formatNumber(desafio.meta_km) + ' km</strong></p>' +
+      '<p><span>Realizado</span><strong>' + formatNumber(desafio.distancia_realizada) + ' km</strong></p>' +
+      '<p><span>Conclusão</span><strong>' + formatNumber(percentual) + '%</strong></p>' +
+      '<p><span>Período</span><strong>' + escapeHtml(getDesafioPeriodoLabelV2_(desafio)) + '</strong></p>' +
+    '</div>' +
+    '<div class="desafio-progress-track" aria-hidden="true"><span class="desafio-progress-fill" style="width:' + percentual + '%"></span></div>' +
+    (certificadoDisponivel
+      ? buildCertificadoDesafioHtml_(desafio, 'conquistas-concluidas')
+      : '<p class="conquista-certificado-pendente">Certificado em preparação.</p>');
+  return card;
+}
+
 function obterTodosDesafiosPainelV2_(painel) {
   var listas = [painel.desafios_ativos, painel.desafios_historico, painel.desafios];
   var resultado = [];
@@ -2699,14 +2745,6 @@ function buildDesafioCard(item, options) {
   var restante = formatNumber(Math.max(0, toFiniteNumber(desafio.meta_km, 0) - toFiniteNumber(desafio.distancia_realizada, 0)));
   var periodoLabel = getDesafioPeriodoLabel(desafio);
   var podeBaixarCertificado = isDesafioElegivelCertificado_(desafio);
-  var payloadCertificado = encodeURIComponent(JSON.stringify({
-    id_inscricao: desafio.id_inscricao || '',
-    id_desafio: desafio.id_desafio || '',
-    id_item_estoque: desafio.id_item_estoque || ''
-  }));
-  var certificadoStatusId = buildDesafioCertificadoDomId('certificado-status', desafio);
-  var certificadoBtnId = buildDesafioCertificadoDomId('certificado-btn', desafio);
-  var certificadoImagemAcoesId = buildDesafioCertificadoDomId('certificado-imagem-acoes', desafio);
   var mensagemCertificado = getMensagemCertificado_(desafio);
   var mensagemLocalCertificado = mensagemCertificado.texto;
   var varianteLocalCertificado = mensagemCertificado.variante;
@@ -2732,15 +2770,31 @@ function buildDesafioCard(item, options) {
       ? '<div class="atividade-acoes"><button type="button" class="btn-secondary atividade-acao-btn" onclick="selecionarDesafioEmFoco(\'' + escapeHtml(getDesafioKey(desafio)) + '\')"' + (selecionado ? ' disabled aria-current="true"' : '') + '>' + (selecionado ? 'Em foco' : 'Selecionar') + '</button></div>'
       : '') +
     (podeBaixarCertificado
-      ? '<div class="atividade-acoes"><button type="button" id="' + certificadoBtnId + '" class="btn-secondary atividade-acao-btn" onclick="solicitarCertificadoDesafio(\'' + payloadCertificado + '\', \'' + certificadoStatusId + '\', \'' + certificadoBtnId + '\', \'' + certificadoImagemAcoesId + '\')">Gerar certificado</button></div>' +
-        '<div id="' + certificadoImagemAcoesId + '" class="atividade-acoes" style="display:none;">' +
-          '<button type="button" class="btn-secondary atividade-acao-btn" onclick="baixarPdfCertificadoDesafio(\'' + payloadCertificado + '\')">Baixar PDF</button>' +
-          '<button type="button" class="btn-secondary atividade-acao-btn" onclick="baixarImagemCertificadoDesafio(\'' + payloadCertificado + '\')">Baixar imagem</button>' +
-        '</div>'
+      ? buildCertificadoDesafioHtml_(desafio, options.isPrincipal ? 'painel-principal' : 'painel-lista')
       : '') +
-    '<div id="' + certificadoStatusId + '" class="msg status-msg certificado-status-local' + (mensagemLocalCertificado ? ' is-visible msg-inline' : '') + (varianteLocalCertificado ? (' msg-' + varianteLocalCertificado) : '') + '">' + escapeHtml(mensagemLocalCertificado) + '</div>';
+    (podeBaixarCertificado ? '' : '<div class="msg status-msg certificado-status-local' + (mensagemLocalCertificado ? ' is-visible msg-inline' : '') + (varianteLocalCertificado ? (' msg-' + varianteLocalCertificado) : '') + '">' + escapeHtml(mensagemLocalCertificado) + '</div>');
 
   return card;
+}
+
+function buildCertificadoDesafioHtml_(desafio, contexto) {
+  var payloadCertificado = encodeURIComponent(JSON.stringify({
+    id_inscricao: desafio.id_inscricao || '',
+    id_desafio: desafio.id_desafio || '',
+    id_item_estoque: desafio.id_item_estoque || ''
+  }));
+  var prefixo = String(contexto || 'certificado');
+  var certificadoStatusId = buildDesafioCertificadoDomId(prefixo + '-status', desafio);
+  var certificadoBtnId = buildDesafioCertificadoDomId(prefixo + '-btn', desafio);
+  var certificadoImagemAcoesId = buildDesafioCertificadoDomId(prefixo + '-imagem-acoes', desafio);
+  var mensagemCertificado = getMensagemCertificado_(desafio);
+
+  return '<div class="atividade-acoes"><button type="button" id="' + certificadoBtnId + '" class="btn-secondary atividade-acao-btn" onclick="solicitarCertificadoDesafio(\'' + payloadCertificado + '\', \'' + certificadoStatusId + '\', \'' + certificadoBtnId + '\', \'' + certificadoImagemAcoesId + '\')">Baixar certificado</button></div>' +
+    '<div id="' + certificadoImagemAcoesId + '" class="atividade-acoes" style="display:none;">' +
+      '<button type="button" class="btn-secondary atividade-acao-btn" onclick="baixarPdfCertificadoDesafio(\'' + payloadCertificado + '\')">Baixar PDF</button>' +
+      '<button type="button" class="btn-secondary atividade-acao-btn" onclick="baixarImagemCertificadoDesafio(\'' + payloadCertificado + '\')">Baixar imagem</button>' +
+    '</div>' +
+    '<div id="' + certificadoStatusId + '" class="msg status-msg certificado-status-local is-visible msg-inline msg-' + escapeHtml(mensagemCertificado.variante || 'success') + '">' + escapeHtml(mensagemCertificado.texto) + '</div>';
 }
 
 function getDesafioStatusClass(status) {
