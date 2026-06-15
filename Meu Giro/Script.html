@@ -44,12 +44,19 @@ let desafioEmFocoKey = '';
 const DESAFIO_CARROSSEL_SESSION_KEY = 'meuGiro.desafioEmFocoKey';
 const LOGIN_SESSION_STORAGE_KEY = 'meuGiro.loginSession';
 const PAINEL_STATE_STORAGE_KEY = 'meuGiro.painelState';
-const TELAS_RELEVANTES_SESSAO = {
-  painel: true,
-  ranking: true,
-  admin_cert: true
+const NAVEGACAO_V2_DESTINOS = {
+  home: 'painel',
+  challenges: 'desafios',
+  register: 'registrar',
+  achievements: 'conquistas'
 };
-let telaPrivadaRestaurada = 'painel';
+const TELAS_RELEVANTES_SESSAO = {
+  home: true,
+  register: true,
+  ranking: true,
+  admin: true
+};
+let telaPrivadaRestaurada = 'home';
 const statusMessageTimers = {};
 const certificadoImagemLinks_ = {};
 
@@ -76,10 +83,73 @@ function showScreen(name) {
   if (target) {
     target.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    syncNavegacaoV2(name);
     persistirEstadoPainel({
       tela: String(name || '').trim()
     });
   }
+}
+
+function normalizarDestinoV2Persistido(destino) {
+  var valor = String(destino || '').trim();
+  var compatibilidade = {
+    painel: 'home',
+    admin_cert: 'admin'
+  };
+
+  valor = compatibilidade[valor] || valor;
+  return TELAS_RELEVANTES_SESSAO[valor] ? valor : 'home';
+}
+
+function getDestinoV2PorTela(tela) {
+  var nomeTela = String(tela || '').trim();
+  var destinos = Object.keys(NAVEGACAO_V2_DESTINOS);
+
+  for (var i = 0; i < destinos.length; i++) {
+    if (NAVEGACAO_V2_DESTINOS[destinos[i]] === nomeTela) {
+      return destinos[i];
+    }
+  }
+
+  return nomeTela === 'ranking' ? 'home' : '';
+}
+
+function syncNavegacaoV2(tela) {
+  var nav = document.getElementById('nav-v2');
+  if (!nav) return;
+
+  var autenticado = !!(currentUser && currentUser.id_dgmb);
+  var nomeTela = String(tela || '').trim();
+  var telasSemNavegacaoV2 = {
+    inicio: true,
+    login: true,
+    instrucoes: true,
+    'admin-cert': true
+  };
+  var deveExibir = autenticado && !telasSemNavegacaoV2[nomeTela];
+  var destinoAtivo = deveExibir ? getDestinoV2PorTela(nomeTela) : '';
+
+  nav.hidden = !deveExibir;
+  document.body.classList.toggle('v2-nav-authenticated', deveExibir);
+
+  nav.querySelectorAll('[data-v2-destination]').forEach(function(item) {
+    var isActive = item.getAttribute('data-v2-destination') === destinoAtivo;
+    item.classList.toggle('active', isActive);
+    item.setAttribute('aria-current', isActive ? 'page' : 'false');
+  });
+}
+
+function navigateV2(destino) {
+  var destinoNormalizado = normalizarDestinoV2Persistido(destino);
+  var tela = NAVEGACAO_V2_DESTINOS[destinoNormalizado];
+
+  if (!currentUser || !currentUser.id_dgmb) {
+    syncNavegacaoV2('login');
+    showScreen('login');
+    return;
+  }
+
+  showScreen(tela || NAVEGACAO_V2_DESTINOS.home);
 }
 
 function onlyDigits(value) {
@@ -411,21 +481,21 @@ function persistirEstadoPainel(partialState) {
     var stateAtual = recuperarEstadoPainelPersistido() || {};
     var partial = partialState || {};
     var proximoEstado = {
-      tela: stateAtual.tela || 'painel',
+      tela: stateAtual.tela || 'home',
       desafio_em_foco: stateAtual.desafio_em_foco || ''
     };
     var tela = String(partial.tela || '').trim();
     var desafio = String(partial.desafio_em_foco || '').trim();
 
     if (tela) {
-      proximoEstado.tela = tela;
+      proximoEstado.tela = normalizarDestinoV2Persistido(getDestinoV2PorTela(tela) || tela);
     }
     if (partial.hasOwnProperty('desafio_em_foco')) {
       proximoEstado.desafio_em_foco = desafio;
     }
 
     if (!TELAS_RELEVANTES_SESSAO[proximoEstado.tela]) {
-      proximoEstado.tela = 'painel';
+      proximoEstado.tela = 'home';
     }
 
     localStorage.setItem(PAINEL_STATE_STORAGE_KEY, JSON.stringify(proximoEstado));
@@ -451,12 +521,10 @@ function recuperarEstadoPainelPersistido() {
     var tela = String(parsed && parsed.tela || '').trim();
     var desafio = String(parsed && parsed.desafio_em_foco || '').trim();
 
-    if (!TELAS_RELEVANTES_SESSAO[tela]) {
-      tela = 'painel';
-    }
+    tela = normalizarDestinoV2Persistido(tela);
 
     return {
-      tela: tela || 'painel',
+      tela: tela || 'home',
       desafio_em_foco: desafio
     };
   } catch (err) {
@@ -469,7 +537,7 @@ function tentarRestaurarSessaoPersistida() {
   var sessao = recuperarSessaoLoginPersistida();
   if (!sessao || !sessao.id_dgmb) return false;
   var estadoPainel = recuperarEstadoPainelPersistido();
-  telaPrivadaRestaurada = estadoPainel && estadoPainel.tela ? estadoPainel.tela : 'painel';
+  telaPrivadaRestaurada = estadoPainel && estadoPainel.tela ? estadoPainel.tela : 'home';
 
   if (estadoPainel && estadoPainel.desafio_em_foco) {
     desafioEmFocoKey = String(estadoPainel.desafio_em_foco).trim();
@@ -534,6 +602,7 @@ document.addEventListener('DOMContentLoaded', function() {
   setupQuickKmShortcutFeedback();
   setupQuickKmClearFeedback();
   syncAdminValidacaoVisibility();
+  syncNavegacaoV2('inicio');
   tentarRestaurarSessaoPersistida();
 });
 
@@ -588,7 +657,7 @@ function login() {
 
         persistirSessaoLogin(currentUser);
         syncAdminValidacaoVisibility();
-        showScreen('painel');
+        navigateV2('home');
         carregarPainel();
       })
       .withFailureHandler(function(err) {
@@ -1674,8 +1743,14 @@ function carregarPainel(triggerSource) {
 
       if (painelReloadPending) {
         carregarPainel();
-      } else if (triggerSource === 'restored' && telaPrivadaRestaurada === 'ranking') {
-        carregarRanking('restored');
+      } else if (triggerSource === 'restored') {
+        if (telaPrivadaRestaurada === 'ranking') {
+          carregarRanking('restored');
+        } else if (telaPrivadaRestaurada === 'admin' && isAdminValidacaoUser()) {
+          openAdminValidacao();
+        } else {
+          navigateV2(telaPrivadaRestaurada);
+        }
       }
     })
     .withFailureHandler(function(err) {
@@ -3285,6 +3360,8 @@ function iniciarEdicaoAtividadeUI(item) {
   if (currentPainel && Array.isArray(currentPainel.atividades)) {
     sincronizarPainelComDesafioEmFoco();
   }
+
+  navigateV2('register');
 }
 
 async function excluirAtividadeUI(item, btnExcluir) {
@@ -3858,7 +3935,7 @@ function setAdminActionButtonsBusy_(buttons, clickedButton, status, isBusy) {
 
 function openMeuGiro() {
   if (currentUser && currentUser.id_dgmb) {
-    showScreen('painel');
+    navigateV2('home');
 
     if (painelLoadInProgress) {
       setPainelMsg('Atualização em andamento...', 'loading');
@@ -3934,6 +4011,7 @@ function logoutUser() {
   cancelarEdicaoAtividadeUI();
 
   syncAdminValidacaoVisibility();
+  syncNavegacaoV2('inicio');
   showScreen('inicio');
 }
 

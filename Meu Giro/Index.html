@@ -218,6 +218,15 @@
         <p id="frase-feedback" class="phrase-feedback" aria-live="polite"></p>
       </div>
 
+    </section>
+
+    <section id="screen-desafios" class="screen">
+      <div class="card">
+        <h2>Desafios — em preparação</h2>
+      </div>
+    </section>
+
+    <section id="screen-registrar" class="screen">
       <div id="registro-card" class="card card-registro-atividade">
         <h2>Registrar atividade</h2>
         <p class="field-helper field-helper-intro">Preencha só o dia e os km do pedal.</p>
@@ -254,6 +263,12 @@
       </div>
     </section>
 
+    <section id="screen-conquistas" class="screen">
+      <div class="card">
+        <h2>Conquistas — em preparação</h2>
+      </div>
+    </section>
+
     <section id="screen-admin-cert" class="screen">
       <div class="card">
         <h2>Admin · Validação de certificado</h2>
@@ -283,6 +298,11 @@
       </div>
     </section>
   </main>
+
+  <nav id="nav-v2" class="nav-v2" aria-label="Navegação do atleta" hidden>
+    <button class="nav-v2-item" type="button" data-v2-destination="home" onclick="navigateV2('home')">Início</button>
+    <button class="nav-v2-item" type="button" data-v2-destination="register" onclick="navigateV2('register')">Registrar</button>
+  </nav>
 
   <?!= include('Script'); ?>
   <?!= include('AuthSession'); ?>
