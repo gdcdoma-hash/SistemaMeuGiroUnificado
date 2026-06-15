@@ -39,14 +39,6 @@ function gerarOuObterCertificadoDesafio(payload) {
       };
     }
 
-    if (contexto.status_validacao_certificado !== 'APROVADO') {
-      return {
-        ok: false,
-        code: 'CERTIFICADO_EM_PROCESSAMENTO',
-        msg: 'Conclusão confirmada. Certificado em processamento.'
-      };
-    }
-
     var linkPlanilha = certificadoLerLinkPlanilha_(contexto);
     if (certLinkValido_(linkPlanilha)) {
       var extrasPlanilha = certificadoMontarExtrasImagem_(contexto);
@@ -704,8 +696,7 @@ function certificadoBuscarContextoDesafio_(payload) {
   var statusUsuarioDesafio = normalizeText_(row[idxStatusUsuarioDesafio]).toUpperCase();
   var statusValidacaoCertificado = normalizeText_(row[idxStatusValidacao]).toUpperCase();
   var desafioElegivel = statusApuracao === 'CONCLUIDO' &&
-    statusUsuarioDesafio === 'CONCLUIDO' &&
-    statusValidacaoCertificado === 'APROVADO';
+    statusUsuarioDesafio === 'CONCLUIDO';
 
   return {
     ok: true,

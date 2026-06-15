@@ -2569,17 +2569,14 @@ function isDesafioElegivelCertificado_(desafio) {
   if (!desafio) return false;
   var statusApuracao = String(desafio.status_apuracao || '').trim().toUpperCase();
   var statusUsuarioDesafio = String(desafio.status_usuario_desafio || '').trim().toUpperCase();
-  var statusValidacao = String(desafio.status_validacao_certificado || '').trim().toUpperCase();
   return statusApuracao === 'CONCLUIDO' &&
-    statusUsuarioDesafio === 'CONCLUIDO' &&
-    statusValidacao === 'APROVADO';
+    statusUsuarioDesafio === 'CONCLUIDO';
 }
 
 function getMensagemCertificado_(desafio) {
   var item = desafio || {};
   var statusApuracao = String(item.status_apuracao || '').trim().toUpperCase();
   var statusUsuarioDesafio = String(item.status_usuario_desafio || '').trim().toUpperCase();
-  var statusValidacao = String(item.status_validacao_certificado || '').trim().toUpperCase();
 
   if (statusUsuarioDesafio === 'CANCELADO') {
     return { texto: 'Inscrição cancelada.', variante: '' };
@@ -2592,9 +2589,6 @@ function getMensagemCertificado_(desafio) {
   }
   if (statusUsuarioDesafio !== 'CONCLUIDO') {
     return { texto: 'Meta atingida. Aguardando validação da organização.', variante: 'loading' };
-  }
-  if (statusValidacao !== 'APROVADO') {
-    return { texto: 'Conclusão confirmada. Certificado em processamento.', variante: 'loading' };
   }
   return { texto: 'Certificado disponível.', variante: 'success' };
 }
