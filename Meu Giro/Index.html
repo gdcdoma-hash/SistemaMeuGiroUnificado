@@ -53,17 +53,7 @@
     </button>
   </nav>
 
-  <nav id="menu-autenticado-top" class="menu menu-top-icons menu-authenticated" aria-label="Ações da conta" hidden>
-    <button id="btn-admin-cert-top" class="menu-btn menu-icon-btn" type="button" onclick="openAdminValidacao()" style="display:none;">
-      <span class="menu-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 2l8 4v6c0 5.2-3.4 8.8-8 10-4.6-1.2-8-4.8-8-10V6l8-4z"></path>
-          <path d="M9 12l2 2 4-4"></path>
-        </svg>
-      </span>
-      <span class="menu-label">Admin</span>
-    </button>
-  </nav>
+  <nav id="menu-autenticado-top" class="menu menu-top-icons menu-authenticated" aria-label="Ações da conta" hidden></nav>
 </header>
   <main class="container">
     <section id="screen-inicio" class="screen active">
@@ -247,6 +237,10 @@
       <div id="registro-card" class="card card-registro-atividade">
         <h2>Registrar atividade</h2>
         <p class="field-helper field-helper-intro">Preencha só o dia e os km do pedal.</p>
+        <div class="registro-desafio-foco" aria-live="polite">
+          <span>Registrando para:</span>
+          <strong id="registro-desafio-foco-nome">-</strong>
+        </div>
 
         <label for="data-atividade">Data da atividade</label>
         <input id="data-atividade" type="date">
@@ -291,6 +285,15 @@
           <div class="conquistas-lista"></div>
         </div>
       </section>
+    </section>
+
+    <section id="screen-conquista-detalhe" class="screen">
+      <div class="card conquista-detalhe-card">
+        <h2 id="conquista-detalhe-titulo">Conquista</h2>
+        <p>Atividades registradas neste desafio.</p>
+        <div id="conquista-detalhe-lista" class="lista conquista-detalhe-lista"></div>
+        <button class="btn-secondary" type="button" onclick="voltarConquistasV2()">Voltar</button>
+      </div>
     </section>
 
     <section id="screen-admin-cert" class="screen">

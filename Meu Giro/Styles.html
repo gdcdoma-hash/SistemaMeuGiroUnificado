@@ -257,6 +257,7 @@
 
   .conquistas-lista {
     display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 12px;
   }
 
@@ -265,6 +266,16 @@
     border: 1px solid #e5e7eb;
     border-radius: 14px;
     background: #fcfcfd;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  }
+
+  .conquista-card:hover,
+  .conquista-card:focus {
+    border-color: #2563eb;
+    box-shadow: 0 12px 28px rgba(37, 99, 235, 0.14);
+    outline: none;
+    transform: translateY(-1px);
   }
 
   .conquista-card .atividade-acoes {
@@ -275,6 +286,42 @@
     margin: 12px 0 0;
     color: #4b5563;
     font-weight: 700;
+  }
+
+  .registro-desafio-foco {
+    display: grid;
+    gap: 4px;
+    margin: 12px 0 16px;
+    padding: 12px;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    background: #eff6ff;
+    color: #1e3a8a;
+  }
+
+  .registro-desafio-foco span {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .registro-desafio-foco strong {
+    font-size: 18px;
+  }
+
+  .conquista-detalhe-card {
+    display: grid;
+    gap: 12px;
+  }
+
+  .conquista-detalhe-card h2,
+  .conquista-detalhe-card p {
+    margin: 0;
+  }
+
+  .conquista-atividade-item {
+    align-items: center;
   }
 
   @media (min-width: 721px) {
