@@ -3138,19 +3138,24 @@
     margin: 2px -4px 0;
     padding: 2px 4px 8px;
     overflow-x: auto;
-    scrollbar-width: thin;
+    scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
+  }
+
+  .atividades-meses::-webkit-scrollbar {
+    display: none;
   }
 
   .atividades-mes-btn {
     flex: 0 0 auto;
-    min-height: 38px;
-    padding: 8px 12px;
+    min-height: 34px;
+    padding: 7px 11px;
     border: 1px solid #dbeafe;
     border-radius: 999px;
-    background: #ffffff;
+    background: #f8fbff;
     color: #1e3a8a;
-    font-weight: 800;
+    font-size: 13px;
+    font-weight: 700;
     cursor: pointer;
   }
 
@@ -3158,16 +3163,17 @@
     border-color: #2563eb;
     background: #2563eb;
     color: #ffffff;
-    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.14);
   }
 
   .atividades-mes-resumo {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 8px;
     color: #374151;
+    font-weight: 700;
   }
 
   .atividade-info {
