@@ -152,10 +152,16 @@ function syncTopNavigation(autenticado) {
   var menuPublico = document.getElementById('menu-publico-top');
   var menuAutenticado = document.getElementById('menu-autenticado-top');
   var btnLogout = document.getElementById('btn-logout-top');
+  var nomeTopo = document.getElementById('painel-nome');
+  var nomeUsuario = String((currentUser && currentUser.nome) || '').trim();
 
   if (menuPublico) menuPublico.hidden = isAuthenticated;
   if (menuAutenticado) menuAutenticado.hidden = true;
   if (btnLogout) btnLogout.hidden = !isAuthenticated;
+  if (nomeTopo) {
+    nomeTopo.hidden = !isAuthenticated;
+    nomeTopo.innerText = isAuthenticated ? (nomeUsuario || 'Atleta') : '';
+  }
   document.body.classList.toggle('topbar-authenticated', isAuthenticated);
 }
 
@@ -1218,17 +1224,30 @@ function getRitmoAgoraVariant(statusText) {
 }
 
 function renderRitmoAgora(p) {
-  var statusText = normalizeRitmoText(p && p.ritmo_status, 'Seu ritmo aparece aqui.');
-  var mensagemText = normalizeRitmoText(p && p.ritmo_mensagem, 'Registre atividades para ver uma orientação simples.');
-  var alerta = document.getElementById('alerta-ritmo');
+  var statusText = normalizeRitmoText(p && p.ritmo_status, '');
+  var alerta = document.getElementById('alerta-ritmo') || document.getElementById('painel-status-motivacional');
+  var variant = getRitmoAgoraVariant(statusText);
+  var titulo = '🚴 Hora de reagir.';
+  var mensagem = 'Sua meta está ficando distante.';
+  var statusClass = 'painel-status-reagir';
 
-  setTextById('alerta-ritmo-titulo', statusText);
-  setTextById('alerta-ritmo-texto', mensagemText);
+  if (variant === 'alerta-ritmo-bom') {
+    titulo = '✅ Você está acima do ritmo.';
+    mensagem = 'Continue pedalando.';
+    statusClass = 'painel-status-bom';
+  } else if (variant === 'alerta-ritmo-atencao') {
+    titulo = '⚠️ Atenção.';
+    mensagem = 'Você precisa aumentar seu ritmo.';
+    statusClass = 'painel-status-atencao';
+  }
+
+  setTextById('alerta-ritmo-titulo', titulo);
+  setTextById('alerta-ritmo-texto', mensagem);
 
   if (!alerta) return;
 
-  alerta.classList.remove('alerta-ritmo-neutro', 'alerta-ritmo-bom', 'alerta-ritmo-atencao');
-  alerta.classList.add(getRitmoAgoraVariant(statusText));
+  alerta.classList.remove('alerta-ritmo-neutro', 'alerta-ritmo-bom', 'alerta-ritmo-atencao', 'painel-status-neutro', 'painel-status-bom', 'painel-status-atencao', 'painel-status-reagir');
+  alerta.classList.add(statusClass);
 }
 
 function playRitmoAgoraFeedback() {
@@ -1499,7 +1518,7 @@ function playPainelProgressFeedback(previousPainel, nextPainel) {
     clearPainelProgressFeedback();
     setTextById('realizado-km', formatNumber(nextRealizado));
     setTextById('restante-km', formatNumber(nextRestante));
-    setTextById('progress-percent', formatNumber(nextPercentual) + '%');
+    setTextById('progress-percent', formatNumber(nextPercentual) + '% concluído');
     setTextById(
       'progress-text',
       formatNumber(nextRealizado) + ' km de ' + formatNumber(toFiniteNumber(nextPainel.meta, 0)) + ' km'
@@ -1754,6 +1773,7 @@ function carregarPainel(triggerSource) {
         currentUser.nome = String(currentPainel.nome || currentUser.nome || '').trim();
         currentUser.cidade_uf = String(currentPainel.cidade_uf || currentUser.cidade_uf || '').trim();
         persistirSessaoLogin(currentUser);
+        syncTopNavigation(true);
       }
       renderPainel(currentPainel);
       var nextPainelContextual = montarPainelContextual(currentPainel, getDesafioEmFocoAtual());
@@ -1804,6 +1824,7 @@ function carregarPainel(triggerSource) {
 function renderPainel(p) {
   setTextById('painel-nome', p.nome || '');
   setTextById('painel-cidade', p.cidade_uf || '');
+  syncTopNavigation(!!(currentUser && currentUser.id_dgmb));
 
   var idHidden = document.getElementById('painel-id-dgmb');
   if (idHidden) {
@@ -2377,6 +2398,39 @@ function montarPainelContextual(basePainel, desafio) {
   return contexto;
 }
 
+
+function getDesafioMesAnoLabel(desafio, contexto) {
+  var inicio = String((desafio && desafio.periodo_inicio) || (contexto && contexto.periodo_inicio) || '').trim();
+  var match = inicio.match(/^(\d{4})-(\d{2})/);
+  if (!match) return 'Período: -';
+  var nomeMes = getMesNome_(match[2]);
+  return nomeMes ? ('Período: ' + nomeMes + '/' + match[1]) : 'Período: -';
+}
+
+function renderUltimaAtividadePainel(lista) {
+  var atividades = Array.isArray(lista) ? lista.slice() : [];
+  var diaEl = document.getElementById('painel-ultima-dia');
+  var kmEl = document.getElementById('painel-ultima-km');
+  if (!diaEl || !kmEl) return;
+
+  atividades.sort(function(a, b) {
+    return String((b && b.data) || '').localeCompare(String((a && a.data) || ''));
+  });
+
+  var ultima = atividades[0];
+  if (!ultima) {
+    diaEl.innerText = 'Nenhuma atividade';
+    kmEl.innerText = '0 km';
+    return;
+  }
+
+  var data = String(ultima.data || '').trim();
+  var partes = data.split('-');
+  var dia = partes.length >= 3 ? String(Number(partes[2])) : formatDateBR(data);
+  diaEl.innerText = dia ? ('Dia ' + dia) : 'Último pedal';
+  kmEl.innerText = formatNumber(ultima.km) + ' km';
+}
+
 function atualizarContextoVisualRanking(desafioAtual) {
   var nomeDesafio = getDesafioTitulo(desafioAtual || {});
   var titulo = document.getElementById('painel-ranking-context-title');
@@ -2413,11 +2467,12 @@ function sincronizarPainelComDesafioEmFoco() {
 
   setTextById('frase-box', contexto.frase);
   setTextById('desafio-foco-operacional', contexto.mensagem_operacional);
+  setTextById('painel-desafio-periodo', getDesafioMesAnoLabel(desafioAtual, contexto));
   setTextById('meta-km', formatNumber(contexto.meta));
   setTextById('realizado-km', formatNumber(contexto.realizado));
   setTextById('restante-km', formatNumber(contexto.restante));
   setTextById('progress-text', formatNumber(contexto.realizado) + ' km de ' + formatNumber(contexto.meta) + ' km');
-  setTextById('progress-percent', formatNumber(contexto.percentual) + '%');
+  setTextById('progress-percent', formatNumber(contexto.percentual) + '% concluído');
 
   const bar = document.getElementById('progress-bar');
   if (bar) {
@@ -2449,6 +2504,7 @@ function sincronizarPainelComDesafioEmFoco() {
       : 'Disponível quando houver base de comparação.';
   }
 
+  renderUltimaAtividadePainel(contexto.atividades || (currentPainel && currentPainel.atividades) || []);
   renderAtividades(currentPainel && currentPainel.atividades || []);
 }
 
@@ -2731,24 +2787,12 @@ function renderDesafioEmFocoResumo(feedbackText) {
 
 function renderCardDesafioSelecionado() {
   var box = document.getElementById('desafio-selecionado-card');
-  if (!box) return;
-
-  box.innerHTML = '';
   var desafioAtual = getDesafioEmFocoAtual();
-  if (!desafioAtual) {
-    box.innerHTML =
-      '<div class="card atividade atividade-empty desafio-empty">' +
-        '<strong>Nenhum desafio disponível.</strong>' +
-        '<p>Quando houver um desafio vinculado ao seu cadastro, ele aparecerá aqui.</p>' +
-      '</div>';
-    return;
-  }
-
-  box.appendChild(buildDesafioCard(desafioAtual, {
-    allowSelect: false,
-    hideSelectedBadge: true,
-    isPrincipal: true
-  }));
+  setTextById('painel-desafio-nome', desafioAtual ? getDesafioTitulo(desafioAtual) : 'Nenhum desafio disponível');
+  setTextById('painel-desafio-periodo', getDesafioMesAnoLabel(desafioAtual));
+  if (!box) return;
+  box.innerHTML = '';
+  box.hidden = true;
 }
 
 function getDesafioPeriodoLabel(desafio) {
