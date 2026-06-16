@@ -1885,17 +1885,16 @@ function renderDesafiosV2() {
   var mensagem = document.getElementById('desafios-v2-msg');
   var secoes = {
     andamento: document.getElementById('desafios-v2-andamento'),
-    concluidos: document.getElementById('desafios-v2-concluidos'),
-    historico: document.getElementById('desafios-v2-historico')
+    concluidos: document.getElementById('desafios-v2-concluidos')
   };
-  if (!mensagem || !secoes.andamento || !secoes.concluidos || !secoes.historico) return;
+  if (!mensagem || !secoes.andamento || !secoes.concluidos) return;
 
-  var grupos = { andamento: [], concluidos: [], historico: [] };
+  var grupos = { andamento: [], concluidos: [] };
   var desafios = obterTodosDesafiosPainelV2_(currentPainel || {});
 
   desafios.forEach(function(desafio) {
     var classificacao = classificarDesafioV2_(desafio);
-    if (classificacao.grupo) {
+    if (classificacao.grupo === 'andamento' || classificacao.grupo === 'concluidos') {
       grupos[classificacao.grupo].push({
         desafio: desafio,
         statusHumano: classificacao.statusHumano
@@ -1903,13 +1902,12 @@ function renderDesafiosV2() {
     }
   });
 
-  var totalClassificado = grupos.andamento.length + grupos.concluidos.length + grupos.historico.length;
+  var totalClassificado = grupos.andamento.length + grupos.concluidos.length;
   mensagem.innerText = totalClassificado ? '' : 'Você ainda não possui desafios disponíveis.';
   mensagem.className = 'msg status-msg desafios-v2-msg' + (totalClassificado ? '' : ' is-visible msg-inline');
 
   renderGrupoDesafiosV2_(secoes.andamento, grupos.andamento, 'andamento');
   renderGrupoDesafiosV2_(secoes.concluidos, grupos.concluidos, 'concluidos');
-  renderGrupoDesafiosV2_(secoes.historico, grupos.historico, 'historico');
 }
 
 
@@ -2051,29 +2049,81 @@ function renderGrupoDesafiosV2_(secao, itens, grupo) {
   var lista = secao.querySelector('.desafios-v2-lista');
   lista.innerHTML = '';
   secao.hidden = !itens.length;
+  lista.classList.toggle('desafios-v2-lista-unica', itens.length === 1);
   itens.forEach(function(item) {
-    lista.appendChild(buildDesafioCardV2_(item.desafio, item.statusHumano, grupo));
+    lista.appendChild(buildDesafioCardV2_(item.desafio, grupo));
   });
 }
 
-function buildDesafioCardV2_(desafio, statusHumano, grupo) {
+function buildDesafioCardV2_(desafio, grupo) {
   var card = document.createElement('article');
   var meta = toFiniteNumber(desafio.meta_km, 0);
   var realizado = toFiniteNumber(desafio.distancia_realizada, 0);
+  var percentual = calcularPercentualDesafio_(meta, realizado);
+  var chave = getDesafioKey(desafio);
 
   card.className = 'desafio-v2-card desafio-v2-card-' + grupo;
+  card.tabIndex = 0;
+  card.setAttribute('role', 'button');
+  card.setAttribute('aria-label', 'Abrir detalhes de ' + getDesafioTitulo(desafio));
   card.innerHTML =
-    '<div class="desafio-resumo-head">' +
-      '<strong class="desafio-resumo-titulo">' + escapeHtml(getDesafioTitulo(desafio)) + '</strong>' +
-      '<span class="desafio-status-badge">' + escapeHtml(statusHumano) + '</span>' +
-    '</div>' +
-    '<div class="desafio-metricas-grid">' +
-      '<p><span>Meta</span><strong>' + formatNumber(meta) + ' km</strong></p>' +
-      '<p><span>Realizado</span><strong>' + formatNumber(realizado) + ' km</strong></p>' +
-      '<p><span>Período</span><strong>' + escapeHtml(getDesafioPeriodoLabelV2_(desafio) || '-') + '</strong></p>' +
-    '</div>' +
-    '<p class="desafio-periodo"><span>Mês</span> <strong>' + escapeHtml(getDesafioMesLabelV2_(desafio)) + '</strong></p>';
+    '<div class="desafio-v2-card-conteudo">' +
+      '<strong class="desafio-v2-card-titulo">' + escapeHtml(getDesafioTitulo(desafio)) + '</strong>' +
+      '<div class="desafio-v2-metricas">' +
+        '<p><span>Meta</span><strong>' + formatNumber(meta) + ' km</strong></p>' +
+        '<p><span>Realizado</span><strong>' + formatNumber(realizado) + ' km</strong></p>' +
+        '<p><span>Período</span><strong>' + escapeHtml(getDesafioMesAnoPortugues_(desafio)) + '</strong></p>' +
+      '</div>' +
+      '<div class="desafio-v2-progress-track" aria-hidden="true"><span class="desafio-v2-progress-fill" style="width:' + Math.max(0, Math.min(100, percentual)) + '%"></span></div>' +
+      '<p class="desafio-v2-percentual">' + formatNumber(percentual) + '%</p>' +
+    '</div>';
+  card.addEventListener('click', function() { abrirDetalheDesafioV2_(chave); });
+  card.addEventListener('keydown', function(event) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      abrirDetalheDesafioV2_(chave);
+    }
+  });
   return card;
+}
+
+function calcularPercentualDesafio_(meta, realizado) {
+  var metaNum = toFiniteNumber(meta, 0);
+  if (metaNum <= 0) return 0;
+  return Math.max(0, Math.min(100, (toFiniteNumber(realizado, 0) / metaNum) * 100));
+}
+
+function abrirDetalheDesafioV2_(chave) {
+  var desafio = encontrarDesafioPorChaveV2_(chave);
+  if (!desafio) return;
+  renderDetalheDesafioV2_(desafio);
+  showScreen('desafio-detalhe');
+}
+
+function voltarDesafiosV2() {
+  renderDesafiosV2();
+  showScreen('desafios');
+}
+
+function renderDetalheDesafioV2_(desafio) {
+  var meta = toFiniteNumber(desafio.meta_km, 0);
+  var realizado = toFiniteNumber(desafio.distancia_realizada, 0);
+  var falta = Math.max(0, meta - realizado);
+  var percentual = calcularPercentualDesafio_(meta, realizado);
+  setTextById('desafio-detalhe-titulo', getDesafioTitulo(desafio));
+  setTextById('desafio-detalhe-periodo', getDesafioMesAnoPortugues_(desafio));
+  setTextById('desafio-detalhe-meta', formatNumber(meta) + ' km');
+  setTextById('desafio-detalhe-realizado', formatNumber(realizado) + ' km');
+  setTextById('desafio-detalhe-falta', formatNumber(falta) + ' km');
+  setTextById('desafio-detalhe-percentual', formatNumber(percentual) + '%');
+  var bar = document.getElementById('desafio-detalhe-progress-bar');
+  if (bar) bar.style.width = Math.max(0, Math.min(100, percentual)) + '%';
+  var cert = document.getElementById('desafio-detalhe-certificado');
+  if (cert) {
+    cert.innerHTML = isDesafioElegivelCertificado_(desafio)
+      ? '<h3>Certificado</h3>' + buildCertificadoDesafioHtml_(desafio, 'desafio-detalhe', { ocultarMensagemInicial: true })
+      : '';
+  }
 }
 
 function getDesafioMesLabelV2_(desafio) {

@@ -2066,8 +2066,7 @@
   }
 
   .desafios-v2-page,
-  .desafios-v2-group,
-  .desafios-v2-lista {
+  .desafios-v2-group {
     display: flex;
     flex-direction: column;
   }
@@ -2099,50 +2098,197 @@
   .desafios-v2-group h3 {
     color: #1f2937;
     font-size: 18px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
   }
 
   .desafios-v2-lista {
-    gap: 12px;
-  }
-
-  .desafio-v2-card {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding: 14px;
-    border: 1px solid #e5e7eb;
-    border-left: 4px solid #9ca3af;
-    border-radius: 12px;
-    background: #ffffff;
-  }
-
-  .desafio-v2-card-andamento {
-    border-left-color: #2563eb;
-  }
-
-  .desafio-v2-card-concluidos {
-    border-left-color: #16a34a;
-  }
-
-  .desafios-v2-acoes {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: 14px;
   }
 
-  .desafios-v2-acoes-unica {
+  .desafios-v2-lista-unica,
+  .desafios-v2-lista:has(.desafio-v2-card:only-child) {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .desafios-v2-acoes button {
-    min-height: 44px;
-    margin: 0;
-    padding: 10px 12px;
+  .desafio-v2-card {
+    position: relative;
+    overflow: hidden;
+    min-height: 100%;
+    padding: 18px;
+    border: 1px solid rgba(249, 115, 22, 0.18);
+    border-radius: 22px;
+    background:
+      radial-gradient(circle at top right, rgba(249, 115, 22, 0.12), transparent 34%),
+      linear-gradient(180deg, #ffffff 0%, #fffaf5 100%);
+    box-shadow: 0 10px 24px rgba(17, 24, 39, 0.08);
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, background 0.2s ease;
   }
 
-  @media (max-width: 420px) {
-    .desafios-v2-acoes {
-      grid-template-columns: minmax(0, 1fr);
+  .desafio-v2-card::before {
+    content: '›';
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    border-radius: 999px;
+    background: rgba(249, 115, 22, 0.12);
+    color: #f97316;
+    font-size: 30px;
+    font-weight: 900;
+    line-height: 1;
+    box-shadow: inset 0 0 0 1px rgba(249, 115, 22, 0.18);
+    pointer-events: none;
+  }
+
+  .desafio-v2-card:hover,
+  .desafio-v2-card:focus {
+    border-color: rgba(249, 115, 22, 0.55);
+    box-shadow: 0 16px 34px rgba(249, 115, 22, 0.16);
+    outline: none;
+    transform: translateY(-2px);
+  }
+
+  .desafio-v2-card-conteudo {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    gap: 16px;
+    padding-right: 50px;
+  }
+
+  .desafio-v2-card-titulo {
+    color: #111827;
+    font-size: 21px;
+    line-height: 1.22;
+  }
+
+  .desafio-v2-metricas {
+    display: grid;
+    gap: 12px;
+  }
+
+  .desafio-v2-metricas p,
+  .desafio-v2-percentual {
+    margin: 0;
+  }
+
+  .desafio-v2-metricas p {
+    display: grid;
+    gap: 2px;
+  }
+
+  .desafio-v2-metricas span {
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .desafio-v2-metricas strong {
+    color: #111827;
+    font-size: 24px;
+    line-height: 1.15;
+  }
+
+  .desafio-v2-progress-track,
+  .desafio-detalhe-progress-track {
+    overflow: hidden;
+    height: 10px;
+    border-radius: 999px;
+    background: #fed7aa;
+  }
+
+  .desafio-v2-progress-fill,
+  .desafio-detalhe-progress-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #f97316, #fb923c);
+  }
+
+  .desafio-v2-percentual {
+    color: #f97316;
+    font-size: 24px;
+    font-weight: 900;
+  }
+
+  .desafio-detalhe-layout {
+    display: grid;
+    gap: 16px;
+  }
+
+  .desafio-detalhe-topo {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+  }
+
+  .desafio-detalhe-label,
+  .desafio-detalhe-periodo {
+    margin: 0;
+    color: #6b7280;
+    font-weight: 800;
+  }
+
+  .desafio-detalhe-topo h2 {
+    margin: 4px 0;
+  }
+
+  .desafio-detalhe-card,
+  .desafio-detalhe-certificado {
+    display: grid;
+    gap: 16px;
+  }
+
+  .desafio-detalhe-metricas {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .desafio-detalhe-metricas p {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+    padding: 14px;
+    border-radius: 16px;
+    background: #fff7ed;
+  }
+
+  .desafio-detalhe-metricas span {
+    color: #6b7280;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .desafio-detalhe-metricas strong {
+    color: #111827;
+    font-size: 22px;
+  }
+
+  .desafio-detalhe-certificado h3 {
+    margin: 0;
+  }
+
+  @media (max-width: 640px) {
+    .desafios-v2-lista,
+    .desafio-detalhe-metricas {
+      grid-template-columns: 1fr;
+    }
+
+    .desafio-detalhe-topo {
+      flex-direction: column;
     }
   }
 
