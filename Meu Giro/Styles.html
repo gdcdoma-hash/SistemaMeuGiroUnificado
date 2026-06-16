@@ -2155,6 +2155,37 @@
     transform: translateY(-2px);
   }
 
+  .desafio-v2-card-concluidos {
+    border-color: #bbf7d0;
+    background:
+      radial-gradient(circle at top right, rgba(34, 197, 94, 0.14), transparent 34%),
+      linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%);
+  }
+
+  .desafio-v2-card-concluidos::before {
+    background: rgba(34, 197, 94, 0.14);
+    color: #16a34a;
+    box-shadow: inset 0 0 0 1px #bbf7d0;
+  }
+
+  .desafio-v2-card-concluidos:hover,
+  .desafio-v2-card-concluidos:focus {
+    border-color: #22c55e;
+    box-shadow: 0 16px 34px rgba(22, 163, 74, 0.16);
+  }
+
+  .desafio-v2-card-concluidos .desafio-v2-progress-track {
+    background: #bbf7d0;
+  }
+
+  .desafio-v2-card-concluidos .desafio-v2-progress-fill {
+    background: linear-gradient(90deg, #16a34a, #22c55e);
+  }
+
+  .desafio-v2-card-concluidos .desafio-v2-percentual {
+    color: #16a34a;
+  }
+
   .desafio-v2-card-conteudo {
     position: relative;
     z-index: 1;
