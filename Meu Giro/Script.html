@@ -34,6 +34,9 @@ let atividadesMesAtivo = '';
 let rankingButtonFeedbackTimer = null;
 let lastRankingTriggerButton = null;
 let rankingBackNavigationFeedbackTimer = null;
+let rankingFiltroAtual = 'todos';
+let rankingListaAtual = [];
+let rankingInscricaoReferenciaAtual = '';
 let quickKmTapFeedbackTimer = null;
 let quickKmClearFeedbackTimer = null;
 let kmInputAddFeedbackTimer = null;
@@ -4137,11 +4140,11 @@ function carregarRanking(triggerSource) {
 
           if (!res || !res.ok) {
             setRankingMsg((res && res.msg) ? res.msg : 'Erro ao carregar ranking.', 'error');
-            renderRankingState('error', 'Não foi possível carregar o ranking.', 'Tente novamente em instantes para atualizar a classificação.');
+            renderRankingState('error', 'Não foi possível carregar o acompanhamento.', 'Tente novamente em instantes para atualizar a lista.');
             return;
           }
 
-          setRankingMsg('Ranking do desafio atualizado com sucesso. Confira a lista abaixo.', 'success', 2600);
+          setRankingMsg('Acompanhamento atualizado com sucesso. Confira sua jornada abaixo.', 'success', 2600);
           renderRanking(
             Array.isArray(res.data) ? res.data : [],
             String((res && res.id_inscricao_referencia) || (desafioAtual && desafioAtual.id_inscricao) || '').trim()
@@ -4149,7 +4152,7 @@ function carregarRanking(triggerSource) {
           showRankingLoadSuccessFeedback();
         } catch (errSuccess) {
           setRankingMsg('Erro ao processar ranking.', 'error');
-          renderRankingState('error', 'Não foi possível carregar o ranking.', 'Tente novamente em instantes para atualizar a classificação.');
+          renderRankingState('error', 'Não foi possível carregar o acompanhamento.', 'Tente novamente em instantes para atualizar a lista.');
           console.error(errSuccess);
         } finally {
           if (requestId !== rankingLoadRequestId) {
@@ -4171,7 +4174,7 @@ function carregarRanking(triggerSource) {
         syncGlobalBusyState();
         setRankingLoadDisabled(false);
         setRankingMsg('Erro ao carregar ranking.', 'error');
-        renderRankingState('error', 'Não foi possível carregar o ranking.', 'Confira sua conexão e tente novamente em instantes.');
+        renderRankingState('error', 'Não foi possível carregar o acompanhamento.', 'Confira sua conexão e tente novamente em instantes.');
         console.error(err);
         if (rankingReloadPending || desafioRequestKey !== getDesafioKey(getDesafioEmFocoAtual())) {
           carregarRanking('manual');
@@ -4191,7 +4194,7 @@ function carregarRanking(triggerSource) {
     syncGlobalBusyState();
     setRankingLoadDisabled(false);
     setRankingMsg('Erro ao carregar ranking.', 'error');
-    renderRankingState('error', 'Não foi possível carregar o ranking.', 'Confira sua conexão e tente novamente em instantes.');
+    renderRankingState('error', 'Não foi possível carregar o acompanhamento.', 'Confira sua conexão e tente novamente em instantes.');
     console.error(errRun);
     if (rankingReloadPending || desafioRequestKey !== getDesafioKey(getDesafioEmFocoAtual())) {
       carregarRanking('manual');
@@ -4223,33 +4226,145 @@ function renderRankingState(variant, title, description) {
     '</div>';
 }
 
-function renderRanking(lista, idInscricaoReferencia) {
+function getRankingProgressInfo(item) {
+  item = item || {};
+  var meta = toFiniteNumber(item.meta, 0);
+  var realizado = toFiniteNumber(item.realizado !== undefined ? item.realizado : item.distancia_realizada, 0);
+  var percentual = toFiniteNumber(item.percentual !== undefined ? item.percentual : item.percentual_concluido, 0);
+  if (percentual <= 0 && meta > 0) percentual = (realizado / meta) * 100;
+  var progressoBarra = Math.max(0, Math.min(100, percentual));
+  var restante = item.restante !== undefined ? toFiniteNumber(item.restante, 0) : Math.max(meta - realizado, 0);
+  var concluido = meta > 0 && (realizado >= meta || percentual >= 100 || restante <= 0);
+  var semRegistro = realizado <= 0 && percentual <= 0;
+  return {
+    meta: meta,
+    realizado: realizado,
+    percentual: percentual,
+    progressoBarra: progressoBarra,
+    restante: Math.max(restante, 0),
+    concluido: concluido,
+    semRegistro: semRegistro,
+    statusClasse: concluido ? 'is-complete' : (semRegistro ? 'is-empty' : 'is-progress'),
+    statusTexto: concluido ? 'Concluído' : (semRegistro ? 'Sem registro' : 'Em andamento')
+  };
+}
+
+function isRankingItemCurrentUser(item, idInscricaoReferencia) {
+  item = item || {};
+  var currentUserId = currentUser && currentUser.id_dgmb ? String(currentUser.id_dgmb).trim() : '';
+  var inscricaoEmFoco = String(idInscricaoReferencia || '').trim();
+  var itemId = item.id_dgmb ? String(item.id_dgmb).trim() : '';
+  var itemInscricao = item.id_inscricao ? String(item.id_inscricao).trim() : '';
+
+  return inscricaoEmFoco
+    ? !!itemInscricao && inscricaoEmFoco === itemInscricao
+    : !!currentUserId && !!itemId && currentUserId === itemId;
+}
+
+function getRankingFilteredList(lista) {
+  var filtro = rankingFiltroAtual || 'todos';
+  if (filtro === 'todos') return lista;
+
+  return lista.filter(function(item) {
+    var info = getRankingProgressInfo(item);
+    if (filtro === 'concluidos') return info.concluido;
+    if (filtro === 'andamento') return info.realizado > 0 && !info.concluido;
+    return true;
+  });
+}
+
+function setRankingFilter(filtro) {
+  rankingFiltroAtual = filtro || 'todos';
+  document.querySelectorAll('.ranking-filter-btn').forEach(function(button) {
+    button.classList.toggle('is-active', button.getAttribute('data-ranking-filter') === rankingFiltroAtual);
+  });
+  renderRanking(rankingListaAtual, rankingInscricaoReferenciaAtual, true);
+}
+
+function buildRankingCardHtml(item, options) {
+  item = item || {};
+  options = options || {};
+  var info = getRankingProgressInfo(item);
+  var posicao = item.posicao || item.posicao_ranking || options.index || '-';
+  var cidade = item.cidade_uf ? '<span class="ranking-card-city">' + escapeHtml(item.cidade_uf) + '</span>' : '';
+  var selfBadge = options.isCurrentUser ? '<span class="ranking-item-self-badge">Você</span>' : '';
+  var restanteTexto = info.concluido ? 'Meta alcançada' : 'Faltam ' + formatNumber(info.restante) + ' km para a meta';
+
+  return '' +
+    '<div class="ranking-card-topline">' +
+      '<span class="ranking-position">Posição atual: ' + escapeHtml(posicao) + '</span>' +
+      '<span class="ranking-status ' + info.statusClasse + '">' + info.statusTexto + '</span>' +
+    '</div>' +
+    '<div class="ranking-card-name">' + escapeHtml(item.nome || 'Atleta') + selfBadge + '</div>' +
+    cidade +
+    '<div class="ranking-metrics">' +
+      '<div><span>Meta</span><strong>' + formatNumber(info.meta) + ' km</strong></div>' +
+      '<div><span>Realizado</span><strong>' + formatNumber(info.realizado) + ' km</strong></div>' +
+      '<div><span>Progresso</span><strong>' + formatNumber(info.percentual) + '%</strong></div>' +
+    '</div>' +
+    '<div class="ranking-progress ' + info.statusClasse + '" aria-label="Progresso de ' + formatNumber(info.percentual) + '%"><span style="width: ' + info.progressoBarra + '%"></span></div>' +
+    '<p class="ranking-remaining">' + restanteTexto + '</p>';
+}
+
+function renderRanking(lista, idInscricaoReferencia, preserveFilter) {
   const box = document.getElementById('ranking-lista');
   if (!box) return;
 
-  box.innerHTML = '';
-  const currentUserId = currentUser && currentUser.id_dgmb ? String(currentUser.id_dgmb).trim() : '';
-  const inscricaoEmFoco = String(idInscricaoReferencia || '').trim();
+  if (!preserveFilter) {
+    rankingListaAtual = Array.isArray(lista) ? lista : [];
+    rankingInscricaoReferenciaAtual = String(idInscricaoReferencia || '').trim();
+    rankingFiltroAtual = 'todos';
+  }
+  setRankingFilterButtonsState();
 
-  if (!Array.isArray(lista) || !lista.length) {
-    renderRankingState('empty', 'Ainda não há participantes com km registrado.', 'Assim que as primeiras quilometragens forem lançadas, o ranking do desafio aparecerá aqui.');
+  box.innerHTML = '';
+  const listaBase = Array.isArray(rankingListaAtual) ? rankingListaAtual : [];
+
+  if (!listaBase.length) {
+    renderRankingState('empty', 'Ainda não há atletas com km registrado.', 'Assim que as primeiras quilometragens forem lançadas, o acompanhamento do desafio aparecerá aqui.');
     return;
   }
 
-  lista.forEach(function(item, index) {
-    item = item || {};
-    const itemId = item.id_dgmb ? String(item.id_dgmb).trim() : '';
-    const itemInscricao = item.id_inscricao ? String(item.id_inscricao).trim() : '';
-    const isCurrentUser = inscricaoEmFoco
-      ? !!itemInscricao && inscricaoEmFoco === itemInscricao
-      : !!currentUserId && !!itemId && currentUserId === itemId;
-    const div = document.createElement('div');
-    div.className = 'atividade ranking-item' + (isCurrentUser ? ' ranking-item-self' : '');
-    div.innerHTML =
-      '<strong>' + (index + 1) + '. ' + escapeHtml(item.nome || '') + ' - ' + escapeHtml(item.cidade_uf || '') + (isCurrentUser ? ' <span class="ranking-item-self-badge">Você</span>' : '') + '</strong>' +
-      '<p>' + formatNumber(item.realizado) + ' de ' + formatNumber(item.meta) + ' km</p>' +
-      '<p>Faltam ' + formatNumber(item.restante) + ' km</p>';
-    box.appendChild(div);
+  var usuario = null;
+  listaBase.forEach(function(item) {
+    if (!usuario && isRankingItemCurrentUser(item, rankingInscricaoReferenciaAtual)) usuario = item;
+  });
+
+  if (usuario) {
+    var selfCard = document.createElement('section');
+    selfCard.className = 'ranking-self-card ranking-item-self';
+    selfCard.innerHTML = '<span class="ranking-section-label">Seu acompanhamento</span>' +
+      buildRankingCardHtml(usuario, { isCurrentUser: true, index: usuario.posicao || usuario.posicao_ranking || '-' });
+    box.appendChild(selfCard);
+  }
+
+  var filtrada = getRankingFilteredList(listaBase);
+  var listaSection = document.createElement('section');
+  listaSection.className = 'ranking-general-section';
+  listaSection.innerHTML = '<div class="ranking-section-heading"><span class="ranking-section-label">Atletas em movimento</span><strong>Lista geral</strong></div>';
+
+  var cardsWrap = document.createElement('div');
+  cardsWrap.className = 'ranking-cards-grid';
+
+  if (!filtrada.length) {
+    cardsWrap.innerHTML = '<div class="atividade atividade-empty ranking-state ranking-state-empty"><div class="ranking-state-label">Filtro</div><strong>Nenhum atleta encontrado neste filtro.</strong><p>Escolha outra opção para continuar acompanhando a jornada.</p></div>';
+  } else {
+    filtrada.forEach(function(item, index) {
+      var card = document.createElement('article');
+      var isCurrentUser = isRankingItemCurrentUser(item, rankingInscricaoReferenciaAtual);
+      card.className = 'ranking-athlete-card' + (isCurrentUser ? ' ranking-athlete-card-self' : '');
+      card.innerHTML = buildRankingCardHtml(item, { isCurrentUser: isCurrentUser, index: index + 1 });
+      cardsWrap.appendChild(card);
+    });
+  }
+
+  listaSection.appendChild(cardsWrap);
+  box.appendChild(listaSection);
+}
+
+function setRankingFilterButtonsState() {
+  document.querySelectorAll('.ranking-filter-btn').forEach(function(button) {
+    button.classList.toggle('is-active', button.getAttribute('data-ranking-filter') === rankingFiltroAtual);
   });
 }
 
@@ -4276,11 +4391,11 @@ function atualizarCabecalhoTelaRanking(desafioAtual) {
   var subtitulo = document.getElementById('ranking-screen-subtitle');
 
   if (titulo) {
-    titulo.innerText = 'Ranking do desafio em foco';
+    titulo.innerText = 'Acompanhamento do Desafio';
   }
 
   if (subtitulo) {
-    subtitulo.innerText = '';
+    subtitulo.innerText = 'Veja como está sua evolução junto com os demais atletas. O foco aqui é acompanhar, não competir.';
   }
 }
 
