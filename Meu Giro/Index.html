@@ -120,31 +120,7 @@
             </div>
       </div>
 
-      <div class="card card-desafio-foco" id="desafio-foco-card">
-        <div class="desafio-foco-head">
-          <div>
-            <p class="desafio-foco-label">Desafio em foco</p>
-            <h2 id="desafio-foco-nome">-</h2>
-          </div>
-          <span class="desafio-foco-status" id="desafio-foco-status">-</span>
-        </div>
-
-        <p class="desafio-foco-periodo" id="desafio-foco-periodo">Período não informado</p>
-        <p class="desafio-foco-operacional" id="desafio-foco-operacional" aria-live="polite">Status do desafio em análise.</p>
-
-        <label class="desafio-foco-select-label" for="desafio-foco-select">Trocar desafio</label>
-        <select id="desafio-foco-select" class="desafio-foco-select" onchange="onDesafioFocoSelectChange(this.value)" aria-describedby="desafio-foco-feedback"></select>
-        <div id="desafio-foco-feedback" class="desafio-foco-feedback" aria-live="polite"></div>
-      </div>
-
       <div id="desafio-selecionado-card" class="desafio-selecionado-container" aria-live="polite"></div>
-
-      <div class="card card-atividades-foco">
-        <h2>Atividades registradas</h2>
-        <p class="card-context-helper">Atividades do desafio em foco.</p>
-        <div id="atividades-lista" class="lista"></div>
-        <p class="total-pedalado-resumo">Total pedalado: <strong id="total-pedalado">0</strong> km</p>
-      </div>
 
       <div class="card">
         <h2 id="painel-ranking-context-title">Ranking do desafio em foco</h2>
@@ -153,7 +129,7 @@
           <p class="painel-ranking-main" id="painel-posicao-ranking">Ranking ainda indisponível.</p>
           <p class="painel-ranking-sub" id="painel-posicao-detalhe">Disponível quando houver base de comparação.</p>
         </div>
-        <p class="painel-ranking-context-tip" id="painel-ranking-context-tip">Troque o desafio no seletor acima para ver outro ranking.</p>
+        <p class="painel-ranking-context-tip" id="painel-ranking-context-tip">Use a tela Desafios para escolher o desafio em foco.</p>
         <button id="btn-ranking-painel" class="btn-main ranking-action-btn" onclick="markRankingTrigger(this); carregarRanking('manual')">Ver ranking do desafio</button>
       </div>
 
@@ -235,12 +211,8 @@
 
     <section id="screen-registrar" class="screen">
       <div id="registro-card" class="card card-registro-atividade">
-        <h2>Registrar atividade</h2>
+        <h2>Registrar atividades</h2>
         <p class="field-helper field-helper-intro">Preencha só o dia e os km do pedal.</p>
-        <div class="registro-desafio-foco" aria-live="polite">
-          <span>Registrando para:</span>
-          <strong id="registro-desafio-foco-nome">-</strong>
-        </div>
 
         <label for="data-atividade">Data da atividade</label>
         <input id="data-atividade" type="date">
@@ -271,6 +243,12 @@
             Cancelar edição
           </button>
         </div>
+      </div>
+      <div class="card card-atividades-foco card-atividades-registrar">
+        <h2>Atividades registradas</h2>
+        <div id="atividades-meses" class="atividades-meses" aria-label="Filtrar atividades por mês"></div>
+        <div id="atividades-mes-resumo" class="atividades-mes-resumo" aria-live="polite"></div>
+        <div id="atividades-lista" class="lista"></div>
       </div>
     </section>
 

@@ -30,6 +30,7 @@ let totalPedaladoAnimationToken = 0;
 let painelManualSuccessFeedbackTimer = null;
 let pendingRecentActivityHighlight = null;
 let pendingTotalPedaladoFeedback = false;
+let atividadesMesAtivo = '';
 let rankingButtonFeedbackTimer = null;
 let lastRankingTriggerButton = null;
 let rankingBackNavigationFeedbackTimer = null;
@@ -172,8 +173,6 @@ function navigateV2(destino) {
     renderDesafiosV2();
   } else if (destinoNormalizado === 'achievements') {
     renderConquistasV2();
-  } else if (destinoNormalizado === 'register') {
-    atualizarRegistroDesafioFocoV2_();
   }
   showScreen(tela || NAVEGACAO_V2_DESTINOS.home);
 }
@@ -2020,13 +2019,6 @@ function getDesafioMesLabelV2_(desafio) {
   return formatDateBR(base);
 }
 
-function atualizarRegistroDesafioFocoV2_() {
-  var el = document.getElementById('registro-desafio-foco-nome');
-  if (!el) return;
-  var desafio = getDesafioEmFocoAtual();
-  el.innerText = desafio ? getDesafioTitulo(desafio) : 'Selecione um desafio no início';
-}
-
 function abrirDetalheConquistaV2_(chave) {
   if (isConquistaActionLocked_()) return;
   setConquistaActionLock_(true);
@@ -2404,7 +2396,7 @@ function atualizarContextoVisualRanking(desafioAtual) {
   }
 
   if (dica) {
-    dica.innerText = 'Troque o desafio no seletor acima para ver outro ranking.';
+    dica.innerText = 'Use a tela Desafios para escolher o desafio em foco.';
   }
 }
 
@@ -2418,11 +2410,9 @@ function sincronizarPainelComDesafioEmFoco() {
 
   var contexto = montarPainelContextual(painel, desafioAtual);
   atualizarContextoVisualRanking(desafioAtual);
-  atualizarRegistroDesafioFocoV2_();
 
   setTextById('frase-box', contexto.frase);
   setTextById('desafio-foco-operacional', contexto.mensagem_operacional);
-  setTextById('total-pedalado', formatNumber(contexto.totalPedalado));
   setTextById('meta-km', formatNumber(contexto.meta));
   setTextById('realizado-km', formatNumber(contexto.realizado));
   setTextById('restante-km', formatNumber(contexto.restante));
@@ -2459,11 +2449,7 @@ function sincronizarPainelComDesafioEmFoco() {
       : 'Disponível quando houver base de comparação.';
   }
 
-  if (contexto.atividades_erro_periodo) {
-    renderAtividadesState('empty', contexto.atividades_mensagem, 'Selecione outro desafio ou procure a organização para revisar o período cadastrado.');
-  } else {
-    renderAtividades(contexto.atividades || []);
-  }
+  renderAtividades(currentPainel && currentPainel.atividades || []);
 }
 
 function setTextById(id, text) {
@@ -3265,33 +3251,133 @@ function getDesafioTitulo(desafio) {
   return 'Desafio sem identificação';
 }
 
+function getActivityDateParts_(value) {
+  var raw = String(value || '').trim();
+  var match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    return {
+      year: match[1],
+      month: match[2],
+      day: match[3],
+      key: match[1] + '-' + match[2]
+    };
+  }
+
+  match = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (match) {
+    return {
+      year: match[3],
+      month: match[2],
+      day: match[1],
+      key: match[3] + '-' + match[2]
+    };
+  }
+
+  return null;
+}
+
+function getMesNome_(month) {
+  var nomes = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+  var index = Number(month) - 1;
+  return nomes[index] || '';
+}
+
+function getMesLabel_(key) {
+  var partes = String(key || '').split('-');
+  if (partes.length < 2) return '';
+  var nome = getMesNome_(partes[1]);
+  return nome ? nome + '/' + partes[0] : key;
+}
+
+function getActivityMonthKey_(item) {
+  var partes = getActivityDateParts_(item && item.data);
+  return partes ? partes.key : '';
+}
+
+function getActivityDayLabel_(item) {
+  var partes = getActivityDateParts_(item && item.data);
+  if (partes && partes.day) return String(Number(partes.day));
+  return formatDateBR(item && item.data);
+}
+
+function montarMesesAtividades_(lista) {
+  var mapa = {};
+  (Array.isArray(lista) ? lista : []).forEach(function(item) {
+    var key = getActivityMonthKey_(item);
+    if (key) mapa[key] = true;
+  });
+  return Object.keys(mapa).sort().reverse();
+}
+
+function selecionarMesAtividades(key) {
+  atividadesMesAtivo = String(key || '').trim();
+  renderAtividades(currentPainel && currentPainel.atividades || []);
+}
+
 function renderAtividades(lista) {
   const box = document.getElementById('atividades-lista');
+  const mesesBox = document.getElementById('atividades-meses');
+  const resumo = document.getElementById('atividades-mes-resumo');
   if (!box) return;
 
   clearRecentActivityHighlight();
   box.innerHTML = '';
 
-  if (!Array.isArray(lista) || !lista.length) {
-    renderAtividadesState('empty', 'Nenhuma atividade registrada para este desafio.', 'Assim que você registrar um pedal neste período, a lista aparecerá aqui com data e quilometragem.');
+  var atividades = Array.isArray(lista) ? lista.slice() : [];
+  var meses = montarMesesAtividades_(atividades);
+
+  if (!atividades.length) {
+    if (mesesBox) mesesBox.innerHTML = '';
+    if (resumo) resumo.innerHTML = '';
+    renderAtividadesState('empty', 'Você ainda não registrou atividades.', 'Assim que você registrar um pedal, a lista aparecerá aqui.');
     return;
   }
 
-  const highlightedItem = findRecentActivityHighlightMatch(lista);
+  if (!atividadesMesAtivo || meses.indexOf(atividadesMesAtivo) === -1) {
+    atividadesMesAtivo = meses[0] || '';
+  }
 
-  lista.forEach(function(item) {
+  if (mesesBox) {
+    mesesBox.innerHTML = '';
+    meses.forEach(function(key) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'atividades-mes-btn' + (key === atividadesMesAtivo ? ' is-active' : '');
+      btn.innerText = getMesLabel_(key);
+      btn.setAttribute('aria-pressed', key === atividadesMesAtivo ? 'true' : 'false');
+      btn.onclick = function() { selecionarMesAtividades(key); };
+      mesesBox.appendChild(btn);
+    });
+  }
+
+  var listaFiltrada = atividades.filter(function(item) {
+    return getActivityMonthKey_(item) === atividadesMesAtivo;
+  });
+  var totalMes = listaFiltrada.reduce(function(total, item) {
+    return total + toFiniteNumber(item && item.km, 0);
+  }, 0);
+
+  if (resumo) {
+    resumo.innerHTML = '<strong>' + escapeHtml(getMesLabel_(atividadesMesAtivo)) + '</strong><span>Total: <strong id="total-pedalado">' + formatNumber(totalMes) + '</strong> km</span>';
+  }
+
+  if (!listaFiltrada.length) {
+    renderAtividadesState('empty', 'Nenhuma atividade registrada neste mês.', 'Escolha outro mês ou registre uma nova atividade.');
+    return;
+  }
+
+  const highlightedItem = findRecentActivityHighlightMatch(listaFiltrada);
+
+  listaFiltrada.forEach(function(item) {
     item = item || {};
     const div = document.createElement('div');
     div.className = 'atividade';
-    if (item.activity_id) {
-      div.setAttribute('data-activity-id', String(item.activity_id).trim());
-    }
-    if (item.chave_edicao) {
-      div.setAttribute('data-chave-edicao', String(item.chave_edicao).trim());
-    }
+    if (item.activity_id) div.setAttribute('data-activity-id', String(item.activity_id).trim());
+    if (item.chave_edicao) div.setAttribute('data-chave-edicao', String(item.chave_edicao).trim());
 
     const info = document.createElement('div');
-    info.innerText = 'Dia ' + formatDateBR(item.data) + ' - ' + formatNumber(item.km) + ' km';
+    info.className = 'atividade-info';
+    info.innerText = 'Dia ' + getActivityDayLabel_(item) + ' — ' + formatNumber(item.km) + ' km';
     div.appendChild(info);
 
     const actions = document.createElement('div');
@@ -3303,28 +3389,23 @@ function renderAtividades(lista) {
     btnEditar.innerText = 'Editar';
     const editKey = String(item.activity_id || '').trim() || String(item.chave_edicao || '').trim();
     if (editKey) {
-      if (activeEditKey && activeEditKey !== editKey) {
-        btnEditar.disabled = true;
-      }
+      if (activeEditKey && activeEditKey !== editKey) btnEditar.disabled = true;
       if (activeEditKey && activeEditKey === editKey) {
         btnEditar.disabled = true;
         btnEditar.innerText = 'Editando';
       }
-      btnEditar.onclick = function() {
-        iniciarEdicaoAtividadeUI(item);
-      };
+      btnEditar.onclick = function() { iniciarEdicaoAtividadeUI(item); };
     } else {
       btnEditar.disabled = true;
     }
+
     const btnExcluir = document.createElement('button');
     btnExcluir.type = 'button';
     btnExcluir.className = 'btn-secondary atividade-acao-btn';
     btnExcluir.innerText = 'Excluir';
     const deleteKey = String(item.activity_id || '').trim() || String(item.chave_edicao || '').trim();
     if (deleteKey) {
-      btnExcluir.onclick = function() {
-        excluirAtividadeUI(item, btnExcluir);
-      };
+      btnExcluir.onclick = function() { excluirAtividadeUI(item, btnExcluir); };
     } else {
       btnExcluir.disabled = true;
     }
@@ -3332,10 +3413,7 @@ function renderAtividades(lista) {
     actions.appendChild(btnExcluir);
     div.appendChild(actions);
 
-    if (highlightedItem === item) {
-      div.dataset.recentApplied = 'true';
-    }
-
+    if (highlightedItem === item) div.dataset.recentApplied = 'true';
     box.appendChild(div);
   });
 
@@ -3344,12 +3422,7 @@ function renderAtividades(lista) {
   const recentItem = box.querySelector('.atividade[data-recent-applied="true"]');
   if (recentItem) {
     recentItem.removeAttribute('data-recent-applied');
-    playRecentActivityHighlight(
-      recentItem,
-      pendingRecentActivityHighlight && pendingRecentActivityHighlight.label
-        ? pendingRecentActivityHighlight.label
-        : 'Agora'
-    );
+    playRecentActivityHighlight(recentItem, pendingRecentActivityHighlight && pendingRecentActivityHighlight.label ? pendingRecentActivityHighlight.label : 'Agora');
   }
 
   pendingRecentActivityHighlight = null;

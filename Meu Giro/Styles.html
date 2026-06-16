@@ -3080,6 +3080,54 @@
     margin-bottom: 4px;
   }
 
+  .card-atividades-registrar {
+    display: grid;
+    gap: 12px;
+  }
+
+  .atividades-meses {
+    display: flex;
+    gap: 8px;
+    margin: 2px -4px 0;
+    padding: 2px 4px 8px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .atividades-mes-btn {
+    flex: 0 0 auto;
+    min-height: 38px;
+    padding: 8px 12px;
+    border: 1px solid #dbeafe;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #1e3a8a;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .atividades-mes-btn.is-active {
+    border-color: #2563eb;
+    background: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
+  }
+
+  .atividades-mes-resumo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    color: #374151;
+  }
+
+  .atividade-info {
+    font-weight: 800;
+    color: #111827;
+  }
+
   @media (max-width: 600px) {
     .card-desafio-foco,
     .desafio-principal-card {
