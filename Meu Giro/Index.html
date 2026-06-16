@@ -163,10 +163,32 @@
           <h3 id="desafios-v2-concluidos-title">Concluídos</h3>
           <div class="desafios-v2-lista"></div>
         </section>
-        <section id="desafios-v2-historico" class="desafios-v2-group" aria-labelledby="desafios-v2-historico-title">
-          <h3 id="desafios-v2-historico-title">Histórico</h3>
-          <div class="desafios-v2-lista"></div>
-        </section>
+      </div>
+    </section>
+
+    <section id="screen-desafio-detalhe" class="screen desafio-detalhe-screen">
+      <div class="desafio-detalhe-layout">
+        <header class="card desafio-detalhe-topo">
+          <div>
+            <p class="desafio-detalhe-label">Detalhes do desafio</p>
+            <h2 id="desafio-detalhe-titulo">Desafio</h2>
+            <p class="desafio-detalhe-periodo">Período: <strong id="desafio-detalhe-periodo">-</strong></p>
+          </div>
+          <button class="btn-secondary desafio-detalhe-voltar" type="button" onclick="voltarDesafiosV2()" aria-label="Voltar para Desafios">← Voltar</button>
+        </header>
+
+        <div class="card desafio-detalhe-card">
+          <div class="desafio-detalhe-metricas" aria-label="Resumo detalhado do desafio">
+            <p><span>Meta</span><strong id="desafio-detalhe-meta">0 km</strong></p>
+            <p><span>Realizado</span><strong id="desafio-detalhe-realizado">0 km</strong></p>
+            <p><span>Falta</span><strong id="desafio-detalhe-falta">0 km</strong></p>
+            <p><span>Percentual</span><strong id="desafio-detalhe-percentual">0%</strong></p>
+          </div>
+          <div class="desafio-detalhe-progress-track" aria-hidden="true">
+            <span id="desafio-detalhe-progress-bar" class="desafio-detalhe-progress-fill"></span>
+          </div>
+          <div id="desafio-detalhe-certificado" class="desafio-detalhe-certificado"></div>
+        </div>
       </div>
     </section>
 
