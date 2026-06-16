@@ -1,3 +1,5 @@
+const PERFORMANCE_DEBUG = false;
+
 const SPREADSHEET_ID = '1vC4ivc3DMevxtedDXAVAIsjZxzZbtbP794n63tky0Vw';
 
 const SHEETS = {

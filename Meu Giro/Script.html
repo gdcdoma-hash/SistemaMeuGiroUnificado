@@ -1769,6 +1769,120 @@ function playRankingPreviewFeedback(previousPainel, nextPainel) {
   }, 1700);
 }
 
+
+function mesclarPainelPosSalvarLeve_(painelAtual, painelLeve) {
+  var base = painelAtual || {};
+  var leve = painelLeve || {};
+  var merged = {};
+
+  Object.keys(base).forEach(function(key) {
+    merged[key] = base[key];
+  });
+  Object.keys(leve).forEach(function(key) {
+    merged[key] = leve[key];
+  });
+
+  // O fluxo leve não recalcula ranking. Preserva o último preview do painel e
+  // deixa a tela Ranking buscar dados atualizados sob demanda após a invalidação.
+  merged.posicao_ranking = base.posicao_ranking;
+  merged.total_participantes = base.total_participantes;
+  merged.posicaoRanking = base.posicaoRanking;
+  merged.totalParticipantes = base.totalParticipantes;
+  merged.ranking_por_desafio = base.ranking_por_desafio || {};
+
+  return merged;
+}
+
+function carregarPainelPosSalvarLeve() {
+  var painelPerfLabel = 'carregarPainelPosSalvarLeve';
+  perfStart(painelPerfLabel);
+  if (!currentUser || !currentUser.id_dgmb) {
+    perfEnd(painelPerfLabel);
+    setTransientStatus('login-msg', 'Sua sessão expirou. Entre novamente.', 'error');
+    showScreen('login');
+    return;
+  }
+
+  if (painelLoadInProgress) {
+    perfEnd(painelPerfLabel);
+    painelReloadPending = true;
+    setPainelMsg('Atualizando painel...', 'loading');
+    return;
+  }
+
+  if (activityMutationInProgress) {
+    perfEnd(painelPerfLabel);
+    painelReloadPending = true;
+    return;
+  }
+
+  painelLoadInProgress = true;
+  painelReloadPending = false;
+  painelLoadRequestId += 1;
+  const requestId = painelLoadRequestId;
+
+  setManualPainelRefreshDisabled(true);
+  setPainelMsg('Atualizando atividades...', 'loading');
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (requestId !== painelLoadRequestId) {
+        return;
+      }
+
+      painelLoadInProgress = false;
+      perfEnd(painelPerfLabel);
+      syncGlobalBusyState();
+      setManualPainelRefreshDisabled(false);
+
+      if (!res || !res.ok) {
+        setPainelMsg((res && res.msg) ? res.msg : 'Erro ao atualizar atividades. Recarregando painel completo...', 'error');
+        painelReloadPending = false;
+        carregarPainel('pos-salvar-fallback');
+        return;
+      }
+
+      var previousPainel = currentPainel;
+      var focoAntesDaAtualizacao = String(desafioEmFocoKey || '').trim();
+      var previousPainelContextual = montarPainelContextualPorChave(previousPainel, focoAntesDaAtualizacao);
+      var shouldPlayRitmoAgoraFeedback = painelProgressFeedbackMode === 'activity-registered';
+      currentPainel = mesclarPainelPosSalvarLeve_(currentPainel, res.data || {});
+      if (currentPainel && currentUser) {
+        currentUser.nome = String(currentPainel.nome || currentUser.nome || '').trim();
+        currentUser.cidade_uf = String(currentPainel.cidade_uf || currentUser.cidade_uf || '').trim();
+        persistirSessaoLogin(currentUser);
+        syncTopNavigation(true);
+      }
+      renderPainel(currentPainel);
+      var nextPainelContextual = montarPainelContextual(currentPainel, getDesafioEmFocoAtual());
+      playTotalPedaladoFeedback(previousPainelContextual, nextPainelContextual);
+      playPainelProgressFeedback(previousPainelContextual, nextPainelContextual);
+      if (shouldPlayRitmoAgoraFeedback) {
+        playRitmoAgoraFeedback();
+      }
+      setPainelMsg('Atividades atualizadas.', 'success', 1600);
+
+      if (painelReloadPending) {
+        carregarPainelPosSalvarLeve();
+      }
+    })
+    .withFailureHandler(function(err) {
+      if (requestId !== painelLoadRequestId) {
+        return;
+      }
+
+      painelLoadInProgress = false;
+      perfEnd(painelPerfLabel);
+      syncGlobalBusyState();
+      setManualPainelRefreshDisabled(false);
+      setPainelMsg('Erro de conexão ao atualizar atividades. Recarregando painel completo...', 'error');
+      console.error(err);
+      painelReloadPending = false;
+      carregarPainel('pos-salvar-fallback');
+    })
+    .getPainelUsuarioPosSalvarLeve(currentUser.id_dgmb);
+}
+
 function carregarPainel(triggerSource) {
   var painelPerfLabel = 'carregarPainel' + (triggerSource ? ':' + triggerSource : '');
   perfStart(painelPerfLabel);
@@ -3859,7 +3973,7 @@ async function salvarAtividade(forcarDuplicidade) {
       invalidarCacheRanking();
     }
     if (shouldReloadPainel || painelReloadPending) {
-      carregarPainel('pos-salvar');
+      carregarPainelPosSalvarLeve();
     }
   }
 }
@@ -3987,7 +4101,7 @@ async function salvarEdicaoAtividade() {
       invalidarCacheRanking();
     }
     if (shouldReloadPainel || painelReloadPending) {
-      carregarPainel('pos-salvar');
+      carregarPainelPosSalvarLeve();
     }
   }
 }
@@ -4136,7 +4250,7 @@ async function excluirAtividadeUI(item, btnExcluir) {
       invalidarCacheRanking();
     }
     if (shouldReloadPainel || painelReloadPending) {
-      carregarPainel('pos-salvar');
+      carregarPainelPosSalvarLeve();
     }
   }
 }

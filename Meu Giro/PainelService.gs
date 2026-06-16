@@ -162,6 +162,192 @@ function getPainelUsuario(idDgmb) {
 }
 
 
+function painelMG_perfDebugAtivo_() {
+  try {
+    return typeof PERFORMANCE_DEBUG !== 'undefined' && !!PERFORMANCE_DEBUG;
+  } catch (e) {
+    return false;
+  }
+}
+
+function painelMG_perfNow_() {
+  try {
+    return Date.now();
+  } catch (e) {
+    return new Date().getTime();
+  }
+}
+
+function painelMG_perfLog_(escopo, etapa, inicio, extras) {
+  if (!painelMG_perfDebugAtivo_()) return;
+
+  try {
+    var fim = painelMG_perfNow_();
+    var payload = {
+      etapa: etapa,
+      duracao_ms: fim - inicio
+    };
+
+    Object.keys(extras || {}).forEach(function(chave) {
+      payload[chave] = extras[chave];
+    });
+
+    Logger.log('[Meu Giro][performance][' + escopo + '] ' + JSON.stringify(payload));
+  } catch (e) {}
+}
+
+function getPainelUsuarioPosSalvarLeve(idDgmb) {
+  var perfTotalInicio = painelMG_perfNow_();
+  var perfEtapaInicio = perfTotalInicio;
+
+  try {
+    var id = String(idDgmb || '').trim();
+    if (!id) {
+      return { ok: false, code: 'ID_OBRIGATORIO', msg: 'ID do usuário não informado.' };
+    }
+
+    perfEtapaInicio = painelMG_perfNow_();
+    var pessoa = buscarPessoaPainelMG_(id);
+    painelMG_perfLog_('painel-leve-pos-salvar', 'buscarPessoaPainelMG_', perfEtapaInicio, {
+      encontrado: !!pessoa
+    });
+
+    perfEtapaInicio = painelMG_perfNow_();
+    var resumoDesafios = atualizarMeuGiroResumo_(id) || [];
+    painelMG_perfLog_('painel-leve-pos-salvar', 'atualizarMeuGiroResumo_', perfEtapaInicio, {
+      total_desafios_resumo: resumoDesafios.length
+    });
+
+    perfEtapaInicio = painelMG_perfNow_();
+    var desafio = buscarInscricaoPainelMG_(id, resumoDesafios);
+    painelMG_perfLog_('painel-leve-pos-salvar', 'buscarInscricaoPainelMG_', perfEtapaInicio, {
+      ok: !!(desafio && desafio.ok),
+      total_desafios: desafio && desafio.desafios ? desafio.desafios.length : 0
+    });
+
+    if (!pessoa) {
+      return { ok: false, code: 'USUARIO_NAO_ENCONTRADO', msg: 'Usuário não encontrado na base de pessoas para carregar o painel.' };
+    }
+
+    if (!desafio.ok) {
+      return {
+        ok: false,
+        code: desafio.code,
+        motivo_inscricao: desafio.motivo,
+        msg: desafio.msg
+      };
+    }
+
+    if (!desafio.data) {
+      return {
+        ok: false,
+        code: 'CONTRATO_INSCRICAO_INVALIDO',
+        msg: 'Dados de inscrição inválidos para o painel.'
+      };
+    }
+
+    var desafioData = desafio.data;
+    perfEtapaInicio = painelMG_perfNow_();
+    var desafiosConsolidados = (desafio.desafios || []).map(function(item) {
+      var desafioPainel = {};
+      Object.keys(item || {}).forEach(function(chave) {
+        desafioPainel[chave] = item[chave];
+      });
+
+      var operacional = painelMG_montarMensagemOperacional_(
+        desafioPainel.status_apuracao,
+        desafioPainel.status_usuario_desafio
+      );
+      desafioPainel.status_operacional = operacional.codigo_operacional;
+      desafioPainel.mensagem_operacional = operacional.mensagem_operacional;
+      return desafioPainel;
+    });
+    painelMG_perfLog_('painel-leve-pos-salvar', 'montagem_desafios_consolidados', perfEtapaInicio, {
+      total_desafios: desafiosConsolidados.length
+    });
+
+    var meta = painelMG_toNumber_(desafioData.meta);
+    var realizado = painelMG_toNumber_(desafioData.realizado);
+    var realizadoPainel = painelMG_round1_(realizado);
+
+    var desafiosAtivosPainel = desafiosConsolidados.filter(function(d) {
+      return painelMG_isStatusAtivo_(d && d.status_apuracao);
+    });
+    var desafiosHistoricoPainel = desafiosConsolidados.filter(function(d) {
+      return painelMG_isStatusHistorico_(d && d.status_apuracao);
+    }).sort(painelMG_compareHistoricoDesafios_);
+
+    var desafioPrincipalPainel = null;
+    if (desafiosAtivosPainel.length) {
+      desafioPrincipalPainel = desafiosAtivosPainel[0];
+    } else if (desafiosHistoricoPainel.length) {
+      desafioPrincipalPainel = desafiosHistoricoPainel[0];
+    } else if (desafiosConsolidados.length) {
+      desafioPrincipalPainel = desafiosConsolidados[0];
+    }
+
+    var statusOperacionalPainel = desafioPrincipalPainel
+      ? {
+          codigo_operacional: desafioPrincipalPainel.status_operacional,
+          mensagem_operacional: desafioPrincipalPainel.mensagem_operacional
+        }
+      : painelMG_montarMensagemOperacional_('', '');
+    var progresso = painelMG_calcularProgresso_(meta, realizadoPainel);
+    var ritmo = painelMG_calcularRitmo_(meta, realizadoPainel, desafioData.periodo_inicio, desafioData.periodo_fim);
+    perfEtapaInicio = painelMG_perfNow_();
+    var atividades = buscarAtividadesUsuario_(id);
+    painelMG_perfLog_('painel-leve-pos-salvar', 'buscarAtividadesUsuario_', perfEtapaInicio, {
+      total_atividades: atividades && atividades.length ? atividades.length : 0
+    });
+
+    painelMG_perfLog_('painel-leve-pos-salvar', 'getPainelUsuarioPosSalvarLeve_total', perfTotalInicio, {
+      total_desafios: desafiosConsolidados.length,
+      total_atividades: atividades && atividades.length ? atividades.length : 0
+    });
+
+    return {
+      ok: true,
+      data: {
+        nome: pessoa.nome || '',
+        cidade_uf: pessoa.cidade_uf || '',
+        id_dgmb: pessoa.id_dgmb || '',
+        status_inscricao: desafioData.status_inscricao || 'inscrito',
+        criterio_validacao_inscricao: desafioData.criterio_validacao || 'presenca_id_dgmb',
+        desafio_usuario: desafioData.aba_desafio || '',
+
+        meta: painelMG_round1_(meta),
+        realizado: realizadoPainel,
+        restante: progresso.restante,
+        percentual: progresso.percentual,
+
+        diaAtual: ritmo.diaAtual,
+        diasRestantes: ritmo.diasRestantes,
+        kmIdealAtual: ritmo.kmIdealHoje,
+        kmPorDiaRestante: ritmo.kmPorDiaRestante,
+
+        ritmo_status: ritmo.status,
+        ritmo_mensagem: ritmo.mensagem,
+        status_operacional: statusOperacionalPainel.codigo_operacional,
+        mensagem_operacional: statusOperacionalPainel.mensagem_operacional,
+
+        atividades: atividades,
+        desafios: desafiosConsolidados,
+        desafio_em_foco: desafioPrincipalPainel,
+        desafios_ativos: desafiosAtivosPainel,
+        desafios_historico: desafiosHistoricoPainel,
+        totalPedalado: realizadoPainel,
+        total_pedalado: realizadoPainel
+      }
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      code: 'PAINEL_LEVE_POS_SALVAR_ERROR',
+      msg: err && err.message ? err.message : 'Erro interno ao atualizar atividades do painel.'
+    };
+  }
+}
+
 function painelMG_montarMensagemOperacional_(statusApuracao, statusUsuarioDesafio) {
   var apuracao = painelMG_norm_(statusApuracao).toUpperCase();
   var usuario = painelMG_norm_(statusUsuarioDesafio).toUpperCase();
