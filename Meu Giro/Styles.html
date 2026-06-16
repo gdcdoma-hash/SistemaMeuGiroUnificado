@@ -431,7 +431,7 @@
   }
 
   .conquista-detalhe-screen {
-    padding-bottom: 88px;
+    padding-bottom: 112px;
   }
 
   .conquista-detalhe-layout {
@@ -442,7 +442,8 @@
 
   .conquista-detalhe-card {
     display: grid;
-    gap: 12px;
+    gap: 10px;
+    padding-bottom: 18px;
   }
 
   .conquista-detalhe-card h2,
@@ -457,7 +458,7 @@
     top: 10px;
     z-index: 3;
     display: grid;
-    gap: 12px;
+    gap: 10px;
     margin-bottom: 0;
     border: 1px solid rgba(15, 23, 42, .08);
     background: rgba(255, 255, 255, .96);
@@ -480,6 +481,12 @@
     color: #0f172a;
   }
 
+  .conquista-detalhe-descricao {
+    color: #475569;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
   .conquista-detalhe-voltar {
     justify-self: start;
     width: auto;
@@ -492,16 +499,22 @@
 
   .conquista-detalhe-lista {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
+  }
+
+  @media (max-width: 360px) {
+    .conquista-detalhe-lista {
+      grid-template-columns: 1fr;
+    }
   }
 
   .conquista-atividade-item {
     display: grid;
-    gap: 3px;
-    min-height: 58px;
+    gap: 2px;
+    min-height: 52px;
     align-content: center;
-    padding: 10px 12px;
+    padding: 8px 10px;
     border: 1px solid rgba(59, 130, 246, .16);
     border-radius: 14px;
     background:
