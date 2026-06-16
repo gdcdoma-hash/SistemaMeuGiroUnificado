@@ -268,19 +268,30 @@
       </div>
     </section>
 
-    <section id="screen-ranking" class="screen">
-      <div class="card">
-        <h2 id="ranking-screen-title">Ranking do desafio em foco</h2>
-        <p id="ranking-screen-subtitle">Desafio: -</p>
-        <div class="ranking-desafio-selector-wrap">
-          <label for="ranking-desafio-select">Desafio</label>
+    <section id="screen-ranking" class="screen ranking-screen-v2">
+      <div class="card ranking-shell">
+        <header class="ranking-header-v2">
+          <span class="ranking-kicker">Atletas em movimento</span>
+          <h2 id="ranking-screen-title">Acompanhamento do Desafio</h2>
+          <p id="ranking-screen-subtitle">Veja como está sua evolução junto com os demais atletas. O foco aqui é acompanhar, não competir.</p>
+        </header>
+
+        <div class="ranking-desafio-selector-wrap ranking-selector-v2">
+          <label for="ranking-desafio-select">Desafio em foco</label>
           <select id="ranking-desafio-select" class="ranking-desafio-select" onchange="onRankingDesafioSelectorChange(this.value)">
             <option value="">Selecione um desafio</option>
           </select>
         </div>
-        <p>O ranking é apenas para acompanhamento. O verdadeiro desafio é superar você mesmo.</p>
+
         <div id="ranking-msg" class="msg status-msg" aria-live="polite"></div>
-        <div id="ranking-lista" class="lista"></div>
+
+        <div class="ranking-filter-group" role="group" aria-label="Filtrar acompanhamento por progresso">
+          <button type="button" class="ranking-filter-btn is-active" data-ranking-filter="todos" onclick="setRankingFilter('todos')">Todos</button>
+          <button type="button" class="ranking-filter-btn" data-ranking-filter="concluidos" onclick="setRankingFilter('concluidos')">Concluídos</button>
+          <button type="button" class="ranking-filter-btn" data-ranking-filter="andamento" onclick="setRankingFilter('andamento')">Em andamento</button>
+        </div>
+
+        <div id="ranking-lista" class="ranking-lista-v2"></div>
         <button id="btn-ranking-voltar" class="btn-secondary" onclick="showScreen('painel')">Voltar ao painel</button>
       </div>
     </section>

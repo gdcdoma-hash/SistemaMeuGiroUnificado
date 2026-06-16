@@ -3686,4 +3686,243 @@
     }
   }
 
+  /* Ranking modernizado — mobile-first */
+  .ranking-screen-v2 .ranking-shell {
+    display: grid;
+    gap: 18px;
+    background: linear-gradient(180deg, #fff7ed 0%, #ffffff 34%);
+    border: 1px solid rgba(251, 146, 60, 0.16);
+    box-shadow: 0 18px 46px rgba(15, 23, 42, 0.08);
+  }
+
+  .ranking-header-v2 {
+    display: grid;
+    gap: 8px;
+  }
+
+  .ranking-kicker,
+  .ranking-section-label {
+    display: inline-flex;
+    width: fit-content;
+    align-items: center;
+    border-radius: 999px;
+    padding: 5px 10px;
+    background: #ffedd5;
+    color: #c2410c;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .ranking-header-v2 h2 {
+    margin: 0;
+    color: #111827;
+    font-size: clamp(24px, 6vw, 34px);
+    line-height: 1.08;
+  }
+
+  .ranking-header-v2 p {
+    margin: 0;
+    color: #4b5563;
+    line-height: 1.55;
+  }
+
+  .ranking-selector-v2 {
+    margin: 0;
+    padding: 12px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.86);
+    border: 1px solid #fed7aa;
+  }
+
+  .ranking-filter-group {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .ranking-filter-btn {
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #374151;
+    cursor: pointer;
+    flex: 0 0 auto;
+    font-weight: 800;
+    min-height: 38px;
+    padding: 8px 13px;
+  }
+
+  .ranking-filter-btn.is-active {
+    background: #f97316;
+    border-color: #f97316;
+    color: #ffffff;
+    box-shadow: 0 10px 22px rgba(249, 115, 22, 0.22);
+  }
+
+  .ranking-lista-v2,
+  .ranking-general-section,
+  .ranking-cards-grid {
+    display: grid;
+    gap: 14px;
+  }
+
+  .ranking-self-card,
+  .ranking-athlete-card {
+    display: grid;
+    gap: 11px;
+    border: 1px solid #e5e7eb;
+    border-radius: 22px;
+    background: #ffffff;
+    padding: 15px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.07);
+  }
+
+  .ranking-self-card {
+    position: relative;
+    overflow: hidden;
+    border-color: #fdba74;
+    background: linear-gradient(135deg, #fff7ed 0%, #ffffff 58%, #f0fdf4 100%);
+    padding: 18px;
+    box-shadow: 0 18px 42px rgba(249, 115, 22, 0.16);
+  }
+
+  .ranking-self-card::after {
+    content: '';
+    position: absolute;
+    inset: auto -32px -42px auto;
+    width: 120px;
+    height: 120px;
+    border-radius: 999px;
+    background: rgba(249, 115, 22, 0.12);
+    pointer-events: none;
+  }
+
+  .ranking-card-topline,
+  .ranking-section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .ranking-position {
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .ranking-status {
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 4px 9px;
+  }
+
+  .ranking-status.is-progress {
+    background: #ffedd5;
+    color: #c2410c;
+  }
+
+  .ranking-status.is-complete {
+    background: #dcfce7;
+    color: #15803d;
+  }
+
+  .ranking-status.is-empty {
+    background: #f3f4f6;
+    color: #6b7280;
+  }
+
+  .ranking-card-name {
+    color: #111827;
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1.2;
+  }
+
+  .ranking-card-city,
+  .ranking-remaining {
+    color: #6b7280;
+    font-size: 13px;
+  }
+
+  .ranking-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .ranking-metrics div {
+    border-radius: 16px;
+    background: #f9fafb;
+    padding: 10px;
+  }
+
+  .ranking-metrics span {
+    display: block;
+    color: #6b7280;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .ranking-metrics strong {
+    display: block;
+    color: #111827;
+    font-size: 14px;
+    margin-top: 3px;
+  }
+
+  .ranking-progress {
+    height: 10px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e5e7eb;
+  }
+
+  .ranking-progress span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: #fb923c;
+  }
+
+  .ranking-progress.is-complete span {
+    background: #22c55e;
+  }
+
+  .ranking-progress.is-empty span {
+    background: #9ca3af;
+  }
+
+  .ranking-athlete-card-self {
+    border-color: #fed7aa;
+    background: #fffaf5;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+  }
+
+  .ranking-athlete-card-self .ranking-item-self-badge {
+    background: #f3f4f6;
+    color: #4b5563;
+  }
+
+  .ranking-remaining {
+    margin: 0;
+    font-weight: 700;
+  }
+
+  @media (min-width: 760px) {
+    .ranking-cards-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .ranking-self-card {
+      padding: 22px;
+    }
+  }
+
 </style>
