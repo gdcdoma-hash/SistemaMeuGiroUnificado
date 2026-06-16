@@ -923,6 +923,84 @@ function meuGiroResumoBuildChave_(idDgmb, idDesafio, idItemEstoque, metaKm, idIn
   return [id, desafio, item || ('META_' + meta)].join('|');
 }
 
+
+function obterMeuGiroResumoAtualizado_(idDgmb) {
+  var id = normalizeText_(idDgmb);
+  if (!id) return [];
+
+  var ss = getSpreadsheet_();
+  var sheetName = SHEETS.MEU_GIRO_RESUMO || 'MEU_GIRO_RESUMO';
+  var shResumo = ss.getSheetByName(sheetName);
+  if (!shResumo) return [];
+
+  var valoresResumo = shResumo.getDataRange().getValues();
+  if (!valoresResumo || valoresResumo.length < 2) return [];
+
+  var layoutResumo = meuGiroResumoObterLayout_(valoresResumo[0] || [], sheetName);
+  var mapResumo = layoutResumo.map;
+  var idxInscricaoResumo = getOptionalColumnIndex_(mapResumo, ['id_inscricao', 'id inscrição', 'id inscricao']);
+  var idxId = getOptionalColumnIndex_(mapResumo, ['id_dgmb']);
+  var idxDesafio = getOptionalColumnIndex_(mapResumo, ['id_desafio']);
+  var idxItem = getOptionalColumnIndex_(mapResumo, ['id_item_estoque', 'id item estoque']);
+  var idxMetaResumo = getOptionalColumnIndex_(mapResumo, ['meta_km', 'meta km']);
+  var idxDistanciaResumo = getOptionalColumnIndex_(mapResumo, ['distancia_realizada', 'distancia realizada']);
+  var idxPercentualResumo = getOptionalColumnIndex_(mapResumo, ['percentual_concluido', 'percentual concluido', 'percentual concluído']);
+  var idxStatusResumo = getOptionalColumnIndex_(mapResumo, ['status_apuracao', 'status apuracao', 'status apuração']);
+
+  var vinculos = obterVinculosDesafioUsuario_(id) || [];
+  var vinculosPorChave = {};
+  for (var v = 0; v < vinculos.length; v++) {
+    var vinculo = vinculos[v] || {};
+    var chaveVinculo = meuGiroResumoBuildChave_(
+      id,
+      vinculo.id_desafio,
+      vinculo.id_item_estoque,
+      vinculo.meta_km,
+      idxInscricaoResumo > -1 ? vinculo.id_inscricao : ''
+    );
+    vinculosPorChave[chaveVinculo] = vinculo;
+  }
+
+  var saida = [];
+  for (var i = 1; i < valoresResumo.length; i++) {
+    var row = valoresResumo[i] || [];
+    if (normalizeText_(row[idxId]) !== id) continue;
+
+    var idInscricao = idxInscricaoResumo > -1 ? normalizeText_(row[idxInscricaoResumo]) : '';
+    var meta = parseLocalizedNumber_(row[idxMetaResumo]);
+    var chave = meuGiroResumoBuildChave_(
+      row[idxId],
+      row[idxDesafio],
+      row[idxItem],
+      meta,
+      idxInscricaoResumo > -1 ? idInscricao : ''
+    );
+    var vinculoAtual = vinculosPorChave[chave] || {};
+
+    saida.push({
+      id_inscricao: idInscricao,
+      id_dgmb: id,
+      id_desafio: normalizeText_(row[idxDesafio]),
+      id_item_estoque: normalizeText_(row[idxItem]),
+      nome_desafio: normalizeText_(vinculoAtual.nome_desafio),
+      meta_km: Math.round((meta + Number.EPSILON) * 10) / 10,
+      distancia_realizada: Math.round((parseLocalizedNumber_(row[idxDistanciaResumo]) + Number.EPSILON) * 10) / 10,
+      percentual_concluido: Math.round((parseLocalizedNumber_(row[idxPercentualResumo]) + Number.EPSILON) * 10) / 10,
+      status_apuracao: normalizeText_(row[idxStatusResumo]),
+      status_validacao_certificado: normalizeText_(vinculoAtual.status_validacao_certificado).toUpperCase(),
+      status_desafio: normalizeText_(vinculoAtual.status_desafio),
+      status_usuario_desafio: normalizeText_(vinculoAtual.status_usuario_desafio),
+      status_pagamento: normalizeText_(vinculoAtual.status_pagamento),
+      status_lista_desafios: normalizeText_(vinculoAtual.status_lista_desafios),
+      periodo_inicio: normalizarDataISO_(vinculoAtual.periodo_inicio) || '',
+      periodo_fim: normalizarDataISO_(vinculoAtual.periodo_fim) || '',
+      periodo_desafio: normalizeText_(vinculoAtual.periodo_desafio)
+    });
+  }
+
+  return saida;
+}
+
 function atualizarMeuGiroResumo_(idDgmb) {
   var id = normalizeText_(idDgmb);
   if (!id) return [];
