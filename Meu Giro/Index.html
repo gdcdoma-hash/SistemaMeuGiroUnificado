@@ -10,6 +10,7 @@
   <header class="topbar">
   <div class="brand-row">
     <div class="brand">MEU GIRO</div>
+    <span id="painel-nome" class="topbar-user-name" hidden></span>
 
     <button id="btn-logout-top" class="btn-logout-top" type="button" onclick="logoutUser()" hidden>
       Sair
@@ -92,97 +93,57 @@
     </section>
 
     <section id="screen-painel" class="screen">
-      <div class="card card-identidade">
-            <div class="identidade-topo">
-              <div class="identidade-avatar" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="8" r="3.2"></circle>
-                  <path d="M5 20c1.8-3.8 4.3-5.7 7-5.7s5.2 1.9 7 5.7"></path>
-                </svg>
-              </div>
+      <div class="card painel-inicio-card">
+        <input id="painel-id-dgmb" type="hidden">
+        <span id="painel-cidade" hidden></span>
 
-              <div class="identidade-topo-texto">
-                <p class="identidade-label">Seu painel</p>
-                <p class="identidade-apoio">Sua evolução no desafio.</p>
-              </div>
-            </div>
-
-            <div class="identidade-conteudo">
-              <p class="identidade-nome"><strong id="painel-nome"></strong></p>
-              <input id="painel-id-dgmb" type="hidden">
-              <p class="identidade-cidade" id="painel-cidade"></p>
-            </div>
-            <div id="painel-msg" class="msg status-msg" aria-live="polite"></div>
-            <div id="painel-error-state" class="painel-error-state" hidden>
-              <p class="painel-error-title">Não foi possível atualizar seu painel.</p>
-              <p class="painel-error-text">Você pode tentar novamente agora. Se a falha continuar, aguarde um instante e repita a atualização.</p>
-              <button id="btn-painel-retry" class="btn-secondary painel-error-btn" type="button" onclick="carregarPainel('manual')">Tentar novamente</button>
-            </div>
-      </div>
-
-      <div id="desafio-selecionado-card" class="desafio-selecionado-container" aria-live="polite"></div>
-
-      <div class="card">
-        <h2 id="painel-ranking-context-title">Ranking do desafio em foco</h2>
-        <p class="painel-ranking-context-subtitle" id="painel-ranking-context-subtitle">Desafio em foco: -</p>
-        <div id="painel-ranking-box" class="painel-ranking-box">
-          <p class="painel-ranking-main" id="painel-posicao-ranking">Ranking ainda indisponível.</p>
-          <p class="painel-ranking-sub" id="painel-posicao-detalhe">Disponível quando houver base de comparação.</p>
-        </div>
-        <p class="painel-ranking-context-tip" id="painel-ranking-context-tip">Use a tela Desafios para escolher o desafio em foco.</p>
-        <button id="btn-ranking-painel" class="btn-main ranking-action-btn" onclick="markRankingTrigger(this); carregarRanking('manual')">Ver ranking do desafio</button>
-      </div>
-
-      <div class="card ritmo-card">
-        <h2>Ritmo ideal</h2>
-
-        <p id="ritmo-dia" class="ritmo-dia-helper">Hoje é o 9º dia do desafio.</p>
-
-        <div class="ritmo-stack">
-          <div class="ritmo-row ritmo-row-principal">
-            <div class="ritmo-col-left">
-              <span class="ritmo-titulo">Ritmo necessário para concluir</span>
-            </div>
-            <div class="ritmo-col-right">
-              <p id="ritmo-meta" class="ritmo-valor">12,6 km/dia</p>
-            </div>
-          </div>
-
-          <div class="ritmo-row">
-            <div class="ritmo-col-left">
-              <span class="ritmo-titulo">Ideal até hoje</span>
-            </div>
-            <div class="ritmo-col-right">
-              <p id="ritmo-ideal" class="ritmo-valor">116,10 km</p>
-            </div>
-          </div>
-
-          <div class="ritmo-row">
-            <div class="ritmo-col-left">
-              <span class="ritmo-titulo">Dias restantes</span>
-            </div>
-            <div class="ritmo-col-right">
-              <p id="ritmo-restante" class="ritmo-valor">22 dias</p>
-            </div>
-          </div>
+        <div class="painel-desafio-topo">
+          <p class="painel-desafio-label">Desafio em foco</p>
+          <h2 id="painel-desafio-nome">DESAFIO VOCÊ NA MEDALHA</h2>
+          <p id="painel-desafio-periodo" class="painel-desafio-periodo">Período: -</p>
         </div>
 
-        <p id="ritmo-atual" class="ritmo-hidden-helper">Você tem 0 km.</p>
-      </div>
+        <div class="painel-metricas-emocionais" aria-label="Resumo do desafio">
+          <p><span>Meta</span><strong><span id="meta-km">0</span> km</strong></p>
+          <p><span>Realizado</span><strong><span id="realizado-km">0</span> km</strong></p>
+          <p><span>Faltam</span><strong><span id="restante-km">0</span> km</strong></p>
+        </div>
 
-      <div class="card card-ritmo-agora">
-        <h2 class="ritmo-agora-heading">Seu ritmo agora</h2>
-        <div id="alerta-ritmo" class="alerta-ritmo alerta-ritmo-neutro" aria-live="polite">
-          <p class="alerta-ritmo-titulo" id="alerta-ritmo-titulo">Seu ritmo aparece aqui.</p>
-          <p class="alerta-ritmo-texto" id="alerta-ritmo-texto">Registre atividades para ver uma orientação simples.</p>
+        <p id="progress-percent" class="painel-percentual">0% concluído</p>
+        <div class="painel-progress-track" aria-hidden="true">
+          <span id="progress-bar" class="painel-progress-fill"></span>
+        </div>
+        <p id="progress-text" class="painel-progress-text">0 km de 0 km</p>
+
+        <div id="painel-status-motivacional" class="painel-status-motivacional painel-status-neutro" aria-live="polite">
+          <p id="alerta-ritmo-titulo" class="painel-status-titulo">🚴 Hora de começar.</p>
+          <p id="alerta-ritmo-texto" class="painel-status-texto">Registre sua primeira atividade.</p>
+        </div>
+
+        <div id="painel-msg" class="msg status-msg" aria-live="polite"></div>
+        <div id="painel-error-state" class="painel-error-state" hidden>
+          <p class="painel-error-title">Não foi possível atualizar seu painel.</p>
+          <p class="painel-error-text">Você pode tentar novamente agora. Se a falha continuar, aguarde um instante e repita a atualização.</p>
+          <button id="btn-painel-retry" class="btn-secondary painel-error-btn" type="button" onclick="carregarPainel('manual')">Tentar novamente</button>
         </div>
       </div>
 
-      <div class="card phrase-card">
-        <h2>Seu impulso de hoje</h2>
-        <p id="frase-box">Cada quilômetro conta. Continue no seu ritmo.</p>
-        <button type="button" id="btnOutraMensagem" onclick="verOutraFrase()">Outra mensagem</button>
-        <p id="frase-feedback" class="phrase-feedback" aria-live="polite"></p>
+      <div id="desafio-selecionado-card" class="desafio-selecionado-container" hidden aria-live="polite"></div>
+
+      <div class="painel-acoes-rapidas" aria-label="Ações rápidas">
+        <button type="button" class="painel-acao-card" onclick="navigateV2('register')"><span>🚴</span><strong>Registrar atividade</strong></button>
+        <button type="button" class="painel-acao-card" onclick="navigateV2('challenges')"><span>🏆</span><strong>Desafios</strong></button>
+        <button type="button" class="painel-acao-card" onclick="navigateV2('achievements')"><span>🥇</span><strong>Conquistas</strong></button>
+        <button type="button" class="painel-acao-card" onclick="markRankingTrigger(this); carregarRanking('manual')"><span>📊</span><strong>Ranking</strong></button>
+      </div>
+
+      <div class="card painel-ultima-atividade">
+        <div>
+          <p class="painel-ultima-label">Última atividade registrada</p>
+          <p id="painel-ultima-dia" class="painel-ultima-dia">Nenhuma atividade</p>
+          <strong id="painel-ultima-km" class="painel-ultima-km">0 km</strong>
+        </div>
+        <button type="button" class="btn-secondary painel-ultima-btn" onclick="navigateV2('register')">Ver todas</button>
       </div>
 
     </section>
