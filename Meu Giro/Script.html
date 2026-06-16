@@ -833,9 +833,13 @@ function setRankingLoadDisabled(disabled) {
   const topBtn = document.getElementById('btn-ranking-top');
   const painelBtn = document.getElementById('btn-ranking-painel');
   const desafioSelect = document.getElementById('ranking-desafio-select');
+  const desafioButtons = document.querySelectorAll('.ranking-desafio-btn');
 
   if (topBtn) topBtn.disabled = !!disabled;
   if (painelBtn) painelBtn.disabled = !!disabled;
+  desafioButtons.forEach(function(button) {
+    button.disabled = !!disabled;
+  });
   if (desafioSelect) {
     if (disabled) {
       desafioSelect.setAttribute('data-prev-disabled', desafioSelect.disabled ? 'true' : 'false');
@@ -2902,10 +2906,12 @@ function getDesafioPeriodoLabel(desafio) {
 
 function atualizarSeletorDesafioRanking() {
   var select = document.getElementById('ranking-desafio-select');
+  var buttonsWrap = document.getElementById('ranking-desafio-buttons');
   if (!select) return;
 
   var itens = Array.isArray(desafiosAtivosCarouselItems) ? desafiosAtivosCarouselItems : [];
   select.innerHTML = '';
+  if (buttonsWrap) buttonsWrap.innerHTML = '';
 
   if (!itens.length) {
     var emptyOption = document.createElement('option');
@@ -2913,17 +2919,19 @@ function atualizarSeletorDesafioRanking() {
     emptyOption.innerText = 'Sem desafios ativos';
     select.appendChild(emptyOption);
     select.disabled = true;
+
+    if (buttonsWrap) {
+      var emptyButton = document.createElement('button');
+      emptyButton.type = 'button';
+      emptyButton.className = 'ranking-desafio-btn is-active';
+      emptyButton.innerText = 'Sem desafios ativos';
+      emptyButton.disabled = true;
+      buttonsWrap.appendChild(emptyButton);
+    }
     return;
   }
 
   select.disabled = itens.length <= 1;
-
-  itens.forEach(function(item, index) {
-    var option = document.createElement('option');
-    option.value = String(index);
-    option.innerText = getDesafioTitulo(item || {});
-    select.appendChild(option);
-  });
 
   var indiceSeguro = Math.max(0, Math.min(itens.length - 1, Number(desafiosAtivosCarouselIndex) || 0));
   if (indiceSeguro !== desafiosAtivosCarouselIndex) {
@@ -2931,6 +2939,28 @@ function atualizarSeletorDesafioRanking() {
     desafioEmFocoKey = getDesafioKey(itens[indiceSeguro]);
     salvarDesafioEmFocoNaSessao(desafioEmFocoKey);
   }
+
+  itens.forEach(function(item, index) {
+    var titulo = getDesafioTitulo(item || {});
+    var option = document.createElement('option');
+    option.value = String(index);
+    option.innerText = titulo;
+    select.appendChild(option);
+
+    if (buttonsWrap) {
+      var button = document.createElement('button');
+      var isActive = index === indiceSeguro;
+      button.type = 'button';
+      button.className = 'ranking-desafio-btn' + (isActive ? ' is-active' : '');
+      button.dataset.rankingDesafioIndex = String(index);
+      button.innerText = titulo;
+      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      button.onclick = function() {
+        onRankingDesafioSelectorChange(String(index));
+      };
+      buttonsWrap.appendChild(button);
+    }
+  });
 
   select.value = String(indiceSeguro);
 }

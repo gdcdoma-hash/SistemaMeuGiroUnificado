@@ -277,10 +277,11 @@
         </header>
 
         <div class="ranking-desafio-selector-wrap ranking-selector-v2">
-          <label for="ranking-desafio-select">Desafio em foco</label>
-          <select id="ranking-desafio-select" class="ranking-desafio-select" onchange="onRankingDesafioSelectorChange(this.value)">
+          <span class="ranking-desafio-selector-label">Desafio em foco</span>
+          <select id="ranking-desafio-select" class="ranking-desafio-select ranking-desafio-select-hidden" onchange="onRankingDesafioSelectorChange(this.value)" aria-hidden="true" tabindex="-1">
             <option value="">Selecione um desafio</option>
           </select>
+          <div id="ranking-desafio-buttons" class="ranking-desafio-buttons" role="group" aria-label="Escolher desafio em foco"></div>
         </div>
 
         <div id="ranking-msg" class="msg status-msg" aria-live="polite"></div>
