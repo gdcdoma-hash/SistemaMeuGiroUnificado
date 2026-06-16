@@ -213,13 +213,23 @@ function getPainelUsuarioPosSalvarLeve(idDgmb) {
     });
 
     perfEtapaInicio = painelMG_perfNow_();
-    var resumoDesafios = atualizarMeuGiroResumo_(id) || [];
-    painelMG_perfLog_('painel-leve-pos-salvar', 'atualizarMeuGiroResumo_', perfEtapaInicio, {
-      total_desafios_resumo: resumoDesafios.length
+    var resumoDesafios = obterMeuGiroResumoAtualizado_(id) || [];
+    painelMG_perfLog_('painel-leve-pos-salvar', 'lerMeuGiroResumoAtualizado_', perfEtapaInicio, {
+      total_desafios_resumo: resumoDesafios.length,
+      fallback: false
     });
 
+    if (!resumoDesafios.length) {
+      perfEtapaInicio = painelMG_perfNow_();
+      resumoDesafios = atualizarMeuGiroResumo_(id) || [];
+      painelMG_perfLog_('painel-leve-pos-salvar', 'atualizarMeuGiroResumo_fallback_', perfEtapaInicio, {
+        total_desafios_resumo: resumoDesafios.length,
+        fallback: true
+      });
+    }
+
     perfEtapaInicio = painelMG_perfNow_();
-    var desafio = buscarInscricaoPainelMG_(id, resumoDesafios);
+    var desafio = buscarInscricaoPainelMG_(id, resumoDesafios, true);
     painelMG_perfLog_('painel-leve-pos-salvar', 'buscarInscricaoPainelMG_', perfEtapaInicio, {
       ok: !!(desafio && desafio.ok),
       total_desafios: desafio && desafio.desafios ? desafio.desafios.length : 0
@@ -477,7 +487,7 @@ function buscarPessoaPainelMG_(idDgmb) {
   return null;
 }
 
-function buscarInscricaoPainelMG_(idDgmb, resumoAtualizado) {
+function buscarInscricaoPainelMG_(idDgmb, resumoAtualizado, evitarRecalculoResumo) {
   var inscricao = obterDadosInscricaoUsuario_(idDgmb);
 
   if (!inscricao || inscricao.inscricao_valida === false) {
@@ -491,7 +501,7 @@ function buscarInscricaoPainelMG_(idDgmb, resumoAtualizado) {
   }
 
   var resumo = resumoAtualizado && resumoAtualizado.length ? resumoAtualizado : [];
-  if (!resumo.length) {
+  if (!resumo.length && !evitarRecalculoResumo) {
     try {
       resumo = atualizarMeuGiroResumo_(idDgmb) || [];
     } catch (e) {
