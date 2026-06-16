@@ -271,6 +271,15 @@
     <button class="nav-v2-item" type="button" data-v2-destination="achievements" onclick="navigateV2('achievements')">Conquistas</button>
   </nav>
 
+
+  <div id="global-loading-overlay" class="global-loading-overlay" role="status" aria-live="polite" aria-hidden="true" hidden>
+    <div class="global-loading-card" aria-label="Carregamento em andamento">
+      <div class="global-loading-spinner" aria-hidden="true"></div>
+      <strong class="global-loading-title">MEU GIRO</strong>
+      <span id="global-loading-message" class="global-loading-message">Carregando...</span>
+    </div>
+  </div>
+
   <?!= include('Script'); ?>
   <?!= include('AuthSession'); ?>
 </body>
