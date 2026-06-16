@@ -42,6 +42,7 @@ let desafiosFocoItems = [];
 let desafiosAtivosCarouselIndex = 0;
 let desafioEmFocoKey = '';
 let certificadoProcessandoKey = '';
+let conquistaActionInProgress = false;
 const DESAFIO_CARROSSEL_SESSION_KEY = 'meuGiro.desafioEmFocoKey';
 const LOGIN_SESSION_STORAGE_KEY = 'meuGiro.loginSession';
 const PAINEL_STATE_STORAGE_KEY = 'meuGiro.painelState';
@@ -1845,6 +1846,26 @@ function renderDesafiosV2() {
   renderGrupoDesafiosV2_(secoes.historico, grupos.historico, 'historico');
 }
 
+
+function isConquistaActionLocked_() {
+  return !!(conquistaActionInProgress || certificadoProcessandoKey);
+}
+
+function setConquistaActionLock_(locked) {
+  conquistaActionInProgress = !!locked;
+  syncConquistasBloqueioVisual_();
+}
+
+function syncConquistasBloqueioVisual_() {
+  var root = document.body;
+  if (!root) return;
+  root.classList.toggle('conquistas-bloqueadas', isConquistaActionLocked_());
+}
+
+function liberarConquistaActionLock_() {
+  setConquistaActionLock_(false);
+}
+
 function renderConquistasV2() {
   var mensagem = document.getElementById('conquistas-msg');
   var secaoConcluidas = document.getElementById('conquistas-concluidas');
@@ -1891,6 +1912,7 @@ function buildConquistaCard_(desafio) {
     abrirDetalheConquistaV2_(chave);
   });
   card.addEventListener('keydown', function(event) {
+    if (event.target && event.target.closest && event.target.closest('button, a')) return;
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       abrirDetalheConquistaV2_(chave);
@@ -2006,12 +2028,23 @@ function atualizarRegistroDesafioFocoV2_() {
 }
 
 function abrirDetalheConquistaV2_(chave) {
-  var desafio = encontrarDesafioPorChaveV2_(chave);
-  if (!desafio) return;
-  setTextById('conquista-detalhe-titulo', getDesafioTitulo(desafio));
-  setTextById('conquista-detalhe-periodo', getDesafioMesExtensoAnoLabel_(desafio));
-  renderConquistaDetalheAtividadesV2_(desafio);
-  showScreen('conquista-detalhe');
+  if (isConquistaActionLocked_()) return;
+  setConquistaActionLock_(true);
+  try {
+    var desafio = encontrarDesafioPorChaveV2_(chave);
+    if (!desafio) {
+      liberarConquistaActionLock_();
+      return;
+    }
+    setTextById('conquista-detalhe-titulo', getDesafioTitulo(desafio));
+    setTextById('conquista-detalhe-periodo', getDesafioMesExtensoAnoLabel_(desafio));
+    renderConquistaDetalheAtividadesV2_(desafio);
+    showScreen('conquista-detalhe');
+    window.setTimeout(liberarConquistaActionLock_, 0);
+  } catch (e) {
+    liberarConquistaActionLock_();
+    throw e;
+  }
 }
 
 function voltarConquistasV2() {
@@ -3006,7 +3039,7 @@ function solicitarCertificadoDesafio(payloadEncoded, localStatusId, buttonId, im
 
   var idDgmb = currentUser && currentUser.id_dgmb ? String(currentUser.id_dgmb).trim() : '';
   var certificadoKey = buildCertificadoProcessKey_(payload);
-  if (certificadoProcessandoKey) {
+  if (isConquistaActionLocked_()) {
     setPainelMsg('Aguarde: outro certificado está sendo processado.', 'loading');
     setCertificadoLocalMsg(localStatusId, 'Aguarde a geração do certificado em andamento.', 'loading');
     return;
@@ -3018,6 +3051,7 @@ function solicitarCertificadoDesafio(payloadEncoded, localStatusId, buttonId, im
   }
 
   certificadoProcessandoKey = certificadoKey;
+  setConquistaActionLock_(true);
   setCertificadoProcessingState_(true, buttonId);
 
   setPainelMsg('Gerando certificado...', 'loading');
@@ -3025,6 +3059,7 @@ function solicitarCertificadoDesafio(payloadEncoded, localStatusId, buttonId, im
   google.script.run
     .withSuccessHandler(function(res) {
       certificadoProcessandoKey = '';
+      liberarConquistaActionLock_();
       setCertificadoProcessingState_(false);
 
       if (!res || res.ok !== true || !(res.pdfDownloadUrl || res.url)) {
@@ -3044,6 +3079,7 @@ function solicitarCertificadoDesafio(payloadEncoded, localStatusId, buttonId, im
     })
     .withFailureHandler(function() {
       certificadoProcessandoKey = '';
+      liberarConquistaActionLock_();
       setCertificadoProcessingState_(false);
       setPainelMsg('Erro de conexão ao gerar certificado.', 'error');
       setCertificadoLocalMsg(localStatusId, 'Não foi possível gerar seu certificado agora. Tente novamente.', 'error');
@@ -3066,6 +3102,7 @@ function buildCertificadoProcessKey_(payload) {
 }
 
 function setCertificadoProcessingState_(processing, activeButtonId) {
+  syncConquistasBloqueioVisual_();
   var buttons = document.querySelectorAll('.certificado-download-btn');
   buttons.forEach(function(button) {
     button.disabled = !!processing;
