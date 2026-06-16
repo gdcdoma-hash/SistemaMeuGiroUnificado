@@ -895,11 +895,17 @@
 
   .ranking-desafio-buttons {
     display: flex;
+    flex-wrap: nowrap;
     gap: 8px;
+    box-sizing: border-box;
+    max-width: 100%;
+    min-width: 0;
     overflow-x: auto;
+    overflow-y: hidden;
     padding: 2px 2px 8px;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
+    touch-action: pan-x;
   }
 
   .ranking-desafio-btn {
@@ -910,8 +916,11 @@
     cursor: pointer;
     flex: 0 0 auto;
     font-weight: 800;
+    max-width: 85vw;
     min-height: 40px;
+    overflow: hidden;
     padding: 9px 14px;
+    text-overflow: ellipsis;
     white-space: nowrap;
   }
 
@@ -3747,9 +3756,29 @@
   }
 
   /* Ranking modernizado — mobile-first */
+  .ranking-screen-v2,
+  .ranking-screen-v2 .ranking-shell,
+  .ranking-selector-v2,
+  .ranking-lista-v2,
+  .ranking-self-card,
+  .ranking-athlete-card,
+  .ranking-cards-grid,
+  .ranking-filter-group,
+  .ranking-desafio-buttons {
+    box-sizing: border-box;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .ranking-screen-v2 {
+    overflow-x: hidden;
+  }
+
   .ranking-screen-v2 .ranking-shell {
     display: grid;
     gap: 18px;
+    width: 100%;
+    overflow-x: hidden;
     background: linear-gradient(180deg, #fff7ed 0%, #ffffff 34%);
     border: 1px solid rgba(251, 146, 60, 0.16);
     box-shadow: 0 18px 46px rgba(15, 23, 42, 0.08);
@@ -3798,10 +3827,13 @@
 
   .ranking-filter-group {
     display: flex;
+    flex-wrap: nowrap;
     gap: 8px;
     overflow-x: auto;
+    overflow-y: hidden;
     padding-bottom: 2px;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
   }
 
   .ranking-filter-btn {
@@ -3814,6 +3846,7 @@
     font-weight: 800;
     min-height: 38px;
     padding: 8px 13px;
+    white-space: nowrap;
   }
 
   .ranking-filter-btn.is-active {
@@ -3867,19 +3900,24 @@
     align-items: center;
     justify-content: space-between;
     gap: 10px;
+    min-width: 0;
   }
 
   .ranking-position {
+    min-width: 0;
     color: #6b7280;
     font-size: 13px;
     font-weight: 800;
+    overflow-wrap: anywhere;
   }
 
   .ranking-status {
+    flex: 0 0 auto;
     border-radius: 999px;
     font-size: 12px;
     font-weight: 800;
     padding: 4px 9px;
+    white-space: nowrap;
   }
 
   .ranking-status.is-progress {
@@ -3898,10 +3936,13 @@
   }
 
   .ranking-card-name {
+    min-width: 0;
     color: #111827;
     font-size: 18px;
     font-weight: 900;
     line-height: 1.2;
+    overflow-wrap: anywhere;
+    word-break: normal;
   }
 
   .ranking-card-city,
@@ -3914,9 +3955,11 @@
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
+    min-width: 0;
   }
 
   .ranking-metrics div {
+    min-width: 0;
     border-radius: 16px;
     background: #f9fafb;
     padding: 10px;
@@ -3935,6 +3978,7 @@
     color: #111827;
     font-size: 14px;
     margin-top: 3px;
+    overflow-wrap: anywhere;
   }
 
   .ranking-progress {
@@ -3973,6 +4017,18 @@
   .ranking-remaining {
     margin: 0;
     font-weight: 700;
+  }
+
+  @media (max-width: 420px) {
+    .ranking-card-topline,
+    .ranking-section-heading {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .ranking-metrics {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 
   @media (min-width: 760px) {
