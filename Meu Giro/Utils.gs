@@ -545,21 +545,24 @@ function meuGiroPerfLog_(escopo, etapa, inicio, extras) {
 
 var MEU_GIRO_DIAGNOSTICO_LOGS_EXECUCAO_ = 0;
 
-function buildPeriodoOficialPorAbaEId_(ss) {
-  var out = { byAba: {}, byId: {} };
+function buildListaDesafiosContexto_(ss) {
+  var contexto = {
+    periodos: { byAba: {}, byId: {} },
+    status: { byId: {}, possuiColunaId: false }
+  };
   var lista = ss.getSheetByName(SHEETS.LISTA_DESAFIOS || 'ListaDesafios');
-  if (!lista) return out;
+  if (!lista) return contexto;
 
   var perfLeituraInicio = meuGiroPerfNow_();
   var rows = lista.getDataRange().getValues();
-  meuGiroPerfLog_('obter-vinculos-desafio-usuario', 'leitura_ListaDesafios_periodos', perfLeituraInicio, {
+  meuGiroPerfLog_('obter-vinculos-desafio-usuario', 'leitura_ListaDesafios_contexto', perfLeituraInicio, {
     quantidade_linhas_lista_desafios: rows && rows.length ? rows.length - 1 : 0
   });
-  if (!rows || rows.length < 2) return out;
+  if (!rows || rows.length < 2) return contexto;
 
   var map = buildHeaderMap_(rows[0]);
   var idxAba = getOptionalColumnIndex_(map, ['aba', 'aba desafio', 'abadesafio']);
-  var idxId = getOptionalColumnIndex_(map, [
+  var idxIdPeriodo = getOptionalColumnIndex_(map, [
     'id',
     'id_desafio',
     'id desafio',
@@ -577,51 +580,7 @@ function buildPeriodoOficialPorAbaEId_(ss) {
     'desafio',
     'nome'
   ]);
-
-  if (idxAba === -1) idxAba = 1;
-
-  for (var i = 1; i < rows.length; i++) {
-    var row = rows[i];
-    var aba = normalizeText_(row[idxAba]);
-    if (!aba) continue;
-
-    var nomeDesafio = idxNome > -1 ? normalizeText_(row[idxNome]) : '';
-    var periodoTexto = idxPeriodo > -1 ? normalizeText_(row[idxPeriodo]) : '';
-    var periodoMensal = idxPeriodo > -1
-      ? normalizarPeriodoMensal_(row[idxPeriodo])
-      : { inicio: '', fim: '' };
-    var periodo = {
-      inicio: periodoMensal.inicio,
-      fim: periodoMensal.fim,
-      periodo_desafio: periodoTexto,
-      nome_desafio: nomeDesafio || aba
-    };
-
-    out.byAba[aba] = periodo;
-
-    if (idxId > -1) {
-      var idDesafio = normalizeText_(row[idxId]);
-      if (idDesafio) out.byId[idDesafio] = periodo;
-    }
-  }
-
-  return out;
-}
-
-function buildMapaStatusDesafioListaPorId_(ss) {
-  var out = { byId: {}, possuiColunaId: false };
-  var lista = ss.getSheetByName(SHEETS.LISTA_DESAFIOS || 'ListaDesafios');
-  if (!lista) return out;
-
-  var perfLeituraInicio = meuGiroPerfNow_();
-  var rows = lista.getDataRange().getValues();
-  meuGiroPerfLog_('obter-vinculos-desafio-usuario', 'leitura_ListaDesafios_status', perfLeituraInicio, {
-    quantidade_linhas_lista_desafios: rows && rows.length ? rows.length - 1 : 0
-  });
-  if (!rows || rows.length < 2) return out;
-
-  var map = buildHeaderMap_(rows[0]);
-  var idxId = getOptionalColumnIndex_(map, [
+  var idxIdStatus = getOptionalColumnIndex_(map, [
     'id_desafio_lista',
     'id desafio lista',
     'id_desafio',
@@ -636,17 +595,50 @@ function buildMapaStatusDesafioListaPorId_(ss) {
     'situacao',
     'situação'
   ]);
-  if (idxId === -1 || idxStatus === -1) return out;
 
-  out.possuiColunaId = true;
+  if (idxAba === -1) idxAba = 1;
+  if (idxIdStatus > -1 && idxStatus > -1) contexto.status.possuiColunaId = true;
 
   for (var i = 1; i < rows.length; i++) {
-    var idDesafio = normalizeText_(rows[i][idxId]);
-    if (!idDesafio) continue;
-    out.byId[idDesafio] = normalizeText_(rows[i][idxStatus]).toLowerCase();
+    var row = rows[i];
+    var aba = normalizeText_(row[idxAba]);
+
+    if (aba) {
+      var nomeDesafio = idxNome > -1 ? normalizeText_(row[idxNome]) : '';
+      var periodoTexto = idxPeriodo > -1 ? normalizeText_(row[idxPeriodo]) : '';
+      var periodoMensal = idxPeriodo > -1
+        ? normalizarPeriodoMensal_(row[idxPeriodo])
+        : { inicio: '', fim: '' };
+      var periodo = {
+        inicio: periodoMensal.inicio,
+        fim: periodoMensal.fim,
+        periodo_desafio: periodoTexto,
+        nome_desafio: nomeDesafio || aba
+      };
+
+      contexto.periodos.byAba[aba] = periodo;
+
+      if (idxIdPeriodo > -1) {
+        var idDesafioPeriodo = normalizeText_(row[idxIdPeriodo]);
+        if (idDesafioPeriodo) contexto.periodos.byId[idDesafioPeriodo] = periodo;
+      }
+    }
+
+    if (contexto.status.possuiColunaId) {
+      var idDesafioStatus = normalizeText_(row[idxIdStatus]);
+      if (idDesafioStatus) contexto.status.byId[idDesafioStatus] = normalizeText_(row[idxStatus]).toLowerCase();
+    }
   }
 
-  return out;
+  return contexto;
+}
+
+function buildPeriodoOficialPorAbaEId_(ss) {
+  return buildListaDesafiosContexto_(ss).periodos;
+}
+
+function buildMapaStatusDesafioListaPorId_(ss) {
+  return buildListaDesafiosContexto_(ss).status;
 }
 
 function logMeuGiroDiagnostico_(mensagem, dados) {
@@ -727,8 +719,9 @@ function obterVinculosDesafioUsuario_(idDgmb) {
   if (!id) return [];
 
   var ss = getSpreadsheet_();
-  var periodos = buildPeriodoOficialPorAbaEId_(ss);
-  var statusListaDesafios = buildMapaStatusDesafioListaPorId_(ss);
+  var contextoLista = buildListaDesafiosContexto_(ss);
+  var periodos = contextoLista.periodos;
+  var statusListaDesafios = contextoLista.status;
   var abaDesafio = SHEETS.DESAFIO || 'dgmbDesafios';
   var sh = ss.getSheetByName(abaDesafio);
   if (!sh) return [];
