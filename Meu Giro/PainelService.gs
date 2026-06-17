@@ -96,24 +96,11 @@ function getPainelUsuario(idDgmb) {
       total_atividades: atividades && atividades.length ? atividades.length : 0
     });
 
-    perfEtapaInicio = painelMG_perfNow_();
-    var rankingInfo = painelMG_calcularPosicaoRanking_(
-      id,
-      desafioPrincipalPainel && desafioPrincipalPainel.id_desafio,
-      desafioPrincipalPainel && desafioPrincipalPainel.id_item_estoque,
-      desafioPrincipalPainel && desafioPrincipalPainel.id_inscricao
-    );
-    painelMG_perfLog_('painel-inicial', 'painelMG_calcularPosicaoRanking_', perfEtapaInicio, {
-      posicao: rankingInfo.posicao,
-      total_participantes: rankingInfo.total
-    });
-
-    perfEtapaInicio = painelMG_perfNow_();
-    var rankingPorDesafio = painelMG_montarRankingPorDesafio_(id, desafiosConsolidados);
-    painelMG_perfLog_('painel-inicial', 'painelMG_montarRankingPorDesafio_', perfEtapaInicio, {
-      total_desafios: desafiosConsolidados.length,
-      total_rankings_montados: rankingPorDesafio ? Object.keys(rankingPorDesafio).length : 0
-    });
+    // P23: ranking sob demanda. O carregamento inicial do painel não deve
+    // acionar getRanking(), nem os agregadores que chamam getRanking() para
+    // cada desafio. A tela Ranking mantém o fluxo próprio via carregarRanking().
+    var rankingInfo = { posicao: 0, total: 0 };
+    var rankingPorDesafio = {};
 
     var frase = '';
     var contextoFrase = '';
