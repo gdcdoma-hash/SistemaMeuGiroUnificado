@@ -1770,6 +1770,50 @@ function playRankingPreviewFeedback(previousPainel, nextPainel) {
 }
 
 
+
+function getDesafioMergeKeyPosSalvarLeve_(desafio) {
+  var d = desafio || {};
+  return [
+    String(d.id_inscricao || '').trim(),
+    String(d.id_desafio || '').trim(),
+    String(d.id_item_estoque || '').trim()
+  ].join('|');
+}
+
+function mesclarDesafioPosSalvarLeve_(desafioAtual, desafioLeve) {
+  var base = desafioAtual || {};
+  var leve = desafioLeve || {};
+  var merged = {};
+
+  Object.keys(base).forEach(function(key) {
+    merged[key] = base[key];
+  });
+  Object.keys(leve).forEach(function(key) {
+    var valor = leve[key];
+    if (valor !== null && valor !== undefined && valor !== '') {
+      merged[key] = valor;
+    }
+  });
+
+  return merged;
+}
+
+function mesclarListasDesafiosPosSalvarLeve_(listaAtual, listaLeve) {
+  var base = Array.isArray(listaAtual) ? listaAtual : [];
+  var leve = Array.isArray(listaLeve) ? listaLeve : [];
+  var basePorChave = {};
+
+  base.forEach(function(item) {
+    var chave = getDesafioMergeKeyPosSalvarLeve_(item);
+    if (chave !== '||') basePorChave[chave] = item;
+  });
+
+  return leve.map(function(item) {
+    var chave = getDesafioMergeKeyPosSalvarLeve_(item);
+    return mesclarDesafioPosSalvarLeve_(basePorChave[chave], item);
+  });
+}
+
 function mesclarPainelPosSalvarLeve_(painelAtual, painelLeve) {
   var base = painelAtual || {};
   var leve = painelLeve || {};
@@ -1781,6 +1825,11 @@ function mesclarPainelPosSalvarLeve_(painelAtual, painelLeve) {
   Object.keys(leve).forEach(function(key) {
     merged[key] = leve[key];
   });
+
+  merged.desafios = mesclarListasDesafiosPosSalvarLeve_(base.desafios, leve.desafios);
+  merged.desafios_ativos = mesclarListasDesafiosPosSalvarLeve_(base.desafios_ativos, leve.desafios_ativos);
+  merged.desafios_historico = mesclarListasDesafiosPosSalvarLeve_(base.desafios_historico, leve.desafios_historico);
+  merged.desafio_em_foco = mesclarDesafioPosSalvarLeve_(base.desafio_em_foco, leve.desafio_em_foco);
 
   // O fluxo leve não recalcula ranking. Preserva o último preview do painel e
   // deixa a tela Ranking buscar dados atualizados sob demanda após a invalidação.

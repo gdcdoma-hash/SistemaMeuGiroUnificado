@@ -213,8 +213,8 @@ function getPainelUsuarioPosSalvarLeve(idDgmb) {
     });
 
     perfEtapaInicio = painelMG_perfNow_();
-    var resumoDesafios = obterMeuGiroResumoAtualizado_(id) || [];
-    painelMG_perfLog_('painel-leve-pos-salvar', 'lerMeuGiroResumoAtualizado_', perfEtapaInicio, {
+    var resumoDesafios = obterMeuGiroResumoAtualizadoLeve_(id) || [];
+    painelMG_perfLog_('painel-leve-pos-salvar', 'lerMeuGiroResumoAtualizadoLeve_', perfEtapaInicio, {
       total_desafios_resumo: resumoDesafios.length,
       fallback: false
     });
@@ -607,14 +607,18 @@ function painelMG_calcularRitmo_(meta, realizado, periodoInicio, periodoFim) {
 function painelMG_buscarVinculoPrincipal_(idDgmb, desafioPrincipal, usarResumoComoFonte) {
   var vazio = { periodo_inicio: '', periodo_fim: '' };
   try {
-    if (usarResumoComoFonte && desafioPrincipal) {
-      var periodoResumo = {
-        periodo_inicio: painelMG_norm_(desafioPrincipal.periodo_inicio),
-        periodo_fim: painelMG_norm_(desafioPrincipal.periodo_fim)
-      };
-      if (periodoResumo.periodo_inicio && periodoResumo.periodo_fim) {
-        return periodoResumo;
+    if (usarResumoComoFonte) {
+      if (desafioPrincipal) {
+        var periodoResumo = {
+          periodo_inicio: painelMG_norm_(desafioPrincipal.periodo_inicio),
+          periodo_fim: painelMG_norm_(desafioPrincipal.periodo_fim)
+        };
+        if (periodoResumo.periodo_inicio && periodoResumo.periodo_fim) {
+          return periodoResumo;
+        }
       }
+
+      return vazio;
     }
 
     var vinculos = obterVinculosDesafioUsuario_(idDgmb) || [];
