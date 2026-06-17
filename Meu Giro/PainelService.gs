@@ -523,8 +523,10 @@ function buscarInscricaoPainelMG_(idDgmb, resumoAtualizado, evitarRecalculoResum
     desafioPrincipal = historicos.length ? historicos[0] : resumo[0];
   }
 
-  var vinculoPrincipal = painelMG_buscarVinculoPrincipal_(idDgmb, desafioPrincipal);
-  var periodoPorAba = painelMG_obterPeriodoOficialPorAba_(inscricao.aba_desafio);
+  var vinculoPrincipal = painelMG_buscarVinculoPrincipal_(idDgmb, desafioPrincipal, evitarRecalculoResumo);
+  var periodoPorAba = (vinculoPrincipal.periodo_inicio && vinculoPrincipal.periodo_fim)
+    ? { periodo_inicio: '', periodo_fim: '' }
+    : painelMG_obterPeriodoOficialPorAba_(inscricao.aba_desafio);
 
   return {
     ok: true,
@@ -602,9 +604,19 @@ function painelMG_calcularRitmo_(meta, realizado, periodoInicio, periodoFim) {
 }
 
 
-function painelMG_buscarVinculoPrincipal_(idDgmb, desafioPrincipal) {
+function painelMG_buscarVinculoPrincipal_(idDgmb, desafioPrincipal, usarResumoComoFonte) {
   var vazio = { periodo_inicio: '', periodo_fim: '' };
   try {
+    if (usarResumoComoFonte && desafioPrincipal) {
+      var periodoResumo = {
+        periodo_inicio: painelMG_norm_(desafioPrincipal.periodo_inicio),
+        periodo_fim: painelMG_norm_(desafioPrincipal.periodo_fim)
+      };
+      if (periodoResumo.periodo_inicio && periodoResumo.periodo_fim) {
+        return periodoResumo;
+      }
+    }
+
     var vinculos = obterVinculosDesafioUsuario_(idDgmb) || [];
     var idDesafioPrincipal = painelMG_norm_(desafioPrincipal && desafioPrincipal.id_desafio);
     var idItemPrincipal = painelMG_norm_(desafioPrincipal && desafioPrincipal.id_item_estoque);

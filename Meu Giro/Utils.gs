@@ -512,12 +512,49 @@ function normalizarPeriodoMensal_(value) {
   };
 }
 
+function meuGiroPerfDebugAtivo_() {
+  try {
+    return typeof PERFORMANCE_DEBUG !== 'undefined' && !!PERFORMANCE_DEBUG;
+  } catch (e) {
+    return false;
+  }
+}
+
+function meuGiroPerfNow_() {
+  try {
+    return Date.now();
+  } catch (e) {
+    return new Date().getTime();
+  }
+}
+
+function meuGiroPerfLog_(escopo, etapa, inicio, extras) {
+  if (!meuGiroPerfDebugAtivo_()) return;
+
+  try {
+    var payload = {
+      etapa: etapa,
+      duracao_ms: meuGiroPerfNow_() - inicio
+    };
+    Object.keys(extras || {}).forEach(function(chave) {
+      payload[chave] = extras[chave];
+    });
+    Logger.log('[Meu Giro][performance][' + escopo + '] ' + JSON.stringify(payload));
+  } catch (e) {}
+}
+
+var MEU_GIRO_DIAGNOSTICO_LOGS_EXECUCAO_ = 0;
+
 function buildPeriodoOficialPorAbaEId_(ss) {
   var out = { byAba: {}, byId: {} };
   var lista = ss.getSheetByName(SHEETS.LISTA_DESAFIOS || 'ListaDesafios');
   if (!lista) return out;
 
+  var perfLeituraInicio = meuGiroPerfNow_();
   var rows = lista.getDataRange().getValues();
+  meuGiroPerfLog_('obter-vinculos-desafio-usuario', 'leitura_ListaDesafios_periodos', perfLeituraInicio, {
+    quantidade_linhas_lista_desafios: rows && rows.length ? rows.length - 1 : 0
+  });
   if (!rows || rows.length < 2) return out;
 
   var map = buildHeaderMap_(rows[0]);
@@ -576,7 +613,11 @@ function buildMapaStatusDesafioListaPorId_(ss) {
   var lista = ss.getSheetByName(SHEETS.LISTA_DESAFIOS || 'ListaDesafios');
   if (!lista) return out;
 
+  var perfLeituraInicio = meuGiroPerfNow_();
   var rows = lista.getDataRange().getValues();
+  meuGiroPerfLog_('obter-vinculos-desafio-usuario', 'leitura_ListaDesafios_status', perfLeituraInicio, {
+    quantidade_linhas_lista_desafios: rows && rows.length ? rows.length - 1 : 0
+  });
   if (!rows || rows.length < 2) return out;
 
   var map = buildHeaderMap_(rows[0]);
@@ -609,6 +650,9 @@ function buildMapaStatusDesafioListaPorId_(ss) {
 }
 
 function logMeuGiroDiagnostico_(mensagem, dados) {
+  MEU_GIRO_DIAGNOSTICO_LOGS_EXECUCAO_++;
+  if (!meuGiroPerfDebugAtivo_()) return;
+
   try {
     Logger.log('[Meu Giro][diagnostico] ' + mensagem + (dados ? ' ' + JSON.stringify(dados) : ''));
   } catch (e) {}
@@ -676,6 +720,9 @@ function montarPeriodoHistoricoVinculo_(row, indices, periodoLista, contextoLog)
 }
 
 function obterVinculosDesafioUsuario_(idDgmb) {
+  var perfTotalInicio = meuGiroPerfNow_();
+  var perfEtapaInicio = perfTotalInicio;
+  var logsDiagnosticoInicio = MEU_GIRO_DIAGNOSTICO_LOGS_EXECUCAO_ || 0;
   var id = normalizeText_(idDgmb);
   if (!id) return [];
 
@@ -686,7 +733,11 @@ function obterVinculosDesafioUsuario_(idDgmb) {
   var sh = ss.getSheetByName(abaDesafio);
   if (!sh) return [];
 
+  perfEtapaInicio = meuGiroPerfNow_();
   var values = sh.getDataRange().getValues();
+  meuGiroPerfLog_('obter-vinculos-desafio-usuario', 'leitura_dgmbDesafios', perfEtapaInicio, {
+    quantidade_linhas_dgmbDesafios: values && values.length ? values.length - 1 : 0
+  });
   if (!values || values.length < 2) return [];
 
   var map = buildHeaderMap_(values[0]);
@@ -712,6 +763,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
   var vinculos = [];
   var chaves = {};
 
+  perfEtapaInicio = meuGiroPerfNow_();
   for (var i = 1; i < values.length; i++) {
     var row = values[i];
     var rowId = normalizeText_(row[idxId]);
@@ -796,6 +848,17 @@ function obterVinculosDesafioUsuario_(idDgmb) {
       aba_desafio: abaDesafio
     });
   }
+
+  meuGiroPerfLog_('obter-vinculos-desafio-usuario', 'montagem_vinculos', perfEtapaInicio, {
+    quantidade_linhas_dgmbDesafios: values.length - 1,
+    quantidade_vinculos_do_usuario: vinculos.length,
+    quantidade_logs_diagnostico: (MEU_GIRO_DIAGNOSTICO_LOGS_EXECUCAO_ || 0) - logsDiagnosticoInicio
+  });
+  meuGiroPerfLog_('obter-vinculos-desafio-usuario', 'obterVinculosDesafioUsuario_total', perfTotalInicio, {
+    quantidade_linhas_dgmbDesafios: values.length - 1,
+    quantidade_vinculos_do_usuario: vinculos.length,
+    quantidade_logs_diagnostico: (MEU_GIRO_DIAGNOSTICO_LOGS_EXECUCAO_ || 0) - logsDiagnosticoInicio
+  });
 
   return vinculos;
 }
