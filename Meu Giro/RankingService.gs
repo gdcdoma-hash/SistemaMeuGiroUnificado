@@ -1,4 +1,9 @@
 function getRanking(idDgmb, idDesafio, idItemEstoque, idInscricao) {
+  var perfRankingInicio = typeof painelMG_perfNow_ === 'function' ? painelMG_perfNow_() : new Date().getTime();
+  var rankingPerfLogado = false;
+  if (typeof painelMG_incrementarAuditoriaCarregamentoInicial_ === 'function') {
+    painelMG_incrementarAuditoriaCarregamentoInicial_('getRanking_chamadas');
+  }
   try {
     var idUsuario = rankingMG_norm_(idDgmb);
     var desafioSolicitado = rankingMG_norm_(idDesafio);
@@ -164,6 +169,17 @@ function getRanking(idDgmb, idDesafio, idItemEstoque, idInscricao) {
       if (!posicaoUsuario && ranking[p].id_dgmb === idUsuario) posicaoUsuario = p + 1;
     }
 
+    if (typeof painelMG_perfLog_ === 'function') {
+      rankingPerfLogado = true;
+      painelMG_perfLog_('painel-inicial', 'getRanking', perfRankingInicio, {
+        id_desafio: desafioSolicitado || desafioPrincipal || '',
+        id_item_estoque: itemSolicitado || itemPrincipal || '',
+        id_inscricao: inscricaoSolicitada || idInscricaoReferencia || '',
+        total_participantes: ranking.length,
+        posicao_usuario: posicaoUsuario
+      });
+    }
+
     return {
       ok: true,
       data: ranking,
@@ -173,12 +189,26 @@ function getRanking(idDgmb, idDesafio, idItemEstoque, idInscricao) {
       diagnosticos: diagnosticos
     };
   } catch (err) {
+    if (typeof painelMG_perfLog_ === 'function') {
+      rankingPerfLogado = true;
+      painelMG_perfLog_('painel-inicial', 'getRanking', perfRankingInicio, {
+        ok: false,
+        erro: err && err.message ? err.message : 'Erro ao carregar ranking.'
+      });
+    }
     return {
       ok: false,
       data: [],
       total: 0,
       msg: err && err.message ? err.message : 'Erro ao carregar ranking.'
     };
+  } finally {
+    if (!rankingPerfLogado && typeof painelMG_perfLog_ === 'function') {
+      painelMG_perfLog_('painel-inicial', 'getRanking', perfRankingInicio, {
+        ok: false,
+        retorno_antecipado: true
+      });
+    }
   }
 }
 
@@ -226,6 +256,9 @@ function rankingMG_montarChaveCompetitiva_(atributos) {
 }
 
 function rankingMG_criarIndiceCompetitivo_() {
+  if (typeof painelMG_incrementarAuditoriaCarregamentoInicial_ === 'function') {
+    painelMG_incrementarAuditoriaCarregamentoInicial_('leituras_dgmbDesafios');
+  }
   var rows = getAllObjects_(SHEETS.DESAFIO) || [];
   var periodos = buildPeriodoOficialPorAbaEId_(getSpreadsheet_());
   var porInscricao = {};
