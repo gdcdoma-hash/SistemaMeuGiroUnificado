@@ -2786,13 +2786,13 @@ function sincronizarPainelComDesafioEmFoco() {
   if (posicaoRankingEl) {
     posicaoRankingEl.innerText = hasPosicaoRanking
       ? 'Sua posição no ranking: ' + formatNumber(posicaoRanking)
-      : 'Ranking ainda indisponível.';
+      : 'Abra a tela Ranking para ver sua posição atualizada.';
   }
 
   if (posicaoDetalheEl) {
-    posicaoDetalheEl.innerText = Number.isFinite(Number(totalParticipantes))
+    posicaoDetalheEl.innerText = hasPosicaoRanking && Number.isFinite(totalParticipantes) && totalParticipantes > 0
       ? 'Base atual: ' + formatNumber(totalParticipantes) + ' participantes.'
-      : 'Disponível quando houver base de comparação.';
+      : 'Ranking carregado somente sob demanda.';
   }
 
   renderUltimaAtividadePainel(contexto.atividades || (currentPainel && currentPainel.atividades) || []);
