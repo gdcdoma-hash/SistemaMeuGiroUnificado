@@ -1,13 +1,29 @@
 function getPainelUsuario(idDgmb) {
+  var perfTotalInicio = painelMG_perfNow_();
+  var perfEtapaInicio = perfTotalInicio;
+  var auditoria = painelMG_criarAuditoriaCarregamentoInicial_();
+  painelMG_definirAuditoriaCarregamentoInicial_(auditoria);
+
   try {
     var id = String(idDgmb || '').trim();
     if (!id) {
       return { ok: false, code: 'ID_OBRIGATORIO', msg: 'ID do usuário não informado.' };
     }
 
+    perfEtapaInicio = painelMG_perfNow_();
     var pessoa = buscarPessoaPainelMG_(id);
+    painelMG_perfLog_('painel-inicial', 'buscarPessoaPainelMG_', perfEtapaInicio, { encontrado: !!pessoa });
+
+    perfEtapaInicio = painelMG_perfNow_();
     var resumoDesafios = atualizarMeuGiroResumo_(id) || [];
+    painelMG_perfLog_('painel-inicial', 'atualizarMeuGiroResumo_', perfEtapaInicio, { total_desafios_resumo: resumoDesafios.length });
+
+    perfEtapaInicio = painelMG_perfNow_();
     var desafio = buscarInscricaoPainelMG_(id, resumoDesafios);
+    painelMG_perfLog_('painel-inicial', 'buscarInscricaoPainelMG_', perfEtapaInicio, {
+      ok: !!(desafio && desafio.ok),
+      total_desafios: desafio && desafio.desafios ? desafio.desafios.length : 0
+    });
 
     if (!pessoa) {
       return { ok: false, code: 'USUARIO_NAO_ENCONTRADO', msg: 'Usuário não encontrado na base de pessoas para carregar o painel.' };
@@ -74,14 +90,30 @@ function getPainelUsuario(idDgmb) {
       : painelMG_montarMensagemOperacional_('', '');
     var progresso = painelMG_calcularProgresso_(meta, realizadoPainel);
     var ritmo = painelMG_calcularRitmo_(meta, realizadoPainel, desafioData.periodo_inicio, desafioData.periodo_fim);
+    perfEtapaInicio = painelMG_perfNow_();
     var atividades = buscarAtividadesUsuario_(id);
+    painelMG_perfLog_('painel-inicial', 'buscarAtividadesUsuario_', perfEtapaInicio, {
+      total_atividades: atividades && atividades.length ? atividades.length : 0
+    });
+
+    perfEtapaInicio = painelMG_perfNow_();
     var rankingInfo = painelMG_calcularPosicaoRanking_(
       id,
       desafioPrincipalPainel && desafioPrincipalPainel.id_desafio,
       desafioPrincipalPainel && desafioPrincipalPainel.id_item_estoque,
       desafioPrincipalPainel && desafioPrincipalPainel.id_inscricao
     );
+    painelMG_perfLog_('painel-inicial', 'painelMG_calcularPosicaoRanking_', perfEtapaInicio, {
+      posicao: rankingInfo.posicao,
+      total_participantes: rankingInfo.total
+    });
+
+    perfEtapaInicio = painelMG_perfNow_();
     var rankingPorDesafio = painelMG_montarRankingPorDesafio_(id, desafiosConsolidados);
+    painelMG_perfLog_('painel-inicial', 'painelMG_montarRankingPorDesafio_', perfEtapaInicio, {
+      total_desafios: desafiosConsolidados.length,
+      total_rankings_montados: rankingPorDesafio ? Object.keys(rankingPorDesafio).length : 0
+    });
 
     var frase = '';
     var contextoFrase = '';
@@ -105,6 +137,13 @@ function getPainelUsuario(idDgmb) {
       frase = '';
       contextoFrase = '';
     }
+
+    painelMG_logResumoAuditoriaCarregamentoInicial_(perfTotalInicio, auditoria, {
+      ok: true,
+      total_desafios: desafiosConsolidados.length,
+      total_atividades: atividades && atividades.length ? atividades.length : 0,
+      total_rankings_por_desafio: rankingPorDesafio ? Object.keys(rankingPorDesafio).length : 0
+    });
 
     return {
       ok: true,
@@ -153,12 +192,60 @@ function getPainelUsuario(idDgmb) {
       }
     };
   } catch (err) {
+    painelMG_logResumoAuditoriaCarregamentoInicial_(perfTotalInicio, auditoria, {
+      ok: false,
+      erro: err && err.message ? err.message : 'Erro interno ao carregar o painel do usuário.'
+    });
     return {
       ok: false,
       code: 'PAINEL_ERROR',
       msg: err && err.message ? err.message : 'Erro interno ao carregar o painel do usuário.'
     };
+  } finally {
+    painelMG_limparAuditoriaCarregamentoInicial_();
   }
+}
+
+var PAINEL_MG_AUDITORIA_CARREGAMENTO_INICIAL_ = null;
+
+function painelMG_criarAuditoriaCarregamentoInicial_() {
+  return {
+    getRanking_chamadas: 0,
+    obterVinculosDesafioUsuario_chamadas: 0,
+    leituras_ListaDesafios: 0,
+    leituras_dgmbDesafios: 0
+  };
+}
+
+function painelMG_definirAuditoriaCarregamentoInicial_(auditoria) {
+  PAINEL_MG_AUDITORIA_CARREGAMENTO_INICIAL_ = auditoria || null;
+}
+
+function painelMG_obterAuditoriaCarregamentoInicial_() {
+  return PAINEL_MG_AUDITORIA_CARREGAMENTO_INICIAL_;
+}
+
+function painelMG_limparAuditoriaCarregamentoInicial_() {
+  PAINEL_MG_AUDITORIA_CARREGAMENTO_INICIAL_ = null;
+}
+
+function painelMG_incrementarAuditoriaCarregamentoInicial_(campo) {
+  var auditoria = painelMG_obterAuditoriaCarregamentoInicial_();
+  if (!auditoria || !campo) return;
+  auditoria[campo] = Number(auditoria[campo] || 0) + 1;
+}
+
+function painelMG_logResumoAuditoriaCarregamentoInicial_(inicio, auditoria, extras) {
+  var payload = {
+    quantidade_chamadas_getRanking: auditoria ? auditoria.getRanking_chamadas : 0,
+    quantidade_chamadas_obterVinculosDesafioUsuario: auditoria ? auditoria.obterVinculosDesafioUsuario_chamadas : 0,
+    quantidade_leituras_ListaDesafios: auditoria ? auditoria.leituras_ListaDesafios : 0,
+    quantidade_leituras_dgmbDesafios: auditoria ? auditoria.leituras_dgmbDesafios : 0
+  };
+  Object.keys(extras || {}).forEach(function(chave) {
+    payload[chave] = extras[chave];
+  });
+  painelMG_perfLog_('painel-inicial', 'getPainelUsuario_total', inicio, payload);
 }
 
 

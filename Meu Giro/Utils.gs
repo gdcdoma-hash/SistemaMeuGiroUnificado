@@ -554,6 +554,9 @@ function buildListaDesafiosContexto_(ss) {
   if (!lista) return contexto;
 
   var perfLeituraInicio = meuGiroPerfNow_();
+  if (typeof painelMG_incrementarAuditoriaCarregamentoInicial_ === 'function') {
+    painelMG_incrementarAuditoriaCarregamentoInicial_('leituras_ListaDesafios');
+  }
   var rows = lista.getDataRange().getValues();
   meuGiroPerfLog_('obter-vinculos-desafio-usuario', 'leitura_ListaDesafios_contexto', perfLeituraInicio, {
     quantidade_linhas_lista_desafios: rows && rows.length ? rows.length - 1 : 0
@@ -712,6 +715,9 @@ function montarPeriodoHistoricoVinculo_(row, indices, periodoLista, contextoLog)
 }
 
 function obterVinculosDesafioUsuario_(idDgmb) {
+  if (typeof painelMG_incrementarAuditoriaCarregamentoInicial_ === 'function') {
+    painelMG_incrementarAuditoriaCarregamentoInicial_('obterVinculosDesafioUsuario_chamadas');
+  }
   var perfTotalInicio = meuGiroPerfNow_();
   var perfEtapaInicio = perfTotalInicio;
   var logsDiagnosticoInicio = MEU_GIRO_DIAGNOSTICO_LOGS_EXECUCAO_ || 0;
@@ -727,6 +733,9 @@ function obterVinculosDesafioUsuario_(idDgmb) {
   if (!sh) return [];
 
   perfEtapaInicio = meuGiroPerfNow_();
+  if (typeof painelMG_incrementarAuditoriaCarregamentoInicial_ === 'function') {
+    painelMG_incrementarAuditoriaCarregamentoInicial_('leituras_dgmbDesafios');
+  }
   var values = sh.getDataRange().getValues();
   meuGiroPerfLog_('obter-vinculos-desafio-usuario', 'leitura_dgmbDesafios', perfEtapaInicio, {
     quantidade_linhas_dgmbDesafios: values && values.length ? values.length - 1 : 0
