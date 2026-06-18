@@ -585,14 +585,32 @@ function meuGiroPerfLog_(escopo, etapa, inicio, extras) {
 }
 
 var MEU_GIRO_DIAGNOSTICO_LOGS_EXECUCAO_ = 0;
+var LISTA_DESAFIOS_CACHE_EXECUCAO_ = null;
 
 function buildListaDesafiosContexto_(ss) {
+  var perfTotalInicio = meuGiroPerfNow_();
+  if (LISTA_DESAFIOS_CACHE_EXECUCAO_ !== null) {
+    meuGiroPerfLog_('obter-vinculos-desafio-usuario', 'cache_hit_lista_desafios', perfTotalInicio);
+    meuGiroPerfLog_('obter-vinculos-desafio-usuario', 'buildListaDesafiosContexto_total', perfTotalInicio, {
+      cache_lista_desafios: 'hit'
+    });
+    return LISTA_DESAFIOS_CACHE_EXECUCAO_;
+  }
+
+  meuGiroPerfLog_('obter-vinculos-desafio-usuario', 'cache_miss_lista_desafios', perfTotalInicio);
   var contexto = {
     periodos: { byAba: {}, byId: {} },
     status: { byId: {}, possuiColunaId: false }
   };
   var lista = ss.getSheetByName(SHEETS.LISTA_DESAFIOS || 'ListaDesafios');
-  if (!lista) return contexto;
+  if (!lista) {
+    LISTA_DESAFIOS_CACHE_EXECUCAO_ = contexto;
+    meuGiroPerfLog_('obter-vinculos-desafio-usuario', 'buildListaDesafiosContexto_total', perfTotalInicio, {
+      cache_lista_desafios: 'miss',
+      quantidade_linhas_lista_desafios: 0
+    });
+    return contexto;
+  }
 
   var perfLeituraInicio = meuGiroPerfNow_();
   if (typeof painelMG_incrementarAuditoriaCarregamentoInicial_ === 'function') {
@@ -602,7 +620,14 @@ function buildListaDesafiosContexto_(ss) {
   meuGiroPerfLog_('obter-vinculos-desafio-usuario', 'leitura_ListaDesafios_contexto', perfLeituraInicio, {
     quantidade_linhas_lista_desafios: rows && rows.length ? rows.length - 1 : 0
   });
-  if (!rows || rows.length < 2) return contexto;
+  if (!rows || rows.length < 2) {
+    LISTA_DESAFIOS_CACHE_EXECUCAO_ = contexto;
+    meuGiroPerfLog_('obter-vinculos-desafio-usuario', 'buildListaDesafiosContexto_total', perfTotalInicio, {
+      cache_lista_desafios: 'miss',
+      quantidade_linhas_lista_desafios: rows && rows.length ? rows.length - 1 : 0
+    });
+    return contexto;
+  }
 
   var map = buildHeaderMap_(rows[0]);
   var idxAba = getOptionalColumnIndex_(map, ['aba', 'aba desafio', 'abadesafio']);
@@ -674,6 +699,11 @@ function buildListaDesafiosContexto_(ss) {
     }
   }
 
+  LISTA_DESAFIOS_CACHE_EXECUCAO_ = contexto;
+  meuGiroPerfLog_('obter-vinculos-desafio-usuario', 'buildListaDesafiosContexto_total', perfTotalInicio, {
+    cache_lista_desafios: 'miss',
+    quantidade_linhas_lista_desafios: rows.length - 1
+  });
   return contexto;
 }
 
