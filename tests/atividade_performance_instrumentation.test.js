@@ -52,3 +52,15 @@ test('correlaciona logs internos com a operação de atividade atual', () => {
     /payload\.operacao = MEU_GIRO_PERF_OPERACAO_ATUAL_/
   );
 });
+
+test('reaproveita uma única leitura de REGISTRO_KM nas sincronizações da P26', () => {
+  assert.match(registroService, /atualizarDistanciaRealizada_\(idDgmb, opcoesRegistroKm\)/);
+  assert.match(registroService, /atualizarMeuGiroResumo_\(idDgmb, opcoesRegistroKm\)/);
+  assert.match(registroService, /dados\.push\(row\.slice\(\)\)/);
+  assert.match(registroService, /dados\[linha - 1\]\[cols\.idxKm\] = novoKm/);
+  assert.match(registroService, /dados\.splice\(linha - 1, 1\)/);
+  assert.match(utils, /function obterRegistrosKmObjetosReaproveitados_\(idDgmb, opcoes\)/);
+  assert.match(utils, /contextoId === id/);
+  assert.match(utils, /reaproveitados: false/);
+  assert.ok(fontes.includes("'leitura_REGISTRO_KM_reaproveitada'"));
+});

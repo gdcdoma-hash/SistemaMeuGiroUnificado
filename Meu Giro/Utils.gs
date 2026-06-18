@@ -212,6 +212,42 @@ function getAllObjects_(sheetName) {
   return items;
 }
 
+function converterValoresRegistroKmEmObjetos_(values) {
+  if (!values || values.length < 2 || !values[0] || !values[0].length) return [];
+
+  var headers = values[0].map(function(h) {
+    return normalizeCell_(h);
+  });
+
+  return values.slice(1).map(function(row) {
+    var obj = {};
+    for (var i = 0; i < headers.length; i++) {
+      obj[headers[i]] = row[i];
+    }
+    return obj;
+  });
+}
+
+function obterRegistrosKmObjetosReaproveitados_(idDgmb, opcoes) {
+  var id = normalizeText_(idDgmb);
+  var contextoId = normalizeText_(opcoes && opcoes.idDgmb);
+  var objetos = opcoes && opcoes.registrosKmObjetos;
+  var valores = opcoes && opcoes.registrosKmValores;
+  var layout = opcoes && opcoes.layoutRegistroKm;
+  var contextoValido = !!id && contextoId === id &&
+    Array.isArray(objetos) && Array.isArray(valores) &&
+    valores.length === objetos.length + 1 &&
+    valores.length > 0 && Array.isArray(valores[0]) &&
+    layout && typeof layout.idxId === 'number' &&
+    layout.idxId > -1 && layout.idxId < valores[0].length;
+
+  if (contextoValido) {
+    return { valores: objetos, reaproveitados: true };
+  }
+
+  return { valores: getAllObjects_(SHEETS.REGISTRO_KM), reaproveitados: false };
+}
+
 function normalizeText_(value) {
   if (value === null || value === undefined) return '';
   return String(value)
@@ -876,14 +912,15 @@ function obterActivityIdRegistroKm_(registro) {
   ]));
 }
 
-function obterRegistrosKmUsuario_(idDgmb) {
+function obterRegistrosKmUsuario_(idDgmb, opcoes) {
   var perfTotalInicio = meuGiroPerfNow_();
   var id = normalizeText_(idDgmb);
   if (!id) return [];
 
   var perfEtapaInicio = meuGiroPerfNow_();
-  var registros = getAllObjects_(SHEETS.REGISTRO_KM);
-  meuGiroPerfLog_('obter-registros-km-usuario', 'leitura_REGISTRO_KM', perfEtapaInicio, {
+  var registrosContexto = obterRegistrosKmObjetosReaproveitados_(id, opcoes);
+  var registros = registrosContexto.valores;
+  meuGiroPerfLog_('obter-registros-km-usuario', registrosContexto.reaproveitados ? 'leitura_REGISTRO_KM_reaproveitada' : 'leitura_REGISTRO_KM', perfEtapaInicio, {
     quantidade_linhas_registro_km: registros.length
   });
   var out = [];
@@ -1137,7 +1174,7 @@ function obterMeuGiroResumoAtualizadoLeve_(idDgmb) {
   return saida;
 }
 
-function atualizarMeuGiroResumo_(idDgmb) {
+function atualizarMeuGiroResumo_(idDgmb, opcoes) {
   var perfTotalInicio = meuGiroPerfNow_();
   var id = normalizeText_(idDgmb);
   if (!id) return [];
@@ -1148,7 +1185,7 @@ function atualizarMeuGiroResumo_(idDgmb) {
     quantidade_vinculos: vinculos.length
   });
   perfEtapaInicio = meuGiroPerfNow_();
-  var registros = obterRegistrosKmUsuario_(id);
+  var registros = obterRegistrosKmUsuario_(id, opcoes);
   meuGiroPerfLog_('atualizar-meu-giro-resumo', 'obterRegistrosKmUsuario_', perfEtapaInicio, {
     quantidade_registros_usuario: registros.length
   });
