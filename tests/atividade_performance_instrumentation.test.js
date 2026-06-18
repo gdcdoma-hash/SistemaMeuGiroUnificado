@@ -74,24 +74,22 @@ test('reaproveita uma única leitura de REGISTRO_KM nas sincronizações da P26'
   assert.ok(fontes.includes("'leitura_REGISTRO_KM_reaproveitada'"));
 });
 
-test('reaproveita uma única leitura de dgmbDesafios ao atualizar a distância realizada', () => {
+test('usa e sincroniza o cache de dgmbDesafios ao atualizar a distância realizada', () => {
   const atualizarDistancia = registroService.match(
     /function atualizarDistanciaRealizada_\(idDgmb, opcoes\)\{[\s\S]*?\n\}/
   );
 
   assert.ok(atualizarDistancia, 'Função atualizarDistanciaRealizada_ não encontrada');
-  assert.equal(
-    (atualizarDistancia[0].match(/getDataRange\(\)\.getValues\(\)/g) || []).length,
-    1
-  );
+  assert.doesNotMatch(atualizarDistancia[0], /getDataRange\(\)\.getValues\(\)/);
+  assert.match(atualizarDistancia[0], /var cacheDesafios = obterDgmbDesafiosCacheExecucao_\(\)/);
+  assert.match(atualizarDistancia[0], /var sheet = cacheDesafios\.sheet/);
+  assert.match(atualizarDistancia[0], /var dados = cacheDesafios\.values/);
   assert.match(
     atualizarDistancia[0],
-    /obterDadosInscricaoUsuario_\(idDgmb, \{\s*abaDesafio: abaDesafio,\s*values: dados\s*\}\)/
+    /obterDadosInscricaoUsuario_\(idDgmb, \{[\s\S]*?cache: cacheDesafios/
   );
-  assert.ok(atualizarDistancia[0].includes("'leitura_dgmbDesafios_unica'"));
-  assert.ok(
-    atualizarDistancia[0].includes('quantidade_linhas_dgmbDesafios: dados && dados.length ? dados.length - 1 : 0')
-  );
+  assert.match(atualizarDistancia[0], /dados\[i\]\[idxRealizado\] = total/);
+  assert.ok(atualizarDistancia[0].includes("'leitura_dgmbDesafios_cache'"));
 });
 
 test('reaproveita o contexto completo de ListaDesafios durante a execução', () => {
@@ -115,35 +113,39 @@ test('reaproveita o contexto completo de ListaDesafios durante a execução', ()
   );
 });
 
-test('busca somente as linhas de dgmbDesafios pertencentes ao usuário', () => {
+test('filtra somente as linhas do usuário sobre o cache único de dgmbDesafios', () => {
   const helper = extractFunction(utils, 'obterLinhasDgmbDesafiosUsuario_');
   const obterVinculos = extractFunction(utils, 'obterVinculosDesafioUsuario_');
 
   assert.doesNotMatch(obterVinculos, /getDataRange\(\)\.getValues\(\)/);
+  assert.match(obterVinculos, /var cacheDesafios = obterDgmbDesafiosCacheExecucao_\(\)/);
   assert.doesNotMatch(helper, /createTextFinder/);
-  assert.match(helper, /var valoresId = sh\.getRange\([\s\S]*?\)\.getValues\(\)/);
-  assert.match(helper, /var idLinha = normalizeText_\(\(valoresId\[i\] \|\| \[\]\)\[0\]\)/);
-  assert.match(helper, /var numerosLinhas = \(indiceExecucao\.numerosLinhasPorId\[id\] \|\| \[\]\)\.slice\(\)/);
-  assert.match(helper, /blocoAtual && numeroLinha === blocoAtual\.linhaFinal \+ 1/);
-  assert.match(helper, /bloco\.quantidadeLinhas,\s*ultimaColuna\s*\)\.getValues\(\)/);
-  assert.match(helper, /quantidade_linhas_total: indiceExecucao\.quantidadeLinhasTotal/);
-  assert.match(helper, /quantidade_linhas_usuario: indiceExecucao\.porId\[id\]\.length/);
-  assert.match(helper, /quantidade_blocos_lidos: indiceExecucao\.quantidadeBlocosPorId\[id\] \|\| 0/);
+  assert.doesNotMatch(helper, /\.getRange\(/);
+  assert.match(helper, /var values = cacheDesafios\.values \|\| \[\]/);
+  assert.match(helper, /normalizeText_\(values\[i\]\[idxId\]\) === id/);
+  assert.match(helper, /quantidade_linhas_usuario: linhasUsuario\.length/);
+  assert.match(helper, /quantidade_blocos_lidos: 0/);
   assert.ok(utils.includes("'indice_dgmbDesafios_usuario'"));
   assert.ok(utils.includes("'obterVinculosDesafioUsuario_otimizado'"));
   assert.ok(utils.includes('quantidade_vinculos: vinculos.length'));
 });
 
-test('índice usa igualdade exata, agrupa blocos e reaproveita as linhas do atleta', () => {
+test('cache por execução centraliza a leitura e instrumenta hit e miss', () => {
+  assert.match(utils, /var DGMB_DESAFIOS_CACHE_EXECUCAO_ = null;/);
+  const cacheHelper = extractFunction(utils, 'obterDgmbDesafiosCacheExecucao_');
+  assert.match(cacheHelper, /DGMB_DESAFIOS_CACHE_EXECUCAO_ !== null/);
+  assert.match(cacheHelper, /'cache_hit_dgmbDesafios'/);
+  assert.match(cacheHelper, /'cache_miss_dgmbDesafios'/);
+  assert.match(cacheHelper, /'leitura_dgmbDesafios_cache'/);
+  assert.equal((cacheHelper.match(/\.getValues\(\)/g) || []).length, 1);
+  assert.match(cacheHelper, /header: header/);
+  assert.match(cacheHelper, /map: buildHeaderMap_\(header\)/);
+});
+
+test('filtro em memória usa igualdade exata e preserva os números das linhas', () => {
   const helper = extractFunction(utils, 'obterLinhasDgmbDesafiosUsuario_');
   const factory = new Function(`
-    var DGMB_DESAFIOS_INDICE_USUARIO_EXECUCAO_ = null;
     function normalizeText_(value) { return value == null ? '' : String(value).trim(); }
-    function buildHeaderMap_(header) {
-      var out = {};
-      header.forEach(function(value, index) { out[normalizeText_(value).toLowerCase()] = index; });
-      return out;
-    }
     function getOptionalColumnIndex_(map, names) {
       for (var i = 0; i < names.length; i++) {
         if (Object.prototype.hasOwnProperty.call(map, names[i])) return map[names[i]];
@@ -164,29 +166,15 @@ test('índice usa igualdade exata, agrupa blocos e reaproveita as linhas do atle
   rows[150][0] = '21133';
   rows[151][0] = '11330';
 
-  let leiturasCabecalho = 0;
-  let leiturasColunaId = 0;
-  const blocosLidos = [];
-  const sheet = {
-    getLastRow: () => rows.length,
-    getLastColumn: () => rows[0].length,
-    getRange(row, column, numRows, numColumns) {
-      if (row === 1) leiturasCabecalho++;
-      return {
-        getValues() {
-          if (row > 1 && numColumns === 1) leiturasColunaId++;
-          if (row > 1 && numColumns > 1) {
-            blocosLidos.push({ linhaInicial: row, quantidadeLinhas: numRows });
-          }
-          return rows.slice(row - 1, row - 1 + numRows)
-            .map(values => values.slice(column - 1, column - 1 + numColumns));
-        }
-      };
-    }
+  const cache = {
+    values: rows,
+    header: rows[0],
+    map: { id_dgmb: 0, id_desafio: 1 },
+    usouCache: true
   };
 
-  const primeira = obterLinhas(sheet, '1133');
-  const segunda = obterLinhas(sheet, '1133');
+  const primeira = obterLinhas(cache, '1133');
+  const segunda = obterLinhas(cache, '1133');
 
   assert.equal(primeira.quantidadeLinhasTotal, 383);
   assert.equal(primeira.linhas.length, 6);
@@ -194,11 +182,15 @@ test('índice usa igualdade exata, agrupa blocos e reaproveita as linhas do atle
   assert.ok(primeira.linhas.every(item => item.valores[0] === '1133'));
   assert.ok(!primeira.linhas.some(item => ['21133', '11330'].includes(item.valores[0])));
   assert.deepEqual(segunda, primeira);
-  assert.equal(leiturasCabecalho, 1);
-  assert.equal(leiturasColunaId, 1);
-  assert.deepEqual(blocosLidos, [
-    { linhaInicial: 11, quantidadeLinhas: 3 },
-    { linhaInicial: 61, quantidadeLinhas: 2 },
-    { linhaInicial: 101, quantidadeLinhas: 1 }
-  ]);
+});
+
+test('inscrição e painel leve reutilizam o cache de dgmbDesafios', () => {
+  const obterDados = extractFunction(utils, 'obterDadosInscricaoUsuario_');
+  const painel = fs.readFileSync(path.join(repoRoot, 'Meu Giro', 'PainelService.gs'), 'utf8');
+  const inscricaoLeve = extractFunction(painel, 'painelMG_obterInscricaoLevePorDesafio_');
+
+  assert.match(obterDados, /contextoDesafios && contextoDesafios\.cache/);
+  assert.match(obterDados, /obterDgmbDesafiosCacheExecucao_\(\)/);
+  assert.match(inscricaoLeve, /obterDgmbDesafiosCacheExecucao_\(\)/);
+  assert.doesNotMatch(inscricaoLeve, /getDataRange\(\)\.getValues\(\)/);
 });

@@ -644,15 +644,13 @@ function painelMG_obterInscricaoLevePorDesafio_(idDgmb, desafioPrincipal) {
     return null;
   }
 
-  var abaDesafio = SHEETS.DESAFIO || 'dgmbDesafios';
-  var sh = getSheetByName_(abaDesafio);
   var perfLeituraInicio = painelMG_perfNow_();
-  if (typeof painelMG_incrementarAuditoriaCarregamentoInicial_ === 'function') {
-    painelMG_incrementarAuditoriaCarregamentoInicial_('leituras_dgmbDesafios');
-  }
-  var values = sh.getDataRange().getValues();
+  var cacheDesafios = obterDgmbDesafiosCacheExecucao_();
+  var abaDesafio = cacheDesafios.aba;
+  var values = cacheDesafios.values;
   painelMG_perfLog_('painel-leve-pos-salvar', 'leitura_dgmbDesafios_inscricao_leve', perfLeituraInicio, {
-    quantidade_linhas_dgmbDesafios: values && values.length ? values.length - 1 : 0
+    quantidade_linhas_dgmbDesafios: values && values.length ? values.length - 1 : 0,
+    usou_cache_dgmbDesafios: cacheDesafios.usouCache
   });
   if (!values || values.length < 2) {
     painelMG_perfLog_('painel-leve-pos-salvar', 'montagem_inscricao_leve', perfMontagemInicio, {
