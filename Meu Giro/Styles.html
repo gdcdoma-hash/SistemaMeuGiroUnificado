@@ -20,6 +20,11 @@
     overflow-y: auto;
   }
 
+  body.modal-meu-giro-aberto {
+    overflow: hidden;
+    touch-action: none;
+  }
+
   .topbar {
     position: sticky;
     top: 0;
@@ -3716,6 +3721,10 @@
     text-align: center;
   }
 
+  .global-loading-card:focus {
+    outline: none;
+  }
+
   .global-loading-spinner {
     width: 42px;
     height: 42px;
@@ -3726,16 +3735,49 @@
   }
 
   .global-loading-title {
-    color: #f97316;
-    font-size: 18px;
-    letter-spacing: 0.12em;
+    color: #111827;
+    font-size: 21px;
+    line-height: 1.25;
   }
 
   .global-loading-message {
+    margin: 0;
     color: #374151;
     font-size: 15px;
-    font-weight: 700;
-    line-height: 1.35;
+    font-weight: 600;
+    line-height: 1.5;
+    white-space: pre-line;
+  }
+
+  .global-loading-actions {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 6px;
+  }
+
+  .global-loading-actions:empty {
+    display: none;
+  }
+
+  .global-loading-actions button {
+    width: auto;
+    min-width: 112px;
+    min-height: 44px;
+    margin: 0;
+  }
+
+  .global-loading-overlay.modal-tipo-erro .global-loading-card {
+    border-color: #fecaca;
+  }
+
+  .global-loading-overlay.modal-tipo-sucesso .global-loading-card {
+    border-color: #bbf7d0;
+  }
+
+  .global-loading-overlay.modal-tipo-alerta .global-loading-card {
+    border-color: #fed7aa;
   }
 
   @keyframes global-loading-spin {
@@ -3752,6 +3794,14 @@
 
     .global-loading-message {
       font-size: 14px;
+    }
+
+    .global-loading-actions {
+      flex-direction: column-reverse;
+    }
+
+    .global-loading-actions button {
+      width: 100%;
     }
   }
 
