@@ -589,6 +589,7 @@ function meuGiroPerfLog_(escopo, etapa, inicio, extras) {
 
 var MEU_GIRO_DIAGNOSTICO_LOGS_EXECUCAO_ = 0;
 var LISTA_DESAFIOS_CACHE_EXECUCAO_ = null;
+var DGMB_DESAFIOS_INDICE_USUARIO_EXECUCAO_ = null;
 
 function buildListaDesafiosContexto_(ss) {
   var perfTotalInicio = meuGiroPerfNow_();
@@ -788,6 +789,108 @@ function montarPeriodoHistoricoVinculo_(row, indices, periodoLista, contextoLog)
   };
 }
 
+function obterLinhasDgmbDesafiosUsuario_(sh, idDgmb) {
+  var perfIndiceInicio = meuGiroPerfNow_();
+  var id = normalizeText_(idDgmb);
+  var ultimaLinha = sh.getLastRow();
+  var ultimaColuna = sh.getLastColumn();
+  var quantidadeLinhasTotal = Math.max(ultimaLinha - 1, 0);
+
+  if (!DGMB_DESAFIOS_INDICE_USUARIO_EXECUCAO_) {
+    DGMB_DESAFIOS_INDICE_USUARIO_EXECUCAO_ = {
+      cabecalho: null,
+      indiceId: -1,
+      quantidadeLinhasTotal: quantidadeLinhasTotal,
+      numerosLinhasPorId: null,
+      porId: {},
+      quantidadeBlocosPorId: {}
+    };
+  }
+
+  var indiceExecucao = DGMB_DESAFIOS_INDICE_USUARIO_EXECUCAO_;
+  if (!indiceExecucao.cabecalho && ultimaLinha > 0 && ultimaColuna > 0) {
+    indiceExecucao.cabecalho = sh.getRange(1, 1, 1, ultimaColuna).getValues()[0];
+    indiceExecucao.indiceId = getOptionalColumnIndex_(
+      buildHeaderMap_(indiceExecucao.cabecalho),
+      ['id_dgmb']
+    );
+    indiceExecucao.quantidadeLinhasTotal = quantidadeLinhasTotal;
+  }
+
+  if (!Object.prototype.hasOwnProperty.call(indiceExecucao.porId, id)) {
+    var linhasUsuario = [];
+    if (id && indiceExecucao.indiceId > -1 && ultimaLinha > 1) {
+      if (indiceExecucao.numerosLinhasPorId === null) {
+        indiceExecucao.numerosLinhasPorId = {};
+        var valoresId = sh.getRange(
+          2,
+          indiceExecucao.indiceId + 1,
+          ultimaLinha - 1,
+          1
+        ).getValues();
+        for (var i = 0; i < valoresId.length; i++) {
+          var idLinha = normalizeText_((valoresId[i] || [])[0]);
+          if (!idLinha) continue;
+          if (!indiceExecucao.numerosLinhasPorId[idLinha]) {
+            indiceExecucao.numerosLinhasPorId[idLinha] = [];
+          }
+          indiceExecucao.numerosLinhasPorId[idLinha].push(i + 2);
+        }
+      }
+
+      var numerosLinhas = (indiceExecucao.numerosLinhasPorId[id] || []).slice();
+      numerosLinhas.sort(function(a, b) { return a - b; });
+      var blocos = [];
+      for (var j = 0; j < numerosLinhas.length; j++) {
+        var numeroLinha = numerosLinhas[j];
+        var blocoAtual = blocos.length ? blocos[blocos.length - 1] : null;
+        if (blocoAtual && numeroLinha === blocoAtual.linhaFinal + 1) {
+          blocoAtual.linhaFinal = numeroLinha;
+          blocoAtual.quantidadeLinhas++;
+        } else {
+          blocos.push({
+            linhaInicial: numeroLinha,
+            linhaFinal: numeroLinha,
+            quantidadeLinhas: 1
+          });
+        }
+      }
+
+      for (var b = 0; b < blocos.length; b++) {
+        var bloco = blocos[b];
+        var valoresBloco = sh.getRange(
+          bloco.linhaInicial,
+          1,
+          bloco.quantidadeLinhas,
+          ultimaColuna
+        ).getValues();
+        for (var k = 0; k < valoresBloco.length; k++) {
+          linhasUsuario.push({
+            numeroLinha: bloco.linhaInicial + k,
+            valores: valoresBloco[k]
+          });
+        }
+      }
+      indiceExecucao.quantidadeBlocosPorId[id] = blocos.length;
+    } else {
+      indiceExecucao.quantidadeBlocosPorId[id] = 0;
+    }
+    indiceExecucao.porId[id] = linhasUsuario;
+  }
+
+  meuGiroPerfLog_('obter-vinculos-desafio-usuario', 'indice_dgmbDesafios_usuario', perfIndiceInicio, {
+    quantidade_linhas_total: indiceExecucao.quantidadeLinhasTotal,
+    quantidade_linhas_usuario: indiceExecucao.porId[id].length,
+    quantidade_blocos_lidos: indiceExecucao.quantidadeBlocosPorId[id] || 0
+  });
+
+  return {
+    cabecalho: indiceExecucao.cabecalho || [],
+    linhas: indiceExecucao.porId[id],
+    quantidadeLinhasTotal: indiceExecucao.quantidadeLinhasTotal
+  };
+}
+
 function obterVinculosDesafioUsuario_(idDgmb) {
   if (typeof painelMG_incrementarAuditoriaCarregamentoInicial_ === 'function') {
     painelMG_incrementarAuditoriaCarregamentoInicial_('obterVinculosDesafioUsuario_chamadas');
@@ -810,13 +913,14 @@ function obterVinculosDesafioUsuario_(idDgmb) {
   if (typeof painelMG_incrementarAuditoriaCarregamentoInicial_ === 'function') {
     painelMG_incrementarAuditoriaCarregamentoInicial_('leituras_dgmbDesafios');
   }
-  var values = sh.getDataRange().getValues();
+  var dadosUsuario = obterLinhasDgmbDesafiosUsuario_(sh, id);
   meuGiroPerfLog_('obter-vinculos-desafio-usuario', 'leitura_dgmbDesafios', perfEtapaInicio, {
-    quantidade_linhas_dgmbDesafios: values && values.length ? values.length - 1 : 0
+    quantidade_linhas_dgmbDesafios: dadosUsuario.quantidadeLinhasTotal,
+    quantidade_linhas_dgmbDesafios_usuario: dadosUsuario.linhas.length
   });
-  if (!values || values.length < 2) return [];
+  if (!dadosUsuario.cabecalho.length || !dadosUsuario.linhas.length) return [];
 
-  var map = buildHeaderMap_(values[0]);
+  var map = buildHeaderMap_(dadosUsuario.cabecalho);
   var idxId = getOptionalColumnIndex_(map, ['id_dgmb']);
   if (idxId === -1) return [];
 
@@ -840,10 +944,10 @@ function obterVinculosDesafioUsuario_(idDgmb) {
   var chaves = {};
 
   perfEtapaInicio = meuGiroPerfNow_();
-  for (var i = 1; i < values.length; i++) {
-    var row = values[i];
-    var rowId = normalizeText_(row[idxId]);
-    if (rowId !== id) continue;
+  for (var i = 0; i < dadosUsuario.linhas.length; i++) {
+    var linhaUsuario = dadosUsuario.linhas[i];
+    var row = linhaUsuario.valores;
+    var numeroLinha = linhaUsuario.numeroLinha;
 
     var idDesafio = obterIdDesafioRegistro_(row, idxIdDesafio, idxObs);
     var idInscricao = idxInscricao > -1 ? normalizeText_(row[idxInscricao]) : '';
@@ -863,7 +967,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
     if (!idDesafio) {
       logMeuGiroDiagnostico_('Vínculo sem ID_DESAFIO identificável.', {
         id_dgmb: id,
-        linha: i + 1,
+        linha: numeroLinha,
         id_item_estoque: idItem || ''
       });
     }
@@ -898,7 +1002,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
     }, periodoLista, {
       id_dgmb: id,
       id_desafio: idDesafio || '',
-      linha: i + 1
+      linha: numeroLinha
     });
 
     var chave = [id, idInscricao, idDesafio, idItem || ('META_' + Math.round((metaKm + Number.EPSILON) * 10) / 10)].join('|');
@@ -926,12 +1030,17 @@ function obterVinculosDesafioUsuario_(idDgmb) {
   }
 
   meuGiroPerfLog_('obter-vinculos-desafio-usuario', 'montagem_vinculos', perfEtapaInicio, {
-    quantidade_linhas_dgmbDesafios: values.length - 1,
+    quantidade_linhas_dgmbDesafios: dadosUsuario.quantidadeLinhasTotal,
+    quantidade_linhas_dgmbDesafios_usuario: dadosUsuario.linhas.length,
     quantidade_vinculos_do_usuario: vinculos.length,
     quantidade_logs_diagnostico: (MEU_GIRO_DIAGNOSTICO_LOGS_EXECUCAO_ || 0) - logsDiagnosticoInicio
   });
+  meuGiroPerfLog_('obter-vinculos-desafio-usuario', 'obterVinculosDesafioUsuario_otimizado', perfTotalInicio, {
+    quantidade_vinculos: vinculos.length
+  });
   meuGiroPerfLog_('obter-vinculos-desafio-usuario', 'obterVinculosDesafioUsuario_total', perfTotalInicio, {
-    quantidade_linhas_dgmbDesafios: values.length - 1,
+    quantidade_linhas_dgmbDesafios: dadosUsuario.quantidadeLinhasTotal,
+    quantidade_linhas_dgmbDesafios_usuario: dadosUsuario.linhas.length,
     quantidade_vinculos_do_usuario: vinculos.length,
     quantidade_logs_diagnostico: (MEU_GIRO_DIAGNOSTICO_LOGS_EXECUCAO_ || 0) - logsDiagnosticoInicio
   });

@@ -14,6 +14,12 @@ const utils = fs.readFileSync(
 );
 const fontes = registroService + '\n' + utils;
 
+function extractFunction(source, name) {
+  const match = source.match(new RegExp(`function ${name}\\([^]*?\\n\\}`));
+  assert.ok(match, `Função ${name} não encontrada`);
+  return match[0];
+}
+
 test('instrumenta as três operações de atividade e seus tempos totais', () => {
   [
     ['registrarAtividade', 'registrarAtividade_total'],
@@ -107,4 +113,92 @@ test('reaproveita o contexto completo de ListaDesafios durante a execução', ()
     utils,
     /function obterVinculosDesafioUsuario_\(idDgmb\)[\s\S]*?var contextoLista = buildListaDesafiosContexto_\(ss\);/
   );
+});
+
+test('busca somente as linhas de dgmbDesafios pertencentes ao usuário', () => {
+  const helper = extractFunction(utils, 'obterLinhasDgmbDesafiosUsuario_');
+  const obterVinculos = extractFunction(utils, 'obterVinculosDesafioUsuario_');
+
+  assert.doesNotMatch(obterVinculos, /getDataRange\(\)\.getValues\(\)/);
+  assert.doesNotMatch(helper, /createTextFinder/);
+  assert.match(helper, /var valoresId = sh\.getRange\([\s\S]*?\)\.getValues\(\)/);
+  assert.match(helper, /var idLinha = normalizeText_\(\(valoresId\[i\] \|\| \[\]\)\[0\]\)/);
+  assert.match(helper, /var numerosLinhas = \(indiceExecucao\.numerosLinhasPorId\[id\] \|\| \[\]\)\.slice\(\)/);
+  assert.match(helper, /blocoAtual && numeroLinha === blocoAtual\.linhaFinal \+ 1/);
+  assert.match(helper, /bloco\.quantidadeLinhas,\s*ultimaColuna\s*\)\.getValues\(\)/);
+  assert.match(helper, /quantidade_linhas_total: indiceExecucao\.quantidadeLinhasTotal/);
+  assert.match(helper, /quantidade_linhas_usuario: indiceExecucao\.porId\[id\]\.length/);
+  assert.match(helper, /quantidade_blocos_lidos: indiceExecucao\.quantidadeBlocosPorId\[id\] \|\| 0/);
+  assert.ok(utils.includes("'indice_dgmbDesafios_usuario'"));
+  assert.ok(utils.includes("'obterVinculosDesafioUsuario_otimizado'"));
+  assert.ok(utils.includes('quantidade_vinculos: vinculos.length'));
+});
+
+test('índice usa igualdade exata, agrupa blocos e reaproveita as linhas do atleta', () => {
+  const helper = extractFunction(utils, 'obterLinhasDgmbDesafiosUsuario_');
+  const factory = new Function(`
+    var DGMB_DESAFIOS_INDICE_USUARIO_EXECUCAO_ = null;
+    function normalizeText_(value) { return value == null ? '' : String(value).trim(); }
+    function buildHeaderMap_(header) {
+      var out = {};
+      header.forEach(function(value, index) { out[normalizeText_(value).toLowerCase()] = index; });
+      return out;
+    }
+    function getOptionalColumnIndex_(map, names) {
+      for (var i = 0; i < names.length; i++) {
+        if (Object.prototype.hasOwnProperty.call(map, names[i])) return map[names[i]];
+      }
+      return -1;
+    }
+    function meuGiroPerfNow_() { return 0; }
+    function meuGiroPerfLog_() {}
+    ${helper}
+    return obterLinhasDgmbDesafiosUsuario_;
+  `);
+  const obterLinhas = factory();
+  const rows = [['ID_DGMB', 'ID_DESAFIO']];
+  for (let i = 1; i <= 383; i++) {
+    rows.push([String(3000 + i), `D${i}`]);
+  }
+  [10, 11, 12, 60, 61, 100].forEach(numero => { rows[numero][0] = '1133'; });
+  rows[150][0] = '21133';
+  rows[151][0] = '11330';
+
+  let leiturasCabecalho = 0;
+  let leiturasColunaId = 0;
+  const blocosLidos = [];
+  const sheet = {
+    getLastRow: () => rows.length,
+    getLastColumn: () => rows[0].length,
+    getRange(row, column, numRows, numColumns) {
+      if (row === 1) leiturasCabecalho++;
+      return {
+        getValues() {
+          if (row > 1 && numColumns === 1) leiturasColunaId++;
+          if (row > 1 && numColumns > 1) {
+            blocosLidos.push({ linhaInicial: row, quantidadeLinhas: numRows });
+          }
+          return rows.slice(row - 1, row - 1 + numRows)
+            .map(values => values.slice(column - 1, column - 1 + numColumns));
+        }
+      };
+    }
+  };
+
+  const primeira = obterLinhas(sheet, '1133');
+  const segunda = obterLinhas(sheet, '1133');
+
+  assert.equal(primeira.quantidadeLinhasTotal, 383);
+  assert.equal(primeira.linhas.length, 6);
+  assert.deepEqual(primeira.linhas.map(item => item.numeroLinha), [11, 12, 13, 61, 62, 101]);
+  assert.ok(primeira.linhas.every(item => item.valores[0] === '1133'));
+  assert.ok(!primeira.linhas.some(item => ['21133', '11330'].includes(item.valores[0])));
+  assert.deepEqual(segunda, primeira);
+  assert.equal(leiturasCabecalho, 1);
+  assert.equal(leiturasColunaId, 1);
+  assert.deepEqual(blocosLidos, [
+    { linhaInicial: 11, quantidadeLinhas: 3 },
+    { linhaInicial: 61, quantidadeLinhas: 2 },
+    { linhaInicial: 101, quantidadeLinhas: 1 }
+  ]);
 });
