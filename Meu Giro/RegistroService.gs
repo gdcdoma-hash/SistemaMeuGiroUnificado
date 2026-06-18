@@ -35,6 +35,8 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
     var cols = getRegistroKmColumnIndexes_(dados);
 
     cols = ensureRegistroKmActivityIdColumn_(sheet, dados, cols);
+    if (!dados[0]) dados[0] = [];
+    dados[0][cols.idxActivityId] = dados[0][cols.idxActivityId] || 'activity_id';
     var activityId = gerarActivityId_();
 
     perfEtapaInicio = meuGiroPerfNow_();
@@ -72,16 +74,18 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
     var linhaInserida = sheet.getLastRow() + 1;
     perfEtapaInicio = meuGiroPerfNow_();
     sheet.getRange(linhaInserida, 1, 1, rowLength).setValues([row]);
+    dados.push(row.slice());
+    var opcoesRegistroKm = criarOpcoesRegistroKmReaproveitado_(idDgmb, dados, cols);
     meuGiroPerfLog_('registrar-atividade', 'escrita_atividade_REGISTRO_KM', perfEtapaInicio, {
       quantidade_linhas_escritas: 1
     });
 
     try {
       perfEtapaInicio = meuGiroPerfNow_();
-      atualizarDistanciaRealizada_(idDgmb);
+      atualizarDistanciaRealizada_(idDgmb, opcoesRegistroKm);
       meuGiroPerfLog_('registrar-atividade', 'atualizarDistanciaRealizada_', perfEtapaInicio);
       perfEtapaInicio = meuGiroPerfNow_();
-      atualizarMeuGiroResumo_(idDgmb);
+      atualizarMeuGiroResumo_(idDgmb, opcoesRegistroKm);
       meuGiroPerfLog_('registrar-atividade', 'atualizarMeuGiroResumo_', perfEtapaInicio);
     } catch (syncErr) {
       sheet.deleteRow(linhaInserida);
@@ -159,17 +163,27 @@ function preencherLinhaRegistroKmBruto_(rowLength, cols, registro) {
   return row;
 }
 
-function atualizarDistanciaRealizada_(idDgmb){
+function criarOpcoesRegistroKmReaproveitado_(idDgmb, valores, layoutRegistroKm) {
+  return {
+    idDgmb: String(idDgmb || '').trim(),
+    registrosKmValores: valores,
+    registrosKmObjetos: converterValoresRegistroKmEmObjetos_(valores),
+    layoutRegistroKm: layoutRegistroKm
+  };
+}
+
+function atualizarDistanciaRealizada_(idDgmb, opcoes){
   var perfTotalInicio = meuGiroPerfNow_();
   var perfEtapaInicio = meuGiroPerfNow_();
-  var registros = getAllObjects_(SHEETS.REGISTRO_KM);
-  meuGiroPerfLog_('atualizar-distancia-realizada', 'leitura_REGISTRO_KM', perfEtapaInicio, {
-    quantidade_linhas_registro_km: registros.length
+  var registros = obterRegistrosKmObjetosReaproveitados_(idDgmb, opcoes);
+  meuGiroPerfLog_('atualizar-distancia-realizada', registros.reaproveitados ? 'leitura_REGISTRO_KM_reaproveitada' : 'leitura_REGISTRO_KM', perfEtapaInicio, {
+    quantidade_linhas_registro_km: registros.valores.length
   });
+  var registrosValores = registros.valores;
   var total = 0;
   var activityIdsSomados = {};
 
-  registros.forEach(function(r){
+  registrosValores.forEach(function(r){
     if(String(r.ID_DGMB).trim() !== String(idDgmb).trim()) return;
 
     var activityId = obterActivityIdRegistroKm_(r);
@@ -286,7 +300,10 @@ function editarAtividade(payload) {
     linhasEncontradas.forEach(function(linha) {
       sheet.getRange(linha, cols.idxData + 1).setValue(novaDataAtividade);
       sheet.getRange(linha, cols.idxKm + 1).setValue(novoKm);
+      dados[linha - 1][cols.idxData] = novaDataAtividade;
+      dados[linha - 1][cols.idxKm] = novoKm;
     });
+    var opcoesRegistroKm = criarOpcoesRegistroKmReaproveitado_(idDgmb, dados, cols);
     meuGiroPerfLog_('editar-atividade', 'edicao_atividade_REGISTRO_KM', perfEtapaInicio, {
       quantidade_linhas_editadas: linhasEncontradas.length,
       quantidade_escritas_celula: linhasEncontradas.length * 2
@@ -294,10 +311,10 @@ function editarAtividade(payload) {
 
     try {
       perfEtapaInicio = meuGiroPerfNow_();
-      atualizarDistanciaRealizada_(idDgmb);
+      atualizarDistanciaRealizada_(idDgmb, opcoesRegistroKm);
       meuGiroPerfLog_('editar-atividade', 'atualizarDistanciaRealizada_', perfEtapaInicio);
       perfEtapaInicio = meuGiroPerfNow_();
-      atualizarMeuGiroResumo_(idDgmb);
+      atualizarMeuGiroResumo_(idDgmb, opcoesRegistroKm);
       meuGiroPerfLog_('editar-atividade', 'atualizarMeuGiroResumo_', perfEtapaInicio);
     } catch (syncErr) {
       linhasEncontradas.forEach(function(linha, index) {
@@ -417,17 +434,19 @@ function excluirAtividade(payload) {
     perfEtapaInicio = meuGiroPerfNow_();
     linhasEncontradas.slice().sort(function(a, b) { return b - a; }).forEach(function(linha) {
       sheet.deleteRow(linha);
+      dados.splice(linha - 1, 1);
     });
+    var opcoesRegistroKm = criarOpcoesRegistroKmReaproveitado_(idDgmb, dados, cols);
     meuGiroPerfLog_('excluir-atividade', 'exclusao_atividade_REGISTRO_KM', perfEtapaInicio, {
       quantidade_linhas_excluidas: linhasEncontradas.length
     });
 
     try {
       perfEtapaInicio = meuGiroPerfNow_();
-      atualizarDistanciaRealizada_(idDgmb);
+      atualizarDistanciaRealizada_(idDgmb, opcoesRegistroKm);
       meuGiroPerfLog_('excluir-atividade', 'atualizarDistanciaRealizada_', perfEtapaInicio);
       perfEtapaInicio = meuGiroPerfNow_();
-      atualizarMeuGiroResumo_(idDgmb);
+      atualizarMeuGiroResumo_(idDgmb, opcoesRegistroKm);
       meuGiroPerfLog_('excluir-atividade', 'atualizarMeuGiroResumo_', perfEtapaInicio);
     } catch (syncErr) {
       linhasOriginais.forEach(function(item) {
