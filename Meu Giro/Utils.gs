@@ -1204,6 +1204,106 @@ function obterMeuGiroResumoAtualizadoLeve_(idDgmb) {
   return saida;
 }
 
+function meuGiroResumoAgruparLinhasContiguas_(linhas) {
+  var blocos = [];
+  for (var i = 0; i < linhas.length; i++) {
+    var numeroLinha = linhas[i];
+    var blocoAtual = blocos.length ? blocos[blocos.length - 1] : null;
+    if (blocoAtual && numeroLinha === blocoAtual.linhaFinal + 1) {
+      blocoAtual.linhaFinal = numeroLinha;
+      blocoAtual.quantidadeLinhas++;
+    } else {
+      blocos.push({
+        linhaInicial: numeroLinha,
+        linhaFinal: numeroLinha,
+        quantidadeLinhas: 1
+      });
+    }
+  }
+  return blocos;
+}
+
+function meuGiroResumoLeituraIntegralFallback_(shResumo) {
+  return shResumo.getDataRange().getValues();
+}
+
+function meuGiroResumoLerLinhasAlvo_(
+  shResumo,
+  cabecalho,
+  totalColunasResumo,
+  id,
+  vinculos,
+  idxId,
+  idxInscricaoResumo
+) {
+  var perfIndicesInicio = meuGiroPerfNow_();
+  var ultimaLinha = shResumo.getLastRow();
+  var valoresResumo = [];
+  valoresResumo[0] = cabecalho;
+  var linhasCandidatas = [];
+  var quantidadeLinhasConsultadas = Math.max(ultimaLinha - 1, 0);
+  var usouIdInscricao = idxInscricaoResumo > -1;
+
+  if (quantidadeLinhasConsultadas > 0) {
+    var idsDgmb = shResumo.getRange(2, idxId + 1, quantidadeLinhasConsultadas, 1).getValues();
+    var idsInscricao = usouIdInscricao
+      ? shResumo.getRange(2, idxInscricaoResumo + 1, quantidadeLinhasConsultadas, 1).getValues()
+      : [];
+    var inscricoesDoAtleta = {};
+
+    if (usouIdInscricao) {
+      for (var v = 0; v < vinculos.length; v++) {
+        var idInscricaoVinculo = normalizeText_((vinculos[v] || {}).id_inscricao);
+        if (idInscricaoVinculo) inscricoesDoAtleta[idInscricaoVinculo] = true;
+      }
+    }
+
+    for (var i = 0; i < quantidadeLinhasConsultadas; i++) {
+      var pertenceAoId = normalizeText_((idsDgmb[i] || [])[0]) === id;
+      var idInscricaoLinha = usouIdInscricao
+        ? normalizeText_((idsInscricao[i] || [])[0])
+        : '';
+      if (pertenceAoId || (idInscricaoLinha && inscricoesDoAtleta[idInscricaoLinha])) {
+        linhasCandidatas.push(i + 2);
+      }
+    }
+  }
+
+  meuGiroPerfLog_('atualizar-meu-giro-resumo', 'leitura_MEU_GIRO_RESUMO_indices', perfIndicesInicio, {
+    quantidade_linhas_consultadas: quantidadeLinhasConsultadas,
+    usou_id_inscricao: usouIdInscricao
+  });
+
+  var perfLinhasAlvoInicio = meuGiroPerfNow_();
+  linhasCandidatas.sort(function(a, b) { return a - b; });
+  var blocos = meuGiroResumoAgruparLinhasContiguas_(linhasCandidatas);
+  for (var b = 0; b < blocos.length; b++) {
+    var bloco = blocos[b];
+    var valoresBloco = shResumo.getRange(
+      bloco.linhaInicial,
+      1,
+      bloco.quantidadeLinhas,
+      totalColunasResumo
+    ).getValues();
+    for (var linhaBloco = 0; linhaBloco < valoresBloco.length; linhaBloco++) {
+      valoresResumo[bloco.linhaInicial + linhaBloco - 1] = valoresBloco[linhaBloco];
+    }
+  }
+
+  meuGiroPerfLog_('atualizar-meu-giro-resumo', 'leitura_MEU_GIRO_RESUMO_linhas_alvo', perfLinhasAlvoInicio, {
+    quantidade_linhas_completas_lidas: linhasCandidatas.length,
+    quantidade_blocos_lidos: blocos.length,
+    quantidade_celulas_estimadas: (quantidadeLinhasConsultadas * (usouIdInscricao ? 2 : 1)) +
+      (linhasCandidatas.length * totalColunasResumo)
+  });
+
+  return {
+    valores: valoresResumo,
+    linhasCandidatas: linhasCandidatas,
+    fallbackIntegral: false
+  };
+}
+
 function atualizarMeuGiroResumo_(idDgmb, opcoes) {
   var perfTotalInicio = meuGiroPerfNow_();
   var id = normalizeText_(idDgmb);
@@ -1221,12 +1321,10 @@ function atualizarMeuGiroResumo_(idDgmb, opcoes) {
   });
   perfEtapaInicio = meuGiroPerfNow_();
   var shResumo = ensureMeuGiroResumoSheet_();
-  var valoresResumo = shResumo.getDataRange().getValues();
-  meuGiroPerfLog_('atualizar-meu-giro-resumo', 'leitura_MEU_GIRO_RESUMO', perfEtapaInicio, {
-    quantidade_linhas_meu_giro_resumo: valoresResumo && valoresResumo.length ? valoresResumo.length - 1 : 0
-  });
+  var totalColunasResumo = Math.max(shResumo.getLastColumn(), 1);
+  var cabecalhoResumo = shResumo.getRange(1, 1, 1, totalColunasResumo).getValues()[0] || [];
   var layoutResumo = meuGiroResumoObterLayout_(
-    valoresResumo[0] || [],
+    cabecalhoResumo,
     SHEETS.MEU_GIRO_RESUMO || 'MEU_GIRO_RESUMO'
   );
   var mapResumo = layoutResumo.map;
@@ -1239,11 +1337,44 @@ function atualizarMeuGiroResumo_(idDgmb, opcoes) {
   var idxDistanciaResumo = getOptionalColumnIndex_(mapResumo, ['distancia_realizada', 'distancia realizada']);
   var idxPercentualResumo = getOptionalColumnIndex_(mapResumo, ['percentual_concluido', 'percentual concluido', 'percentual concluído']);
   var idxStatusResumo = getOptionalColumnIndex_(mapResumo, ['status_apuracao', 'status apuracao', 'status apuração']);
-  var totalColunasResumo = Math.max(shResumo.getLastColumn(), (valoresResumo[0] || []).length);
+  var leituraResumo;
+  try {
+    leituraResumo = meuGiroResumoLerLinhasAlvo_(
+      shResumo,
+      cabecalhoResumo,
+      totalColunasResumo,
+      id,
+      vinculos,
+      idxId,
+      idxInscricaoResumo
+    );
+  } catch (erroLeituraCirurgica) {
+    leituraResumo = {
+      valores: meuGiroResumoLeituraIntegralFallback_(shResumo),
+      linhasCandidatas: null,
+      fallbackIntegral: true
+    };
+    meuGiroPerfLog_('atualizar-meu-giro-resumo', 'leitura_MEU_GIRO_RESUMO_fallback_integral', perfEtapaInicio, {
+      erro: String(erroLeituraCirurgica)
+    });
+  }
+  var valoresResumo = leituraResumo.valores;
+  meuGiroPerfLog_('atualizar-meu-giro-resumo', 'leitura_MEU_GIRO_RESUMO', perfEtapaInicio, {
+    quantidade_linhas_meu_giro_resumo: Math.max(shResumo.getLastRow() - 1, 0),
+    leitura_integral_fallback: leituraResumo.fallbackIntegral
+  });
   var linhasPorChave = {};
+  var linhasParaIndexar = leituraResumo.linhasCandidatas;
+  if (!linhasParaIndexar) {
+    linhasParaIndexar = [];
+    for (var linhaIntegral = 2; linhaIntegral <= valoresResumo.length; linhaIntegral++) {
+      linhasParaIndexar.push(linhaIntegral);
+    }
+  }
 
-  for (var i = 1; i < valoresResumo.length; i++) {
-    var row = valoresResumo[i];
+  for (var i = 0; i < linhasParaIndexar.length; i++) {
+    var numeroLinhaExistente = linhasParaIndexar[i];
+    var row = valoresResumo[numeroLinhaExistente - 1] || [];
     var idInscricaoExistente = idxInscricaoResumo > -1
       ? normalizeText_(row[idxInscricaoResumo])
       : '';
@@ -1256,7 +1387,7 @@ function atualizarMeuGiroResumo_(idDgmb, opcoes) {
       row[idxMetaResumo],
       idInscricaoExistente
     );
-    linhasPorChave[chaveExistente] = i + 1;
+    linhasPorChave[chaveExistente] = numeroLinhaExistente;
   }
 
   var hoje = normalizarDataISO_(new Date());
