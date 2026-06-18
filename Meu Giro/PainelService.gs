@@ -15,14 +15,28 @@ function getPainelUsuario(idDgmb) {
     painelMG_perfLog_('painel-inicial', 'buscarPessoaPainelMG_', perfEtapaInicio, { encontrado: !!pessoa });
 
     perfEtapaInicio = painelMG_perfNow_();
-    var resumoDesafios = atualizarMeuGiroResumo_(id) || [];
-    painelMG_perfLog_('painel-inicial', 'atualizarMeuGiroResumo_', perfEtapaInicio, { total_desafios_resumo: resumoDesafios.length });
+    var resumoDesafios = obterMeuGiroResumoAtualizadoLeve_(id) || [];
+    painelMG_perfLog_('painel-inicial', 'lerMeuGiroResumoAtualizadoLogin_', perfEtapaInicio, {
+      total_desafios_resumo: resumoDesafios.length,
+      fallback: false
+    });
+
+    if (!resumoDesafios.length) {
+      perfEtapaInicio = painelMG_perfNow_();
+      resumoDesafios = atualizarMeuGiroResumo_(id) || [];
+      painelMG_perfLog_('painel-inicial', 'atualizarMeuGiroResumo_fallback_login_', perfEtapaInicio, {
+        total_desafios_resumo: resumoDesafios.length,
+        fallback: true
+      });
+    }
 
     perfEtapaInicio = painelMG_perfNow_();
-    var desafio = buscarInscricaoPainelMG_(id, resumoDesafios);
-    painelMG_perfLog_('painel-inicial', 'buscarInscricaoPainelMG_', perfEtapaInicio, {
+    var desafio = buscarInscricaoPainelMGLeve_(id, resumoDesafios);
+    painelMG_perfLog_('painel-inicial', desafio && desafio.usou_fallback ? 'buscarInscricaoPainelMG_' : 'buscarInscricaoPainelMGLeve_', perfEtapaInicio, {
       ok: !!(desafio && desafio.ok),
-      total_desafios: desafio && desafio.desafios ? desafio.desafios.length : 0
+      total_desafios: desafio && desafio.desafios ? desafio.desafios.length : 0,
+      fallback: !!(desafio && desafio.usou_fallback),
+      motivo_fallback: desafio && desafio.motivo_fallback ? desafio.motivo_fallback : ''
     });
 
     if (!pessoa) {
@@ -633,6 +647,9 @@ function painelMG_obterInscricaoLevePorDesafio_(idDgmb, desafioPrincipal) {
   var abaDesafio = SHEETS.DESAFIO || 'dgmbDesafios';
   var sh = getSheetByName_(abaDesafio);
   var perfLeituraInicio = painelMG_perfNow_();
+  if (typeof painelMG_incrementarAuditoriaCarregamentoInicial_ === 'function') {
+    painelMG_incrementarAuditoriaCarregamentoInicial_('leituras_dgmbDesafios');
+  }
   var values = sh.getDataRange().getValues();
   painelMG_perfLog_('painel-leve-pos-salvar', 'leitura_dgmbDesafios_inscricao_leve', perfLeituraInicio, {
     quantidade_linhas_dgmbDesafios: values && values.length ? values.length - 1 : 0
