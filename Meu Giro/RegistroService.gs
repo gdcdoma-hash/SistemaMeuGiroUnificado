@@ -196,20 +196,21 @@ function atualizarDistanciaRealizada_(idDgmb, opcoes){
     total += Number(r.KM || 0);
   });
 
-  perfEtapaInicio = meuGiroPerfNow_();
-  var inscricao = obterDadosInscricaoUsuario_(idDgmb);
-  meuGiroPerfLog_('atualizar-distancia-realizada', 'leitura_dgmbDesafios_obter_inscricao', perfEtapaInicio);
-  if (!inscricao || !inscricao.aba_desafio) return;
-
-  var abaDesafio = inscricao.aba_desafio;
+  var abaDesafio = SHEETS.DESAFIO || 'dgmbDesafios';
   var sheet = SpreadsheetApp.openById(SPREADSHEET_ID)
     .getSheetByName(abaDesafio);
 
   perfEtapaInicio = meuGiroPerfNow_();
   var dados = sheet.getDataRange().getValues();
-  meuGiroPerfLog_('atualizar-distancia-realizada', 'leitura_dgmbDesafios_atualizacao', perfEtapaInicio, {
+  meuGiroPerfLog_('atualizar-distancia-realizada', 'leitura_dgmbDesafios_unica', perfEtapaInicio, {
     quantidade_linhas_dgmbDesafios: dados && dados.length ? dados.length - 1 : 0
   });
+
+  var inscricao = obterDadosInscricaoUsuario_(idDgmb, {
+    abaDesafio: abaDesafio,
+    values: dados
+  });
+  if (!inscricao || !inscricao.aba_desafio) return;
   if (!dados || dados.length < 2) return;
 
   var map = buildHeaderMap_(dados[0]);
