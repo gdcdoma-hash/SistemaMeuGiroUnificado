@@ -196,19 +196,20 @@ function atualizarDistanciaRealizada_(idDgmb, opcoes){
     total += Number(r.KM || 0);
   });
 
-  var abaDesafio = SHEETS.DESAFIO || 'dgmbDesafios';
-  var sheet = SpreadsheetApp.openById(SPREADSHEET_ID)
-    .getSheetByName(abaDesafio);
-
   perfEtapaInicio = meuGiroPerfNow_();
-  var dados = sheet.getDataRange().getValues();
-  meuGiroPerfLog_('atualizar-distancia-realizada', 'leitura_dgmbDesafios_unica', perfEtapaInicio, {
-    quantidade_linhas_dgmbDesafios: dados && dados.length ? dados.length - 1 : 0
+  var cacheDesafios = obterDgmbDesafiosCacheExecucao_();
+  var abaDesafio = cacheDesafios.aba;
+  var sheet = cacheDesafios.sheet;
+  var dados = cacheDesafios.values;
+  meuGiroPerfLog_('atualizar-distancia-realizada', 'leitura_dgmbDesafios_cache', perfEtapaInicio, {
+    quantidade_linhas_dgmbDesafios: dados && dados.length ? dados.length - 1 : 0,
+    usou_cache_dgmbDesafios: cacheDesafios.usouCache
   });
 
   var inscricao = obterDadosInscricaoUsuario_(idDgmb, {
     abaDesafio: abaDesafio,
-    values: dados
+    values: dados,
+    cache: cacheDesafios
   });
   if (!inscricao || !inscricao.aba_desafio) return;
   if (!dados || dados.length < 2) return;
@@ -221,8 +222,10 @@ function atualizarDistanciaRealizada_(idDgmb, opcoes){
     if(String(dados[i][idxId]).trim() === String(idDgmb).trim()){
       perfEtapaInicio = meuGiroPerfNow_();
       sheet.getRange(i + 1, idxRealizado + 1).setValue(total);
+      dados[i][idxRealizado] = total;
       meuGiroPerfLog_('atualizar-distancia-realizada', 'escrita_dgmbDesafios_distancia_realizada', perfEtapaInicio, {
-        linha_atualizada: i + 1
+        linha_atualizada: i + 1,
+        cache_memoria_atualizado: true
       });
       break;
     }

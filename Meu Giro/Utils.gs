@@ -30,6 +30,53 @@ function getSheetByNameOrThrow_(name) {
   return getSheetByName_(name);
 }
 
+var DGMB_DESAFIOS_CACHE_EXECUCAO_ = null;
+
+function obterDgmbDesafiosCacheExecucao_() {
+  var perfInicio = meuGiroPerfNow_();
+  if (DGMB_DESAFIOS_CACHE_EXECUCAO_ !== null) {
+    meuGiroPerfLog_('cache-dgmb-desafios', 'cache_hit_dgmbDesafios', perfInicio, {
+      usou_cache_dgmbDesafios: true,
+      quantidade_linhas_dgmbDesafios: Math.max(DGMB_DESAFIOS_CACHE_EXECUCAO_.values.length - 1, 0)
+    });
+    DGMB_DESAFIOS_CACHE_EXECUCAO_.usouCache = true;
+    return DGMB_DESAFIOS_CACHE_EXECUCAO_;
+  }
+
+  var abaDesafio = SHEETS.DESAFIO || 'dgmbDesafios';
+  var sh = getSheetByName_(abaDesafio);
+  var lastRow = sh.getLastRow();
+  var lastColumn = sh.getLastColumn();
+  var values = lastRow > 0 && lastColumn > 0
+    ? sh.getRange(1, 1, lastRow, lastColumn).getValues()
+    : [];
+  var header = values.length ? values[0] : [];
+
+  DGMB_DESAFIOS_CACHE_EXECUCAO_ = {
+    aba: abaDesafio,
+    sheet: sh,
+    values: values,
+    header: header,
+    map: buildHeaderMap_(header),
+    lastRow: lastRow,
+    lastColumn: lastColumn,
+    usouCache: false
+  };
+
+  if (typeof painelMG_incrementarAuditoriaCarregamentoInicial_ === 'function') {
+    painelMG_incrementarAuditoriaCarregamentoInicial_('leituras_dgmbDesafios');
+  }
+  meuGiroPerfLog_('cache-dgmb-desafios', 'cache_miss_dgmbDesafios', perfInicio, {
+    usou_cache_dgmbDesafios: false,
+    quantidade_linhas_dgmbDesafios: Math.max(values.length - 1, 0)
+  });
+  meuGiroPerfLog_('cache-dgmb-desafios', 'leitura_dgmbDesafios_cache', perfInicio, {
+    usou_cache_dgmbDesafios: false,
+    quantidade_linhas_dgmbDesafios: Math.max(values.length - 1, 0)
+  });
+  return DGMB_DESAFIOS_CACHE_EXECUCAO_;
+}
+
 function localizarAbaDesafioUsuario_(idDgmb) {
   var id = normalizeText_(idDgmb);
   if (!id) {
@@ -264,9 +311,18 @@ function obterDadosInscricaoUsuario_(idDgmb, contextoDesafios) {
   var abaDesafio = contextoDesafios && contextoDesafios.abaDesafio
     ? contextoDesafios.abaDesafio
     : SHEETS.DESAFIO || 'dgmbDesafios';
+  var cacheDesafios = contextoDesafios && contextoDesafios.cache
+    ? contextoDesafios.cache
+    : null;
+  if (!cacheDesafios && (!contextoDesafios || !Array.isArray(contextoDesafios.values)) &&
+      abaDesafio === (SHEETS.DESAFIO || 'dgmbDesafios')) {
+    cacheDesafios = obterDgmbDesafiosCacheExecucao_();
+  }
   var values = contextoDesafios && Array.isArray(contextoDesafios.values)
     ? contextoDesafios.values
-    : getSheetByName_(abaDesafio).getDataRange().getValues();
+    : cacheDesafios
+      ? cacheDesafios.values
+      : getSheetByName_(abaDesafio).getDataRange().getValues();
 
   if (!values || values.length < 2) {
     return null;
@@ -589,7 +645,6 @@ function meuGiroPerfLog_(escopo, etapa, inicio, extras) {
 
 var MEU_GIRO_DIAGNOSTICO_LOGS_EXECUCAO_ = 0;
 var LISTA_DESAFIOS_CACHE_EXECUCAO_ = null;
-var DGMB_DESAFIOS_INDICE_USUARIO_EXECUCAO_ = null;
 
 function buildListaDesafiosContexto_(ss) {
   var perfTotalInicio = meuGiroPerfNow_();
@@ -789,105 +844,36 @@ function montarPeriodoHistoricoVinculo_(row, indices, periodoLista, contextoLog)
   };
 }
 
-function obterLinhasDgmbDesafiosUsuario_(sh, idDgmb) {
+function obterLinhasDgmbDesafiosUsuario_(cacheDesafios, idDgmb) {
   var perfIndiceInicio = meuGiroPerfNow_();
   var id = normalizeText_(idDgmb);
-  var ultimaLinha = sh.getLastRow();
-  var ultimaColuna = sh.getLastColumn();
-  var quantidadeLinhasTotal = Math.max(ultimaLinha - 1, 0);
+  var values = cacheDesafios.values || [];
+  var cabecalho = cacheDesafios.header || [];
+  var idxId = getOptionalColumnIndex_(cacheDesafios.map || {}, ['id_dgmb']);
+  var linhasUsuario = [];
 
-  if (!DGMB_DESAFIOS_INDICE_USUARIO_EXECUCAO_) {
-    DGMB_DESAFIOS_INDICE_USUARIO_EXECUCAO_ = {
-      cabecalho: null,
-      indiceId: -1,
-      quantidadeLinhasTotal: quantidadeLinhasTotal,
-      numerosLinhasPorId: null,
-      porId: {},
-      quantidadeBlocosPorId: {}
-    };
-  }
-
-  var indiceExecucao = DGMB_DESAFIOS_INDICE_USUARIO_EXECUCAO_;
-  if (!indiceExecucao.cabecalho && ultimaLinha > 0 && ultimaColuna > 0) {
-    indiceExecucao.cabecalho = sh.getRange(1, 1, 1, ultimaColuna).getValues()[0];
-    indiceExecucao.indiceId = getOptionalColumnIndex_(
-      buildHeaderMap_(indiceExecucao.cabecalho),
-      ['id_dgmb']
-    );
-    indiceExecucao.quantidadeLinhasTotal = quantidadeLinhasTotal;
-  }
-
-  if (!Object.prototype.hasOwnProperty.call(indiceExecucao.porId, id)) {
-    var linhasUsuario = [];
-    if (id && indiceExecucao.indiceId > -1 && ultimaLinha > 1) {
-      if (indiceExecucao.numerosLinhasPorId === null) {
-        indiceExecucao.numerosLinhasPorId = {};
-        var valoresId = sh.getRange(
-          2,
-          indiceExecucao.indiceId + 1,
-          ultimaLinha - 1,
-          1
-        ).getValues();
-        for (var i = 0; i < valoresId.length; i++) {
-          var idLinha = normalizeText_((valoresId[i] || [])[0]);
-          if (!idLinha) continue;
-          if (!indiceExecucao.numerosLinhasPorId[idLinha]) {
-            indiceExecucao.numerosLinhasPorId[idLinha] = [];
-          }
-          indiceExecucao.numerosLinhasPorId[idLinha].push(i + 2);
-        }
+  if (id && idxId > -1) {
+    for (var i = 1; i < values.length; i++) {
+      if (normalizeText_(values[i][idxId]) === id) {
+        linhasUsuario.push({
+          numeroLinha: i + 1,
+          valores: values[i]
+        });
       }
-
-      var numerosLinhas = (indiceExecucao.numerosLinhasPorId[id] || []).slice();
-      numerosLinhas.sort(function(a, b) { return a - b; });
-      var blocos = [];
-      for (var j = 0; j < numerosLinhas.length; j++) {
-        var numeroLinha = numerosLinhas[j];
-        var blocoAtual = blocos.length ? blocos[blocos.length - 1] : null;
-        if (blocoAtual && numeroLinha === blocoAtual.linhaFinal + 1) {
-          blocoAtual.linhaFinal = numeroLinha;
-          blocoAtual.quantidadeLinhas++;
-        } else {
-          blocos.push({
-            linhaInicial: numeroLinha,
-            linhaFinal: numeroLinha,
-            quantidadeLinhas: 1
-          });
-        }
-      }
-
-      for (var b = 0; b < blocos.length; b++) {
-        var bloco = blocos[b];
-        var valoresBloco = sh.getRange(
-          bloco.linhaInicial,
-          1,
-          bloco.quantidadeLinhas,
-          ultimaColuna
-        ).getValues();
-        for (var k = 0; k < valoresBloco.length; k++) {
-          linhasUsuario.push({
-            numeroLinha: bloco.linhaInicial + k,
-            valores: valoresBloco[k]
-          });
-        }
-      }
-      indiceExecucao.quantidadeBlocosPorId[id] = blocos.length;
-    } else {
-      indiceExecucao.quantidadeBlocosPorId[id] = 0;
     }
-    indiceExecucao.porId[id] = linhasUsuario;
   }
 
   meuGiroPerfLog_('obter-vinculos-desafio-usuario', 'indice_dgmbDesafios_usuario', perfIndiceInicio, {
-    quantidade_linhas_total: indiceExecucao.quantidadeLinhasTotal,
-    quantidade_linhas_usuario: indiceExecucao.porId[id].length,
-    quantidade_blocos_lidos: indiceExecucao.quantidadeBlocosPorId[id] || 0
+    quantidade_linhas_total: Math.max(values.length - 1, 0),
+    quantidade_linhas_usuario: linhasUsuario.length,
+    quantidade_blocos_lidos: 0,
+    usou_cache_dgmbDesafios: cacheDesafios.usouCache
   });
 
   return {
-    cabecalho: indiceExecucao.cabecalho || [],
-    linhas: indiceExecucao.porId[id],
-    quantidadeLinhasTotal: indiceExecucao.quantidadeLinhasTotal
+    cabecalho: cabecalho,
+    linhas: linhasUsuario,
+    quantidadeLinhasTotal: Math.max(values.length - 1, 0)
   };
 }
 
@@ -905,18 +891,14 @@ function obterVinculosDesafioUsuario_(idDgmb) {
   var contextoLista = buildListaDesafiosContexto_(ss);
   var periodos = contextoLista.periodos;
   var statusListaDesafios = contextoLista.status;
-  var abaDesafio = SHEETS.DESAFIO || 'dgmbDesafios';
-  var sh = ss.getSheetByName(abaDesafio);
-  if (!sh) return [];
-
   perfEtapaInicio = meuGiroPerfNow_();
-  if (typeof painelMG_incrementarAuditoriaCarregamentoInicial_ === 'function') {
-    painelMG_incrementarAuditoriaCarregamentoInicial_('leituras_dgmbDesafios');
-  }
-  var dadosUsuario = obterLinhasDgmbDesafiosUsuario_(sh, id);
+  var cacheDesafios = obterDgmbDesafiosCacheExecucao_();
+  var abaDesafio = cacheDesafios.aba;
+  var dadosUsuario = obterLinhasDgmbDesafiosUsuario_(cacheDesafios, id);
   meuGiroPerfLog_('obter-vinculos-desafio-usuario', 'leitura_dgmbDesafios', perfEtapaInicio, {
     quantidade_linhas_dgmbDesafios: dadosUsuario.quantidadeLinhasTotal,
-    quantidade_linhas_dgmbDesafios_usuario: dadosUsuario.linhas.length
+    quantidade_linhas_dgmbDesafios_usuario: dadosUsuario.linhas.length,
+    usou_cache_dgmbDesafios: cacheDesafios.usouCache
   });
   if (!dadosUsuario.cabecalho.length || !dadosUsuario.linhas.length) return [];
 
@@ -1617,15 +1599,8 @@ function atualizarMeuGiroResumo_(idDgmb, opcoes) {
 }
 
 function atualizarMeuGiroResumoEmLote_() {
-  var ss = getSpreadsheet_();
-  var abaDesafio = SHEETS.DESAFIO || 'dgmbDesafios';
-  var sh = ss.getSheetByName(abaDesafio);
-
-  if (!sh) {
-    return { total_ids: 0, atualizados: 0, ids: [] };
-  }
-
-  var values = sh.getDataRange().getValues();
+  var cacheDesafios = obterDgmbDesafiosCacheExecucao_();
+  var values = cacheDesafios.values;
   if (!values || values.length < 2) {
     return { total_ids: 0, atualizados: 0, ids: [] };
   }
