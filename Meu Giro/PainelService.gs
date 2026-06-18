@@ -645,7 +645,7 @@ function painelMG_obterInscricaoLevePorDesafio_(idDgmb, desafioPrincipal) {
   }
 
   var perfLeituraInicio = painelMG_perfNow_();
-  var cacheDesafios = obterDgmbDesafiosCacheExecucao_();
+  var cacheDesafios = obterDgmbDesafiosCacheExecucao_('painelMG_obterInscricaoLevePorDesafio_');
   var abaDesafio = cacheDesafios.aba;
   var values = cacheDesafios.values;
   painelMG_perfLog_('painel-leve-pos-salvar', 'leitura_dgmbDesafios_inscricao_leve', perfLeituraInicio, {

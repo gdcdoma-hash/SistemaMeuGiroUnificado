@@ -267,7 +267,7 @@ function atualizarDistanciaRealizada_(idDgmb, opcoes){
   });
 
   perfEtapaInicio = meuGiroPerfNow_();
-  var cacheDesafios = obterDgmbDesafiosCacheExecucao_();
+  var cacheDesafios = obterDgmbDesafiosCacheExecucao_('atualizarDistanciaRealizada_');
   var abaDesafio = cacheDesafios.aba;
   var sheet = cacheDesafios.sheet;
   var dados = cacheDesafios.values;

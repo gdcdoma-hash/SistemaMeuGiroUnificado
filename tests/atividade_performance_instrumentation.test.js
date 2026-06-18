@@ -105,22 +105,30 @@ test('reaproveita uma única leitura de REGISTRO_KM nas sincronizações da P26'
   assert.ok(fontes.includes("'leitura_REGISTRO_KM_reaproveitada'"));
 });
 
-test('usa e sincroniza o cache de dgmbDesafios ao atualizar a distância realizada', () => {
+test('restaura o fluxo seguro da P31 ao atualizar a distância realizada', () => {
   const atualizarDistancia = registroService.match(
     /function atualizarDistanciaRealizada_\(idDgmb, opcoes\)\{[\s\S]*?\n\}/
   );
 
   assert.ok(atualizarDistancia, 'Função atualizarDistanciaRealizada_ não encontrada');
   assert.doesNotMatch(atualizarDistancia[0], /getDataRange\(\)\.getValues\(\)/);
-  assert.match(atualizarDistancia[0], /var cacheDesafios = obterDgmbDesafiosCacheExecucao_\(\)/);
-  assert.match(atualizarDistancia[0], /var sheet = cacheDesafios\.sheet/);
-  assert.match(atualizarDistancia[0], /var dados = cacheDesafios\.values/);
+  assert.doesNotMatch(atualizarDistancia[0], /createTextFinder/);
+  assert.match(
+    atualizarDistancia[0],
+    /obterDgmbDesafiosCacheExecucao_\('atualizarDistanciaRealizada_'\)/
+  );
   assert.match(
     atualizarDistancia[0],
     /obterDadosInscricaoUsuario_\(idDgmb, \{[\s\S]*?cache: cacheDesafios/
   );
+  assert.match(atualizarDistancia[0], /sheet\.getRange\(i \+ 1, idxRealizado \+ 1\)\.setValue\(total\)/);
   assert.match(atualizarDistancia[0], /dados\[i\]\[idxRealizado\] = total/);
-  assert.ok(atualizarDistancia[0].includes("'leitura_dgmbDesafios_cache'"));
+  assert.ok(atualizarDistancia[0].includes("'atualizarDistanciaRealizada_total'"));
+});
+
+test('remove helper e TextFinder introduzidos pela P33', () => {
+  assert.doesNotMatch(utils, /function obterLinhaInscricaoReaproveitada_/);
+  assert.doesNotMatch(utils, /LINHA_INSCRICAO_CACHE_EXECUCAO_/);
 });
 
 test('reaproveita o contexto completo de ListaDesafios durante a execução', () => {
@@ -149,7 +157,10 @@ test('filtra somente as linhas do usuário sobre o cache único de dgmbDesafios'
   const obterVinculos = extractFunction(utils, 'obterVinculosDesafioUsuario_');
 
   assert.doesNotMatch(obterVinculos, /getDataRange\(\)\.getValues\(\)/);
-  assert.match(obterVinculos, /var cacheDesafios = obterDgmbDesafiosCacheExecucao_\(\)/);
+  assert.match(
+    obterVinculos,
+    /var cacheDesafios = obterDgmbDesafiosCacheExecucao_\('obterVinculosDesafioUsuario_'\)/
+  );
   assert.doesNotMatch(helper, /createTextFinder/);
   assert.doesNotMatch(helper, /\.getRange\(/);
   assert.match(helper, /var values = cacheDesafios\.values \|\| \[\]/);
@@ -164,13 +175,32 @@ test('filtra somente as linhas do usuário sobre o cache único de dgmbDesafios'
 test('cache por execução centraliza a leitura e instrumenta hit e miss', () => {
   assert.match(utils, /var DGMB_DESAFIOS_CACHE_EXECUCAO_ = null;/);
   const cacheHelper = extractFunction(utils, 'obterDgmbDesafiosCacheExecucao_');
+  assert.match(cacheHelper, /function obterDgmbDesafiosCacheExecucao_\(origemChamada\)/);
+  assert.match(cacheHelper, /origemChamada \|\| 'nao_informada'/);
   assert.match(cacheHelper, /DGMB_DESAFIOS_CACHE_EXECUCAO_ !== null/);
   assert.match(cacheHelper, /'cache_hit_dgmbDesafios'/);
   assert.match(cacheHelper, /'cache_miss_dgmbDesafios'/);
   assert.match(cacheHelper, /'leitura_dgmbDesafios_cache'/);
+  [
+    'dgmbDesafios_cache_chamada',
+    'dgmbDesafios_cache_getSheet',
+    'dgmbDesafios_cache_dimensoes',
+    'dgmbDesafios_cache_getRange',
+    'dgmbDesafios_cache_getValues',
+    'dgmbDesafios_cache_buildHeaderMap'
+  ].forEach((etapa) => {
+    assert.ok(cacheHelper.includes(`'${etapa}'`), `Etapa do cache miss sem log: ${etapa}`);
+  });
+  assert.match(cacheHelper, /DGMB_DESAFIOS_CACHE_CHAMADAS_EXECUCAO_\+\+/);
+  assert.match(cacheHelper, /DGMB_DESAFIOS_CACHE_HITS_EXECUCAO_\+\+/);
+  assert.match(cacheHelper, /DGMB_DESAFIOS_CACHE_MISSES_EXECUCAO_\+\+/);
+  assert.match(cacheHelper, /numero_chamada:/);
+  assert.match(cacheHelper, /operacao:/);
+  assert.match(cacheHelper, /origem_chamada:/);
   assert.equal((cacheHelper.match(/\.getValues\(\)/g) || []).length, 1);
   assert.match(cacheHelper, /header: header/);
-  assert.match(cacheHelper, /map: buildHeaderMap_\(header\)/);
+  assert.match(cacheHelper, /var map = buildHeaderMap_\(header\)/);
+  assert.match(cacheHelper, /map: map/);
 });
 
 test('filtro em memória usa igualdade exata e preserva os números das linhas', () => {
@@ -221,7 +251,13 @@ test('inscrição e painel leve reutilizam o cache de dgmbDesafios', () => {
   const inscricaoLeve = extractFunction(painel, 'painelMG_obterInscricaoLevePorDesafio_');
 
   assert.match(obterDados, /contextoDesafios && contextoDesafios\.cache/);
-  assert.match(obterDados, /obterDgmbDesafiosCacheExecucao_\(\)/);
-  assert.match(inscricaoLeve, /obterDgmbDesafiosCacheExecucao_\(\)/);
+  assert.match(
+    obterDados,
+    /obterDgmbDesafiosCacheExecucao_\('obterDadosInscricaoUsuario_'\)/
+  );
+  assert.match(
+    inscricaoLeve,
+    /obterDgmbDesafiosCacheExecucao_\('painelMG_obterInscricaoLevePorDesafio_'\)/
+  );
   assert.doesNotMatch(inscricaoLeve, /getDataRange\(\)\.getValues\(\)/);
 });

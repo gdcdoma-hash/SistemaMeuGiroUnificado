@@ -31,33 +31,94 @@ function getSheetByNameOrThrow_(name) {
 }
 
 var DGMB_DESAFIOS_CACHE_EXECUCAO_ = null;
+var DGMB_DESAFIOS_CACHE_CHAMADAS_EXECUCAO_ = 0;
+var DGMB_DESAFIOS_CACHE_HITS_EXECUCAO_ = 0;
+var DGMB_DESAFIOS_CACHE_MISSES_EXECUCAO_ = 0;
 
-function obterDgmbDesafiosCacheExecucao_() {
+function obterDgmbDesafiosCacheExecucao_(origemChamada) {
   var perfInicio = meuGiroPerfNow_();
+  var origem = String(origemChamada || 'nao_informada').trim() || 'nao_informada';
+  var operacao = String(MEU_GIRO_PERF_OPERACAO_ATUAL_ || 'nao_informada');
+  DGMB_DESAFIOS_CACHE_CHAMADAS_EXECUCAO_++;
+
+  meuGiroPerfLog_('cache-dgmb-desafios', 'dgmbDesafios_cache_chamada', perfInicio, {
+    numero_chamada: DGMB_DESAFIOS_CACHE_CHAMADAS_EXECUCAO_,
+    operacao: operacao,
+    origem_chamada: origem,
+    quantidade_hits: DGMB_DESAFIOS_CACHE_HITS_EXECUCAO_,
+    quantidade_misses: DGMB_DESAFIOS_CACHE_MISSES_EXECUCAO_
+  });
+
   if (DGMB_DESAFIOS_CACHE_EXECUCAO_ !== null) {
+    DGMB_DESAFIOS_CACHE_HITS_EXECUCAO_++;
     meuGiroPerfLog_('cache-dgmb-desafios', 'cache_hit_dgmbDesafios', perfInicio, {
       usou_cache_dgmbDesafios: true,
-      quantidade_linhas_dgmbDesafios: Math.max(DGMB_DESAFIOS_CACHE_EXECUCAO_.values.length - 1, 0)
+      quantidade_linhas_dgmbDesafios: Math.max(DGMB_DESAFIOS_CACHE_EXECUCAO_.values.length - 1, 0),
+      numero_chamada: DGMB_DESAFIOS_CACHE_CHAMADAS_EXECUCAO_,
+      quantidade_hits: DGMB_DESAFIOS_CACHE_HITS_EXECUCAO_,
+      quantidade_misses: DGMB_DESAFIOS_CACHE_MISSES_EXECUCAO_,
+      operacao: operacao,
+      origem_chamada: origem
     });
     DGMB_DESAFIOS_CACHE_EXECUCAO_.usouCache = true;
     return DGMB_DESAFIOS_CACHE_EXECUCAO_;
   }
 
+  DGMB_DESAFIOS_CACHE_MISSES_EXECUCAO_++;
   var abaDesafio = SHEETS.DESAFIO || 'dgmbDesafios';
+  var perfEtapaInicio = meuGiroPerfNow_();
   var sh = getSheetByName_(abaDesafio);
+  meuGiroPerfLog_('cache-dgmb-desafios', 'dgmbDesafios_cache_getSheet', perfEtapaInicio, {
+    operacao: operacao,
+    origem_chamada: origem
+  });
+
+  perfEtapaInicio = meuGiroPerfNow_();
   var lastRow = sh.getLastRow();
   var lastColumn = sh.getLastColumn();
-  var values = lastRow > 0 && lastColumn > 0
-    ? sh.getRange(1, 1, lastRow, lastColumn).getValues()
-    : [];
+  meuGiroPerfLog_('cache-dgmb-desafios', 'dgmbDesafios_cache_dimensoes', perfEtapaInicio, {
+    operacao: operacao,
+    origem_chamada: origem,
+    last_row: lastRow,
+    last_column: lastColumn
+  });
+
+  var range = null;
+  perfEtapaInicio = meuGiroPerfNow_();
+  if (lastRow > 0 && lastColumn > 0) {
+    range = sh.getRange(1, 1, lastRow, lastColumn);
+  }
+  meuGiroPerfLog_('cache-dgmb-desafios', 'dgmbDesafios_cache_getRange', perfEtapaInicio, {
+    operacao: operacao,
+    origem_chamada: origem,
+    quantidade_linhas: lastRow,
+    quantidade_colunas: lastColumn,
+    range_criado: !!range
+  });
+
+  perfEtapaInicio = meuGiroPerfNow_();
+  var values = range ? range.getValues() : [];
+  meuGiroPerfLog_('cache-dgmb-desafios', 'dgmbDesafios_cache_getValues', perfEtapaInicio, {
+    operacao: operacao,
+    origem_chamada: origem,
+    quantidade_linhas_dgmbDesafios: Math.max(values.length - 1, 0)
+  });
   var header = values.length ? values[0] : [];
+
+  perfEtapaInicio = meuGiroPerfNow_();
+  var map = buildHeaderMap_(header);
+  meuGiroPerfLog_('cache-dgmb-desafios', 'dgmbDesafios_cache_buildHeaderMap', perfEtapaInicio, {
+    operacao: operacao,
+    origem_chamada: origem,
+    quantidade_colunas: header.length
+  });
 
   DGMB_DESAFIOS_CACHE_EXECUCAO_ = {
     aba: abaDesafio,
     sheet: sh,
     values: values,
     header: header,
-    map: buildHeaderMap_(header),
+    map: map,
     lastRow: lastRow,
     lastColumn: lastColumn,
     usouCache: false
@@ -68,7 +129,12 @@ function obterDgmbDesafiosCacheExecucao_() {
   }
   meuGiroPerfLog_('cache-dgmb-desafios', 'cache_miss_dgmbDesafios', perfInicio, {
     usou_cache_dgmbDesafios: false,
-    quantidade_linhas_dgmbDesafios: Math.max(values.length - 1, 0)
+    quantidade_linhas_dgmbDesafios: Math.max(values.length - 1, 0),
+    numero_chamada: DGMB_DESAFIOS_CACHE_CHAMADAS_EXECUCAO_,
+    quantidade_hits: DGMB_DESAFIOS_CACHE_HITS_EXECUCAO_,
+    quantidade_misses: DGMB_DESAFIOS_CACHE_MISSES_EXECUCAO_,
+    operacao: operacao,
+    origem_chamada: origem
   });
   meuGiroPerfLog_('cache-dgmb-desafios', 'leitura_dgmbDesafios_cache', perfInicio, {
     usou_cache_dgmbDesafios: false,
@@ -316,7 +382,7 @@ function obterDadosInscricaoUsuario_(idDgmb, contextoDesafios) {
     : null;
   if (!cacheDesafios && (!contextoDesafios || !Array.isArray(contextoDesafios.values)) &&
       abaDesafio === (SHEETS.DESAFIO || 'dgmbDesafios')) {
-    cacheDesafios = obterDgmbDesafiosCacheExecucao_();
+    cacheDesafios = obterDgmbDesafiosCacheExecucao_('obterDadosInscricaoUsuario_');
   }
   var values = contextoDesafios && Array.isArray(contextoDesafios.values)
     ? contextoDesafios.values
@@ -892,7 +958,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
   var periodos = contextoLista.periodos;
   var statusListaDesafios = contextoLista.status;
   perfEtapaInicio = meuGiroPerfNow_();
-  var cacheDesafios = obterDgmbDesafiosCacheExecucao_();
+  var cacheDesafios = obterDgmbDesafiosCacheExecucao_('obterVinculosDesafioUsuario_');
   var abaDesafio = cacheDesafios.aba;
   var dadosUsuario = obterLinhasDgmbDesafiosUsuario_(cacheDesafios, id);
   meuGiroPerfLog_('obter-vinculos-desafio-usuario', 'leitura_dgmbDesafios', perfEtapaInicio, {
@@ -1599,7 +1665,7 @@ function atualizarMeuGiroResumo_(idDgmb, opcoes) {
 }
 
 function atualizarMeuGiroResumoEmLote_() {
-  var cacheDesafios = obterDgmbDesafiosCacheExecucao_();
+  var cacheDesafios = obterDgmbDesafiosCacheExecucao_('atualizarMeuGiroResumoEmLote_');
   var values = cacheDesafios.values;
   if (!values || values.length < 2) {
     return { total_ids: 0, atualizados: 0, ids: [] };
