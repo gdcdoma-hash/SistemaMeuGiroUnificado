@@ -39,14 +39,66 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
     dados[0][cols.idxActivityId] = dados[0][cols.idxActivityId] || 'activity_id';
     var activityId = gerarActivityId_();
 
-    perfEtapaInicio = meuGiroPerfNow_();
+    var perfBuscaDuplicidadeInicio = meuGiroPerfNow_();
+    var perfNormalizacaoDuplicidadeInicio = meuGiroPerfNow_();
+    var quantidadeLinhasVerificadas = 0;
+    var totalComparacoes = 0;
+    var duracaoComparacoesMs = 0;
+    var duracaoNormalizacaoMs = 0;
+    var duplicidadeEncontrada = false;
+    duracaoNormalizacaoMs += meuGiroPerfNow_() - perfNormalizacaoDuplicidadeInicio;
+
+    var perfLoopDuplicidadeInicio = meuGiroPerfNow_();
     for (var i = 1; i < dados.length; i++) {
+      quantidadeLinhasVerificadas++;
+      perfNormalizacaoDuplicidadeInicio = meuGiroPerfNow_();
       var rowId = String(dados[i][cols.idxId] || '').trim();
       var rowData = normalizarDataISO_(dados[i][cols.idxData]);
       var rowKm = normalizarKmEdicao_(dados[i][cols.idxKm]);
+      duracaoNormalizacaoMs += meuGiroPerfNow_() - perfNormalizacaoDuplicidadeInicio;
 
-      if (rowId === idDgmb && rowData === dataAtividade && kmsIguaisEdicao_(rowKm, km)) {
+      var perfComparacaoInicio = meuGiroPerfNow_();
+      totalComparacoes++;
+      var mesmoId = rowId === idDgmb;
+      var mesmaData = false;
+      var mesmoKm = false;
+      if (mesmoId) {
+        totalComparacoes++;
+        mesmaData = rowData === dataAtividade;
+        if (mesmaData) {
+          totalComparacoes++;
+          mesmoKm = kmsIguaisEdicao_(rowKm, km);
+        }
+      }
+      duracaoComparacoesMs += meuGiroPerfNow_() - perfComparacaoInicio;
+
+      if (mesmoId && mesmaData && mesmoKm) {
+        duplicidadeEncontrada = true;
+        meuGiroPerfLog_('registrar-atividade', 'duplicidade_encontrada', perfBuscaDuplicidadeInicio, {
+          linha_encontrada: i + 1
+        });
         if (!force) {
+          meuGiroPerfLog_('registrar-atividade', 'normalizacao_dados_duplicidade',
+            meuGiroPerfNow_() - duracaoNormalizacaoMs, {
+              campos_preparados: ['data_atividade', 'km', 'id_dgmb', 'activity_id'],
+              campos_comparados: ['id_dgmb', 'data_atividade', 'km'],
+              data_atividade: dataAtividade,
+              km: km,
+              id_dgmb: idDgmb,
+              activity_id: activityId
+            });
+          meuGiroPerfLog_('registrar-atividade', 'loop_busca_duplicidade', perfLoopDuplicidadeInicio, {
+            quantidade_linhas_verificadas: quantidadeLinhasVerificadas
+          });
+          meuGiroPerfLog_('registrar-atividade', 'comparacoes_duplicidade',
+            meuGiroPerfNow_() - duracaoComparacoesMs, {
+              total_comparacoes: totalComparacoes
+            });
+          meuGiroPerfLog_('registrar-atividade', 'busca_duplicidade_total', perfBuscaDuplicidadeInicio, {
+            quantidade_linhas_verificadas: quantidadeLinhasVerificadas,
+            total_comparacoes: totalComparacoes,
+            duplicidade_encontrada: duplicidadeEncontrada
+          });
           return {
             ok:false,
             code:'DUPLICIDADE',
@@ -55,8 +107,26 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
         }
       }
     }
-    meuGiroPerfLog_('registrar-atividade', 'busca_duplicidade', perfEtapaInicio, {
-      quantidade_linhas_verificadas: Math.max(dados.length - 1, 0)
+    meuGiroPerfLog_('registrar-atividade', 'normalizacao_dados_duplicidade',
+      meuGiroPerfNow_() - duracaoNormalizacaoMs, {
+        campos_preparados: ['data_atividade', 'km', 'id_dgmb', 'activity_id'],
+        campos_comparados: ['id_dgmb', 'data_atividade', 'km'],
+        data_atividade: dataAtividade,
+        km: km,
+        id_dgmb: idDgmb,
+        activity_id: activityId
+      });
+    meuGiroPerfLog_('registrar-atividade', 'loop_busca_duplicidade', perfLoopDuplicidadeInicio, {
+      quantidade_linhas_verificadas: quantidadeLinhasVerificadas
+    });
+    meuGiroPerfLog_('registrar-atividade', 'comparacoes_duplicidade',
+      meuGiroPerfNow_() - duracaoComparacoesMs, {
+        total_comparacoes: totalComparacoes
+      });
+    meuGiroPerfLog_('registrar-atividade', 'busca_duplicidade_total', perfBuscaDuplicidadeInicio, {
+      quantidade_linhas_verificadas: quantidadeLinhasVerificadas,
+      total_comparacoes: totalComparacoes,
+      duplicidade_encontrada: duplicidadeEncontrada
     });
 
     var rowLength = Math.max(sheet.getLastColumn(), maiorIndiceRegistroKm_(cols) + 1);
@@ -272,6 +342,10 @@ function editarAtividade(payload) {
     var cols = getRegistroKmColumnIndexes_(dados);
     perfEtapaInicio = meuGiroPerfNow_();
     var linhasEncontradas = localizarLinhasAtividade_(dados, cols, idDgmb, activityId, chaveEdicao);
+    meuGiroPerfLog_('editar-atividade', 'localizar_linhas_atividade', perfEtapaInicio, {
+      quantidade_linhas_verificadas: Math.max(dados.length - 1, 0),
+      quantidade_linhas_encontradas: linhasEncontradas.length
+    });
 
     if (!linhasEncontradas.length) {
       return { ok: false, code: 'ATIVIDADE_NAO_ENCONTRADA', msg: 'Atividade não encontrada para edição com a chave e ID informados.' };
@@ -280,20 +354,97 @@ function editarAtividade(payload) {
     var linhasDoLancamento = {};
     linhasEncontradas.forEach(function(linha) { linhasDoLancamento[linha] = true; });
 
+    var perfBuscaDuplicidadeInicio = meuGiroPerfNow_();
+    var perfNormalizacaoDuplicidadeInicio = meuGiroPerfNow_();
+    var quantidadeLinhasVerificadas = 0;
+    var totalComparacoes = 0;
+    var duracaoComparacoesMs = 0;
+    var duracaoNormalizacaoMs = 0;
+    var duplicidadeEncontrada = false;
+    duracaoNormalizacaoMs += meuGiroPerfNow_() - perfNormalizacaoDuplicidadeInicio;
+
+    var perfLoopDuplicidadeInicio = meuGiroPerfNow_();
     for (var j = 1; j < dados.length; j++) {
+      quantidadeLinhasVerificadas++;
+      perfNormalizacaoDuplicidadeInicio = meuGiroPerfNow_();
       var checkId = String(dados[j][cols.idxId] || '').trim();
       var checkData = normalizarDataEdicao_(dados[j][cols.idxData]);
       var checkKm = normalizarKmEdicao_(dados[j][cols.idxKm]);
       var linhaAtual = j + 1;
+      duracaoNormalizacaoMs += meuGiroPerfNow_() - perfNormalizacaoDuplicidadeInicio;
 
-      if (!linhasDoLancamento[linhaAtual] && checkId === idDgmb &&
-          checkData === novaDataAtividade && kmsIguaisEdicao_(checkKm, novoKm)) {
+      var perfComparacaoInicio = meuGiroPerfNow_();
+      totalComparacoes++;
+      var foraDoLancamento = !linhasDoLancamento[linhaAtual];
+      var mesmoId = false;
+      var mesmaData = false;
+      var mesmoKm = false;
+      if (foraDoLancamento) {
+        totalComparacoes++;
+        mesmoId = checkId === idDgmb;
+        if (mesmoId) {
+          totalComparacoes++;
+          mesmaData = checkData === novaDataAtividade;
+          if (mesmaData) {
+            totalComparacoes++;
+            mesmoKm = kmsIguaisEdicao_(checkKm, novoKm);
+          }
+        }
+      }
+      duracaoComparacoesMs += meuGiroPerfNow_() - perfComparacaoInicio;
+
+      if (foraDoLancamento && mesmoId && mesmaData && mesmoKm) {
+        duplicidadeEncontrada = true;
+        meuGiroPerfLog_('editar-atividade', 'duplicidade_encontrada', perfBuscaDuplicidadeInicio, {
+          linha_encontrada: linhaAtual
+        });
+        meuGiroPerfLog_('editar-atividade', 'normalizacao_dados_duplicidade',
+          meuGiroPerfNow_() - duracaoNormalizacaoMs, {
+            campos_preparados: ['data_atividade', 'km', 'id_dgmb', 'activity_id', 'chave_edicao'],
+            campos_comparados: ['linha_do_lancamento', 'id_dgmb', 'data_atividade', 'km'],
+            data_atividade: novaDataAtividade,
+            km: novoKm,
+            id_dgmb: idDgmb,
+            activity_id: activityId,
+            chave_edicao: chaveEdicao
+          });
+        meuGiroPerfLog_('editar-atividade', 'loop_busca_duplicidade', perfLoopDuplicidadeInicio, {
+          quantidade_linhas_verificadas: quantidadeLinhasVerificadas
+        });
+        meuGiroPerfLog_('editar-atividade', 'comparacoes_duplicidade',
+          meuGiroPerfNow_() - duracaoComparacoesMs, {
+            total_comparacoes: totalComparacoes
+          });
+        meuGiroPerfLog_('editar-atividade', 'busca_duplicidade_total', perfBuscaDuplicidadeInicio, {
+          quantidade_linhas_verificadas: quantidadeLinhasVerificadas,
+          total_comparacoes: totalComparacoes,
+          duplicidade_encontrada: duplicidadeEncontrada
+        });
         return { ok: false, code: 'DUPLICIDADE_EDICAO', msg: 'Já existe uma atividade com esta mesma data e KM.' };
       }
     }
-    meuGiroPerfLog_('editar-atividade', 'busca_duplicidade', perfEtapaInicio, {
-      quantidade_linhas_verificadas: Math.max(dados.length - 1, 0),
-      quantidade_linhas_do_lancamento: linhasEncontradas.length
+    meuGiroPerfLog_('editar-atividade', 'normalizacao_dados_duplicidade',
+      meuGiroPerfNow_() - duracaoNormalizacaoMs, {
+        campos_preparados: ['data_atividade', 'km', 'id_dgmb', 'activity_id', 'chave_edicao'],
+        campos_comparados: ['linha_do_lancamento', 'id_dgmb', 'data_atividade', 'km'],
+        data_atividade: novaDataAtividade,
+        km: novoKm,
+        id_dgmb: idDgmb,
+        activity_id: activityId,
+        chave_edicao: chaveEdicao
+      });
+    meuGiroPerfLog_('editar-atividade', 'loop_busca_duplicidade', perfLoopDuplicidadeInicio, {
+      quantidade_linhas_verificadas: quantidadeLinhasVerificadas
+    });
+    meuGiroPerfLog_('editar-atividade', 'comparacoes_duplicidade',
+      meuGiroPerfNow_() - duracaoComparacoesMs, {
+        total_comparacoes: totalComparacoes
+      });
+    meuGiroPerfLog_('editar-atividade', 'busca_duplicidade_total', perfBuscaDuplicidadeInicio, {
+      quantidade_linhas_verificadas: quantidadeLinhasVerificadas,
+      quantidade_linhas_do_lancamento: linhasEncontradas.length,
+      total_comparacoes: totalComparacoes,
+      duplicidade_encontrada: duplicidadeEncontrada
     });
 
     var valoresOriginais = linhasEncontradas.map(function(linha) {
