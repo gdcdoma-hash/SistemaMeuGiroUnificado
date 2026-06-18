@@ -35,7 +35,11 @@ test('instrumenta todas as etapas obrigatórias da auditoria P25', () => {
   [
     'LockService',
     'leitura_REGISTRO_KM',
-    'busca_duplicidade',
+    'normalizacao_dados_duplicidade',
+    'loop_busca_duplicidade',
+    'comparacoes_duplicidade',
+    'duplicidade_encontrada',
+    'busca_duplicidade_total',
     'escrita_atividade_REGISTRO_KM',
     'edicao_atividade_REGISTRO_KM',
     'exclusao_atividade_REGISTRO_KM',
@@ -53,6 +57,33 @@ test('instrumenta todas as etapas obrigatórias da auditoria P25', () => {
   ].forEach((etapa) => {
     assert.ok(fontes.includes(`'${etapa}'`), `Etapa sem instrumentação: ${etapa}`);
   });
+});
+
+test('auditoria P32 separa localização, loop, comparações e total da duplicidade', () => {
+  const registrar = extractFunction(registroService, 'registrarAtividade');
+  const editar = extractFunction(registroService, 'editarAtividade');
+
+  [registrar, editar].forEach((operacao) => {
+    assert.match(operacao, /quantidadeLinhasVerificadas\+\+/);
+    assert.match(operacao, /totalComparacoes\+\+/);
+    assert.match(operacao, /duracaoComparacoesMs \+=/);
+    assert.match(operacao, /'normalizacao_dados_duplicidade'/);
+    assert.match(operacao, /'loop_busca_duplicidade'/);
+    assert.match(operacao, /'comparacoes_duplicidade'/);
+    assert.match(operacao, /'duplicidade_encontrada'/);
+    assert.match(operacao, /linha_encontrada:/);
+    assert.match(operacao, /'busca_duplicidade_total'/);
+    assert.match(operacao, /quantidade_linhas_verificadas:/);
+    assert.match(operacao, /total_comparacoes:/);
+    assert.match(operacao, /duplicidade_encontrada:/);
+  });
+
+  assert.match(editar, /'localizar_linhas_atividade'/);
+  assert.ok(
+    editar.indexOf("'localizar_linhas_atividade'") <
+      editar.indexOf('var perfBuscaDuplicidadeInicio'),
+    'A localização da atividade não deve compor o tempo total da busca de duplicidade'
+  );
 });
 
 test('correlaciona logs internos com a operação de atividade atual', () => {
