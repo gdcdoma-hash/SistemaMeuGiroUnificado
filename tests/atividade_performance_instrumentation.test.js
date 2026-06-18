@@ -40,6 +40,9 @@ test('instrumenta todas as etapas obrigatórias da auditoria P25', () => {
     'leitura_MEU_GIRO_RESUMO',
     'escrita_MEU_GIRO_RESUMO',
     'leitura_ListaDesafios_contexto',
+    'cache_hit_lista_desafios',
+    'cache_miss_lista_desafios',
+    'buildListaDesafiosContexto_total',
     'leitura_dgmbDesafios'
   ].forEach((etapa) => {
     assert.ok(fontes.includes(`'${etapa}'`), `Etapa sem instrumentação: ${etapa}`);
@@ -63,4 +66,25 @@ test('reaproveita uma única leitura de REGISTRO_KM nas sincronizações da P26'
   assert.match(utils, /contextoId === id/);
   assert.match(utils, /reaproveitados: false/);
   assert.ok(fontes.includes("'leitura_REGISTRO_KM_reaproveitada'"));
+});
+
+test('reaproveita o contexto completo de ListaDesafios durante a execução', () => {
+  assert.match(utils, /var LISTA_DESAFIOS_CACHE_EXECUCAO_ = null;/);
+  assert.match(
+    utils,
+    /if \(LISTA_DESAFIOS_CACHE_EXECUCAO_ !== null\) \{[\s\S]*?return LISTA_DESAFIOS_CACHE_EXECUCAO_;/
+  );
+  assert.match(utils, /LISTA_DESAFIOS_CACHE_EXECUCAO_ = contexto;/);
+  assert.match(
+    utils,
+    /function buildPeriodoOficialPorAbaEId_\(ss\) \{\s*return buildListaDesafiosContexto_\(ss\)\.periodos;/
+  );
+  assert.match(
+    utils,
+    /function buildMapaStatusDesafioListaPorId_\(ss\) \{\s*return buildListaDesafiosContexto_\(ss\)\.status;/
+  );
+  assert.match(
+    utils,
+    /function obterVinculosDesafioUsuario_\(idDgmb\)[\s\S]*?var contextoLista = buildListaDesafiosContexto_\(ss\);/
+  );
 });
