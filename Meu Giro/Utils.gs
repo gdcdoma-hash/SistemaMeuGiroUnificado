@@ -528,6 +528,8 @@ function meuGiroPerfNow_() {
   }
 }
 
+var MEU_GIRO_PERF_OPERACAO_ATUAL_ = '';
+
 function meuGiroPerfLog_(escopo, etapa, inicio, extras) {
   if (!meuGiroPerfDebugAtivo_()) return;
 
@@ -536,6 +538,9 @@ function meuGiroPerfLog_(escopo, etapa, inicio, extras) {
       etapa: etapa,
       duracao_ms: meuGiroPerfNow_() - inicio
     };
+    if (MEU_GIRO_PERF_OPERACAO_ATUAL_) {
+      payload.operacao = MEU_GIRO_PERF_OPERACAO_ATUAL_;
+    }
     Object.keys(extras || {}).forEach(function(chave) {
       payload[chave] = extras[chave];
     });
@@ -872,10 +877,15 @@ function obterActivityIdRegistroKm_(registro) {
 }
 
 function obterRegistrosKmUsuario_(idDgmb) {
+  var perfTotalInicio = meuGiroPerfNow_();
   var id = normalizeText_(idDgmb);
   if (!id) return [];
 
+  var perfEtapaInicio = meuGiroPerfNow_();
   var registros = getAllObjects_(SHEETS.REGISTRO_KM);
+  meuGiroPerfLog_('obter-registros-km-usuario', 'leitura_REGISTRO_KM', perfEtapaInicio, {
+    quantidade_linhas_registro_km: registros.length
+  });
   var out = [];
   var activityIdsIncluidos = {};
 
@@ -896,6 +906,9 @@ function obterRegistrosKmUsuario_(idDgmb) {
     });
   }
 
+  meuGiroPerfLog_('obter-registros-km-usuario', 'obterRegistrosKmUsuario_total', perfTotalInicio, {
+    quantidade_registros_usuario: out.length
+  });
   return out;
 }
 
@@ -1125,13 +1138,26 @@ function obterMeuGiroResumoAtualizadoLeve_(idDgmb) {
 }
 
 function atualizarMeuGiroResumo_(idDgmb) {
+  var perfTotalInicio = meuGiroPerfNow_();
   var id = normalizeText_(idDgmb);
   if (!id) return [];
 
+  var perfEtapaInicio = meuGiroPerfNow_();
   var vinculos = obterVinculosDesafioUsuario_(id);
+  meuGiroPerfLog_('atualizar-meu-giro-resumo', 'obterVinculosDesafioUsuario_', perfEtapaInicio, {
+    quantidade_vinculos: vinculos.length
+  });
+  perfEtapaInicio = meuGiroPerfNow_();
   var registros = obterRegistrosKmUsuario_(id);
+  meuGiroPerfLog_('atualizar-meu-giro-resumo', 'obterRegistrosKmUsuario_', perfEtapaInicio, {
+    quantidade_registros_usuario: registros.length
+  });
+  perfEtapaInicio = meuGiroPerfNow_();
   var shResumo = ensureMeuGiroResumoSheet_();
   var valoresResumo = shResumo.getDataRange().getValues();
+  meuGiroPerfLog_('atualizar-meu-giro-resumo', 'leitura_MEU_GIRO_RESUMO', perfEtapaInicio, {
+    quantidade_linhas_meu_giro_resumo: valoresResumo && valoresResumo.length ? valoresResumo.length - 1 : 0
+  });
   var layoutResumo = meuGiroResumoObterLayout_(
     valoresResumo[0] || [],
     SHEETS.MEU_GIRO_RESUMO || 'MEU_GIRO_RESUMO'
@@ -1168,6 +1194,8 @@ function atualizarMeuGiroResumo_(idDgmb) {
 
   var hoje = normalizarDataISO_(new Date());
   var saida = [];
+  var quantidadeEscritasResumo = 0;
+  var duracaoEscritasResumoMs = 0;
 
   for (var v = 0; v < vinculos.length; v++) {
     var vinculo = vinculos[v];
@@ -1235,11 +1263,14 @@ function atualizarMeuGiroResumo_(idDgmb) {
       linha[idxPercentualResumo] = percentualArredondado;
       linha[idxStatusResumo] = status;
 
+      var perfEscritaResumoInicio = meuGiroPerfNow_();
       if (numeroLinha) {
         shResumo.getRange(numeroLinha, 1, 1, totalColunasResumo).setValues([linha]);
       } else {
         shResumo.appendRow(linha);
       }
+      duracaoEscritasResumoMs += meuGiroPerfNow_() - perfEscritaResumoInicio;
+      quantidadeEscritasResumo++;
     }
 
     saida.push({
@@ -1263,6 +1294,15 @@ function atualizarMeuGiroResumo_(idDgmb) {
     });
   }
 
+  meuGiroPerfLog_('atualizar-meu-giro-resumo', 'escrita_MEU_GIRO_RESUMO', meuGiroPerfNow_() - duracaoEscritasResumoMs, {
+    quantidade_linhas_escritas: quantidadeEscritasResumo,
+    quantidade_vinculos_processados: vinculos.length
+  });
+  meuGiroPerfLog_('atualizar-meu-giro-resumo', 'atualizarMeuGiroResumo_total', perfTotalInicio, {
+    quantidade_vinculos: vinculos.length,
+    quantidade_registros_usuario: registros.length,
+    quantidade_linhas_escritas: quantidadeEscritasResumo
+  });
   return saida;
 }
 

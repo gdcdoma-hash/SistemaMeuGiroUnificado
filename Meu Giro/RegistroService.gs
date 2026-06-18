@@ -1,7 +1,12 @@
 function registrarAtividade(idDgmb, dataAtividade, km, force) {
+  var perfTotalInicio = meuGiroPerfNow_();
+  var perfOperacaoAnterior = MEU_GIRO_PERF_OPERACAO_ATUAL_;
+  MEU_GIRO_PERF_OPERACAO_ATUAL_ = 'registrarAtividade';
   var lock = LockService.getScriptLock();
   try {
+    var perfEtapaInicio = meuGiroPerfNow_();
     lock.waitLock(30000);
+    meuGiroPerfLog_('registrar-atividade', 'LockService', perfEtapaInicio);
 
     idDgmb = String(idDgmb || '').trim();
     dataAtividade = normalizarDataISO_(dataAtividade);
@@ -19,15 +24,20 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
       return { ok:false, code:'KM_INVALIDO', msg:'Informe um valor de KM maior que zero.' };
     }
 
+    perfEtapaInicio = meuGiroPerfNow_();
     var sheet = SpreadsheetApp.openById(SPREADSHEET_ID)
       .getSheetByName(SHEETS.REGISTRO_KM);
 
     var dados = sheet.getDataRange().getValues();
+    meuGiroPerfLog_('registrar-atividade', 'leitura_REGISTRO_KM', perfEtapaInicio, {
+      quantidade_linhas_registro_km: dados && dados.length ? dados.length - 1 : 0
+    });
     var cols = getRegistroKmColumnIndexes_(dados);
 
     cols = ensureRegistroKmActivityIdColumn_(sheet, dados, cols);
     var activityId = gerarActivityId_();
 
+    perfEtapaInicio = meuGiroPerfNow_();
     for (var i = 1; i < dados.length; i++) {
       var rowId = String(dados[i][cols.idxId] || '').trim();
       var rowData = normalizarDataISO_(dados[i][cols.idxData]);
@@ -43,6 +53,9 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
         }
       }
     }
+    meuGiroPerfLog_('registrar-atividade', 'busca_duplicidade', perfEtapaInicio, {
+      quantidade_linhas_verificadas: Math.max(dados.length - 1, 0)
+    });
 
     var rowLength = Math.max(sheet.getLastColumn(), maiorIndiceRegistroKm_(cols) + 1);
     var row = preencherLinhaRegistroKmBruto_(rowLength, cols, {
@@ -57,11 +70,19 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
     });
 
     var linhaInserida = sheet.getLastRow() + 1;
+    perfEtapaInicio = meuGiroPerfNow_();
     sheet.getRange(linhaInserida, 1, 1, rowLength).setValues([row]);
+    meuGiroPerfLog_('registrar-atividade', 'escrita_atividade_REGISTRO_KM', perfEtapaInicio, {
+      quantidade_linhas_escritas: 1
+    });
 
     try {
+      perfEtapaInicio = meuGiroPerfNow_();
       atualizarDistanciaRealizada_(idDgmb);
+      meuGiroPerfLog_('registrar-atividade', 'atualizarDistanciaRealizada_', perfEtapaInicio);
+      perfEtapaInicio = meuGiroPerfNow_();
       atualizarMeuGiroResumo_(idDgmb);
+      meuGiroPerfLog_('registrar-atividade', 'atualizarMeuGiroResumo_', perfEtapaInicio);
     } catch (syncErr) {
       sheet.deleteRow(linhaInserida);
       throw syncErr;
@@ -87,6 +108,8 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
     try {
       lock.releaseLock();
     } catch (e) {}
+    meuGiroPerfLog_('registrar-atividade', 'registrarAtividade_total', perfTotalInicio);
+    MEU_GIRO_PERF_OPERACAO_ATUAL_ = perfOperacaoAnterior;
   }
 }
 
@@ -137,8 +160,12 @@ function preencherLinhaRegistroKmBruto_(rowLength, cols, registro) {
 }
 
 function atualizarDistanciaRealizada_(idDgmb){
-
+  var perfTotalInicio = meuGiroPerfNow_();
+  var perfEtapaInicio = meuGiroPerfNow_();
   var registros = getAllObjects_(SHEETS.REGISTRO_KM);
+  meuGiroPerfLog_('atualizar-distancia-realizada', 'leitura_REGISTRO_KM', perfEtapaInicio, {
+    quantidade_linhas_registro_km: registros.length
+  });
   var total = 0;
   var activityIdsSomados = {};
 
@@ -155,14 +182,20 @@ function atualizarDistanciaRealizada_(idDgmb){
     total += Number(r.KM || 0);
   });
 
+  perfEtapaInicio = meuGiroPerfNow_();
   var inscricao = obterDadosInscricaoUsuario_(idDgmb);
+  meuGiroPerfLog_('atualizar-distancia-realizada', 'leitura_dgmbDesafios_obter_inscricao', perfEtapaInicio);
   if (!inscricao || !inscricao.aba_desafio) return;
 
   var abaDesafio = inscricao.aba_desafio;
   var sheet = SpreadsheetApp.openById(SPREADSHEET_ID)
     .getSheetByName(abaDesafio);
 
+  perfEtapaInicio = meuGiroPerfNow_();
   var dados = sheet.getDataRange().getValues();
+  meuGiroPerfLog_('atualizar-distancia-realizada', 'leitura_dgmbDesafios_atualizacao', perfEtapaInicio, {
+    quantidade_linhas_dgmbDesafios: dados && dados.length ? dados.length - 1 : 0
+  });
   if (!dados || dados.length < 2) return;
 
   var map = buildHeaderMap_(dados[0]);
@@ -171,16 +204,26 @@ function atualizarDistanciaRealizada_(idDgmb){
 
   for(var i=1;i<dados.length;i++){
     if(String(dados[i][idxId]).trim() === String(idDgmb).trim()){
+      perfEtapaInicio = meuGiroPerfNow_();
       sheet.getRange(i + 1, idxRealizado + 1).setValue(total);
+      meuGiroPerfLog_('atualizar-distancia-realizada', 'escrita_dgmbDesafios_distancia_realizada', perfEtapaInicio, {
+        linha_atualizada: i + 1
+      });
       break;
     }
   }
+  meuGiroPerfLog_('atualizar-distancia-realizada', 'atualizarDistanciaRealizada_total', perfTotalInicio);
 }
 
 function editarAtividade(payload) {
+  var perfTotalInicio = meuGiroPerfNow_();
+  var perfOperacaoAnterior = MEU_GIRO_PERF_OPERACAO_ATUAL_;
+  MEU_GIRO_PERF_OPERACAO_ATUAL_ = 'editarAtividade';
   var lock = LockService.getScriptLock();
   try {
+    var perfEtapaInicio = meuGiroPerfNow_();
     lock.waitLock(30000);
+    meuGiroPerfLog_('editar-atividade', 'LockService', perfEtapaInicio);
     payload = payload || {};
 
     var idDgmb = String(payload.id_dgmb || '').trim();
@@ -202,9 +245,14 @@ function editarAtividade(payload) {
       return { ok: false, code: 'KM_INVALIDO', msg: 'Informe um valor de KM maior que zero.' };
     }
 
+    perfEtapaInicio = meuGiroPerfNow_();
     var sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEETS.REGISTRO_KM);
     var dados = sheet.getDataRange().getValues();
+    meuGiroPerfLog_('editar-atividade', 'leitura_REGISTRO_KM', perfEtapaInicio, {
+      quantidade_linhas_registro_km: dados && dados.length ? dados.length - 1 : 0
+    });
     var cols = getRegistroKmColumnIndexes_(dados);
+    perfEtapaInicio = meuGiroPerfNow_();
     var linhasEncontradas = localizarLinhasAtividade_(dados, cols, idDgmb, activityId, chaveEdicao);
 
     if (!linhasEncontradas.length) {
@@ -225,19 +273,32 @@ function editarAtividade(payload) {
         return { ok: false, code: 'DUPLICIDADE_EDICAO', msg: 'Já existe uma atividade com esta mesma data e KM.' };
       }
     }
+    meuGiroPerfLog_('editar-atividade', 'busca_duplicidade', perfEtapaInicio, {
+      quantidade_linhas_verificadas: Math.max(dados.length - 1, 0),
+      quantidade_linhas_do_lancamento: linhasEncontradas.length
+    });
 
     var valoresOriginais = linhasEncontradas.map(function(linha) {
       return [dados[linha - 1][cols.idxData], dados[linha - 1][cols.idxKm]];
     });
 
+    perfEtapaInicio = meuGiroPerfNow_();
     linhasEncontradas.forEach(function(linha) {
       sheet.getRange(linha, cols.idxData + 1).setValue(novaDataAtividade);
       sheet.getRange(linha, cols.idxKm + 1).setValue(novoKm);
     });
+    meuGiroPerfLog_('editar-atividade', 'edicao_atividade_REGISTRO_KM', perfEtapaInicio, {
+      quantidade_linhas_editadas: linhasEncontradas.length,
+      quantidade_escritas_celula: linhasEncontradas.length * 2
+    });
 
     try {
+      perfEtapaInicio = meuGiroPerfNow_();
       atualizarDistanciaRealizada_(idDgmb);
+      meuGiroPerfLog_('editar-atividade', 'atualizarDistanciaRealizada_', perfEtapaInicio);
+      perfEtapaInicio = meuGiroPerfNow_();
       atualizarMeuGiroResumo_(idDgmb);
+      meuGiroPerfLog_('editar-atividade', 'atualizarMeuGiroResumo_', perfEtapaInicio);
     } catch (syncErr) {
       linhasEncontradas.forEach(function(linha, index) {
         sheet.getRange(linha, cols.idxData + 1).setValue(valoresOriginais[index][0]);
@@ -252,6 +313,8 @@ function editarAtividade(payload) {
     return { ok: false, code: 'EDITAR_ATIVIDADE_EXCEPTION', msg: 'Erro interno ao editar atividade na aba REGISTRO_KM.' };
   } finally {
     try { lock.releaseLock(); } catch (e) {}
+    meuGiroPerfLog_('editar-atividade', 'editarAtividade_total', perfTotalInicio);
+    MEU_GIRO_PERF_OPERACAO_ATUAL_ = perfOperacaoAnterior;
   }
 }
 
@@ -308,9 +371,14 @@ function kmsIguaisEdicao_(a, b) {
 }
 
 function excluirAtividade(payload) {
+  var perfTotalInicio = meuGiroPerfNow_();
+  var perfOperacaoAnterior = MEU_GIRO_PERF_OPERACAO_ATUAL_;
+  MEU_GIRO_PERF_OPERACAO_ATUAL_ = 'excluirAtividade';
   var lock = LockService.getScriptLock();
   try {
+    var perfEtapaInicio = meuGiroPerfNow_();
     lock.waitLock(30000);
+    meuGiroPerfLog_('excluir-atividade', 'LockService', perfEtapaInicio);
     payload = payload || {};
 
     var idDgmb = String(payload.id_dgmb || '').trim();
@@ -324,10 +392,19 @@ function excluirAtividade(payload) {
       return { ok: false, code: 'IDENTIFICADOR_ATIVIDADE_OBRIGATORIO', msg: 'activity_id ou chave_edicao é obrigatório para exclusão.' };
     }
 
+    perfEtapaInicio = meuGiroPerfNow_();
     var sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEETS.REGISTRO_KM);
     var dados = sheet.getDataRange().getValues();
+    meuGiroPerfLog_('excluir-atividade', 'leitura_REGISTRO_KM', perfEtapaInicio, {
+      quantidade_linhas_registro_km: dados && dados.length ? dados.length - 1 : 0
+    });
     var cols = getRegistroKmColumnIndexes_(dados);
+    perfEtapaInicio = meuGiroPerfNow_();
     var linhasEncontradas = localizarLinhasAtividade_(dados, cols, idDgmb, activityId, chaveEdicao);
+    meuGiroPerfLog_('excluir-atividade', 'busca_atividade_para_exclusao', perfEtapaInicio, {
+      quantidade_linhas_verificadas: Math.max(dados.length - 1, 0),
+      quantidade_linhas_encontradas: linhasEncontradas.length
+    });
 
     if (!linhasEncontradas.length) {
       return { ok: false, code: 'ATIVIDADE_NAO_ENCONTRADA', msg: 'Atividade não encontrada para exclusão com a chave e ID informados.' };
@@ -337,13 +414,21 @@ function excluirAtividade(payload) {
       return { numero: linha, valores: dados[linha - 1].slice() };
     });
 
+    perfEtapaInicio = meuGiroPerfNow_();
     linhasEncontradas.slice().sort(function(a, b) { return b - a; }).forEach(function(linha) {
       sheet.deleteRow(linha);
     });
+    meuGiroPerfLog_('excluir-atividade', 'exclusao_atividade_REGISTRO_KM', perfEtapaInicio, {
+      quantidade_linhas_excluidas: linhasEncontradas.length
+    });
 
     try {
+      perfEtapaInicio = meuGiroPerfNow_();
       atualizarDistanciaRealizada_(idDgmb);
+      meuGiroPerfLog_('excluir-atividade', 'atualizarDistanciaRealizada_', perfEtapaInicio);
+      perfEtapaInicio = meuGiroPerfNow_();
       atualizarMeuGiroResumo_(idDgmb);
+      meuGiroPerfLog_('excluir-atividade', 'atualizarMeuGiroResumo_', perfEtapaInicio);
     } catch (syncErr) {
       linhasOriginais.forEach(function(item) {
         sheet.insertRowBefore(item.numero);
@@ -358,6 +443,8 @@ function excluirAtividade(payload) {
     return { ok: false, code: 'EXCLUSAO_ATIVIDADE_ERROR', msg: 'Erro interno ao excluir atividade na aba REGISTRO_KM.' };
   } finally {
     try { lock.releaseLock(); } catch (e) {}
+    meuGiroPerfLog_('excluir-atividade', 'excluirAtividade_total', perfTotalInicio);
+    MEU_GIRO_PERF_OPERACAO_ATUAL_ = perfOperacaoAnterior;
   }
 }
 
