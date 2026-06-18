@@ -51,6 +51,9 @@ let desafioEmFocoKey = '';
 let certificadoProcessandoKey = '';
 let conquistaActionInProgress = false;
 let globalLoadingMessage = '';
+let modalMeuGiroBloqueante = false;
+let modalMeuGiroResolver = null;
+let modalMeuGiroEscapeValue = null;
 const DESAFIO_CARROSSEL_SESSION_KEY = 'meuGiro.desafioEmFocoKey';
 const LOGIN_SESSION_STORAGE_KEY = 'meuGiro.loginSession';
 const PAINEL_STATE_STORAGE_KEY = 'meuGiro.painelState';
@@ -95,23 +98,131 @@ function setGlobalLoadingMessage(message) {
   }
 }
 
-function showGlobalLoading(message) {
+function mostrarModalMeuGiro(opcoes) {
+  opcoes = opcoes || {};
   const overlay = document.getElementById('global-loading-overlay');
-  if (!overlay) return;
+  const card = overlay && overlay.querySelector('.global-loading-card');
+  const title = document.getElementById('global-loading-title');
+  const message = document.getElementById('global-loading-message');
+  const spinner = document.getElementById('global-loading-spinner');
+  const actions = document.getElementById('global-loading-actions');
+  if (!overlay || !card || !title || !message || !spinner || !actions) {
+    return Promise.resolve(null);
+  }
 
-  setGlobalLoadingMessage(message || globalLoadingMessage || 'Carregando...');
+  resolverModalMeuGiro(null);
+  modalMeuGiroBloqueante = !!opcoes.bloqueante;
+  globalLoadingMessage = String(opcoes.mensagem || '').trim();
+  title.textContent = opcoes.titulo || 'MEU GIRO';
+  message.textContent = globalLoadingMessage;
+  spinner.hidden = opcoes.processando === false;
+  actions.innerHTML = '';
+  overlay.className = 'global-loading-overlay modal-tipo-' + (opcoes.tipo || 'padrao');
+
+  const botoes = Array.isArray(opcoes.botoes) ? opcoes.botoes : [];
+  modalMeuGiroEscapeValue = botoes.length === 1
+    ? botoes[0].valor
+    : (botoes.length > 1 ? botoes[0].valor : null);
+  botoes.forEach(function(botao) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = botao.destaque ? 'btn-main' : 'btn-secondary';
+    button.textContent = botao.texto || 'OK';
+    button.addEventListener('click', function() {
+      resolverModalMeuGiro(botao.valor);
+      if (botao.fechar !== false) fecharModalMeuGiro(false);
+      if (typeof botao.acao === 'function') botao.acao();
+    });
+    actions.appendChild(button);
+  });
+
   overlay.hidden = false;
   overlay.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('modal-meu-giro-aberto');
+  window.setTimeout(function() {
+    const focusTarget = actions.querySelector('button') || card;
+    focusTarget.focus();
+  }, 0);
+
+  if (!botoes.length) {
+    return Promise.resolve(null);
+  }
+
+  return new Promise(function(resolve) {
+    modalMeuGiroResolver = resolve;
+  });
+}
+
+function atualizarModalMeuGiro(opcoes) {
+  opcoes = opcoes || {};
+  const overlay = document.getElementById('global-loading-overlay');
+  if (!overlay || overlay.hidden) return;
+  const title = document.getElementById('global-loading-title');
+  const message = document.getElementById('global-loading-message');
+  const spinner = document.getElementById('global-loading-spinner');
+  if (opcoes.titulo && title) title.textContent = opcoes.titulo;
+  if (opcoes.mensagem && message) {
+    globalLoadingMessage = String(opcoes.mensagem).trim();
+    message.textContent = globalLoadingMessage;
+  }
+  if (typeof opcoes.processando === 'boolean' && spinner) spinner.hidden = !opcoes.processando;
+  if (opcoes.tipo) overlay.className = 'global-loading-overlay modal-tipo-' + opcoes.tipo;
+}
+
+function resolverModalMeuGiro(valor) {
+  if (!modalMeuGiroResolver) return;
+  const resolver = modalMeuGiroResolver;
+  modalMeuGiroResolver = null;
+  resolver(valor);
+}
+
+function fecharModalMeuGiro(resolverPendente) {
+  const overlay = document.getElementById('global-loading-overlay');
+  if (resolverPendente !== false) resolverModalMeuGiro(null);
+  globalLoadingMessage = '';
+  modalMeuGiroBloqueante = false;
+  modalMeuGiroEscapeValue = null;
+  if (overlay) {
+    overlay.hidden = true;
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+  if (document.body) document.body.classList.remove('modal-meu-giro-aberto');
+}
+
+function mostrarErroAcaoAtividade() {
+  return mostrarModalMeuGiro({
+    titulo: 'Não foi possível concluir a ação',
+    mensagem: 'Tente novamente em alguns instantes.',
+    tipo: 'erro',
+    processando: false,
+    botoes: [{ texto: 'Entendi', valor: true, destaque: true }]
+  });
+}
+
+function confirmarDuplicidadeAtividade() {
+  return mostrarModalMeuGiro({
+    titulo: 'Atividade parecida encontrada',
+    mensagem: 'Já existe uma atividade registrada com a mesma data e a mesma distância.\n\nIsso pode acontecer em alguns casos. Confira antes de continuar.\n\nDeseja salvar mesmo assim?',
+    tipo: 'alerta',
+    processando: false,
+    botoes: [
+      { texto: 'Cancelar', valor: false },
+      { texto: 'Salvar mesmo assim', valor: true, destaque: true }
+    ]
+  });
+}
+
+function showGlobalLoading(message) {
+  mostrarModalMeuGiro({
+    titulo: 'MEU GIRO',
+    mensagem: message || globalLoadingMessage || 'Carregando...',
+    bloqueante: true,
+    processando: true
+  });
 }
 
 function hideGlobalLoading() {
-  const overlay = document.getElementById('global-loading-overlay');
-  globalLoadingMessage = '';
-  if (!overlay) return;
-
-  overlay.hidden = true;
-  overlay.setAttribute('aria-hidden', 'true');
-  setGlobalLoadingMessage('');
+  fecharModalMeuGiro();
 }
 
 function getGlobalBusyMessage() {
@@ -136,12 +247,34 @@ function syncGlobalBusyState() {
     || !!certificadoProcessandoKey;
 
   root.classList.toggle('app-busy', isBusy);
-  if (isBusy) {
+  if (isBusy && !modalMeuGiroBloqueante) {
     showGlobalLoading(getGlobalBusyMessage());
-  } else {
+  } else if (!isBusy && !modalMeuGiroBloqueante) {
     hideGlobalLoading();
   }
 }
+
+document.addEventListener('keydown', function(event) {
+  if (event.key !== 'Escape') return;
+  const overlay = document.getElementById('global-loading-overlay');
+  if (!overlay || overlay.hidden) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  if (modalMeuGiroBloqueante || !modalMeuGiroResolver) return;
+
+  const escapeValue = modalMeuGiroEscapeValue;
+  resolverModalMeuGiro(escapeValue);
+  fecharModalMeuGiro(false);
+}, true);
+
+document.addEventListener('click', function(event) {
+  const overlay = document.getElementById('global-loading-overlay');
+  if (overlay && event.target === overlay) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+}, true);
 
 function showScreen(name) {
   const screens = document.querySelectorAll('.screen');
@@ -1842,7 +1975,7 @@ function mesclarPainelPosSalvarLeve_(painelAtual, painelLeve) {
   return merged;
 }
 
-function carregarPainelPosSalvarLeve() {
+function carregarPainelPosSalvarLeve(permitirDuranteMutacao) {
   var painelPerfLabel = 'carregarPainelPosSalvarLeve';
   perfStart(painelPerfLabel);
   if (!currentUser || !currentUser.id_dgmb) {
@@ -1859,7 +1992,7 @@ function carregarPainelPosSalvarLeve() {
     return;
   }
 
-  if (activityMutationInProgress) {
+  if (activityMutationInProgress && !permitirDuranteMutacao) {
     perfEnd(painelPerfLabel);
     painelReloadPending = true;
     return;
@@ -1887,7 +2020,7 @@ function carregarPainelPosSalvarLeve() {
       if (!res || !res.ok) {
         setPainelMsg((res && res.msg) ? res.msg : 'Erro ao atualizar atividades. Recarregando painel completo...', 'error');
         painelReloadPending = false;
-        carregarPainel('pos-salvar-fallback');
+        carregarPainel('pos-salvar-fallback', permitirDuranteMutacao);
         return;
       }
 
@@ -1912,7 +2045,7 @@ function carregarPainelPosSalvarLeve() {
       setPainelMsg('Atividades atualizadas.', 'success', 1600);
 
       if (painelReloadPending) {
-        carregarPainelPosSalvarLeve();
+        carregarPainelPosSalvarLeve(permitirDuranteMutacao);
       }
     })
     .withFailureHandler(function(err) {
@@ -1927,12 +2060,12 @@ function carregarPainelPosSalvarLeve() {
       setPainelMsg('Erro de conexão ao atualizar atividades. Recarregando painel completo...', 'error');
       console.error(err);
       painelReloadPending = false;
-      carregarPainel('pos-salvar-fallback');
+      carregarPainel('pos-salvar-fallback', permitirDuranteMutacao);
     })
     .getPainelUsuarioPosSalvarLeve(currentUser.id_dgmb);
 }
 
-function carregarPainel(triggerSource) {
+function carregarPainel(triggerSource, permitirDuranteMutacao) {
   var painelPerfLabel = 'carregarPainel' + (triggerSource ? ':' + triggerSource : '');
   perfStart(painelPerfLabel);
   if (!currentUser || !currentUser.id_dgmb) {
@@ -1952,7 +2085,7 @@ function carregarPainel(triggerSource) {
     return;
   }
 
-  if (activityMutationInProgress) {
+  if (activityMutationInProgress && !permitirDuranteMutacao) {
     perfEnd(painelPerfLabel);
     painelReloadPending = true;
     setPainelMsg('Aguarde a operação atual terminar para atualizar o painel.', 'loading');
@@ -3899,6 +4032,33 @@ function parseValidActivityKm(value) {
   return numeric;
 }
 
+function atualizarPainelAposAtividade() {
+  return new Promise(function(resolve, reject) {
+    let finalizado = false;
+    const timeout = window.setTimeout(function() {
+      if (finalizado) return;
+      finalizado = true;
+      reject(new Error('Tempo limite ao atualizar o painel.'));
+    }, 60000);
+
+    function aguardarAtualizacao() {
+      if (finalizado) return;
+      if (!painelLoadInProgress && !painelReloadPending) {
+        finalizado = true;
+        window.clearTimeout(timeout);
+        window.requestAnimationFrame(function() {
+          window.requestAnimationFrame(resolve);
+        });
+        return;
+      }
+      window.setTimeout(aguardarAtualizacao, 80);
+    }
+
+    carregarPainelPosSalvarLeve(true);
+    window.setTimeout(aguardarAtualizacao, 0);
+  });
+}
+
 async function salvarAtividade(forcarDuplicidade) {
   perfStart('salvarAtividade');
   perfStart('salvarAtividade:ateLiberarUI');
@@ -3953,8 +4113,12 @@ async function salvarAtividade(forcarDuplicidade) {
   }
 
   activityMutationInProgress = true;
-  setGlobalLoadingMessage('Salvando sua atividade...');
-  syncGlobalBusyState();
+  mostrarModalMeuGiro({
+    titulo: 'Salvando atividade...',
+    mensagem: 'Estamos registrando seus quilômetros. Aguarde um instante.',
+    bloqueante: true,
+    processando: true
+  });
   setRegistroMsg('Registrando atividade...', 'loading');
   setRegistroCardState('loading');
   setActivityFormLocked(true);
@@ -3962,17 +4126,14 @@ async function salvarAtividade(forcarDuplicidade) {
   const finishLoading = function(nextMessage) {
     finishLoadingBase(nextMessage);
     releaseRegistroSubmitGuard();
-    activityMutationInProgress = false;
     perfEnd('salvarAtividade:ateLiberarUI');
-    syncGlobalBusyState();
-    setActivityFormLocked(false);
     if (nextMessage !== 'success') {
       setRegistroCardState('');
     }
   };
 
   let nextMessage = '';
-  let shouldReloadPainel = false;
+  let repetirComForce = false;
   try {
     const res = await new Promise(function(resolve, reject) {
       google.script.run
@@ -3984,16 +4145,18 @@ async function salvarAtividade(forcarDuplicidade) {
     if (!res || !res.ok) {
       nextMessage = 'error';
       if (res && res.code === 'DUPLICIDADE' && !forcarDuplicidade) {
-        const confirmar = confirm('Você já registrou esse mesmo valor hoje. Deseja registrar mesmo assim?');
+        const confirmar = await confirmarDuplicidadeAtividade();
         if (confirmar) {
-          salvarAtividade(true);
+          repetirComForce = true;
         } else {
+          nextMessage = '';
           setRegistroMsg('Registro não confirmado. Nenhuma alteração foi feita.');
         }
         return;
       }
 
       setRegistroMsg(getGoogleScriptErrorMessage(res, 'Não foi possível registrar a atividade.'), 'error');
+      await mostrarErroAcaoAtividade();
       return;
     }
 
@@ -4008,26 +4171,43 @@ async function salvarAtividade(forcarDuplicidade) {
     });
     pendingTotalPedaladoFeedback = true;
     painelProgressFeedbackMode = 'activity-registered';
-    shouldReloadPainel = true;
     nextMessage = 'success';
+    invalidarCacheRanking();
+    atualizarModalMeuGiro({
+      titulo: 'Atualizando seus desafios...',
+      mensagem: 'Estamos atualizando sua lista de atividades, total de quilômetros e desafios.',
+      tipo: 'padrao',
+      processando: true
+    });
+    await atualizarPainelAposAtividade();
+    await mostrarModalMeuGiro({
+      titulo: 'Atividade salva com sucesso',
+      mensagem: 'Sua lista de atividades foi atualizada.',
+      tipo: 'sucesso',
+      processando: false,
+      botoes: [{ texto: 'OK', valor: true, destaque: true }]
+    });
   } catch (err) {
     nextMessage = 'error';
     const errMsg = getGoogleScriptErrorMessage(err, 'Não foi possível registrar a atividade.');
     setRegistroMsg(errMsg, 'error');
     console.error(err);
+    await mostrarErroAcaoAtividade();
   } finally {
     finishLoading(nextMessage);
+    activityMutationInProgress = false;
+    syncGlobalBusyState();
+    setActivityFormLocked(false);
     perfEnd('salvarAtividade');
-    if (shouldReloadPainel) {
-      invalidarCacheRanking();
-    }
-    if (shouldReloadPainel || painelReloadPending) {
-      carregarPainelPosSalvarLeve();
+    if (repetirComForce) {
+      window.setTimeout(function() {
+        salvarAtividade(true);
+      }, 0);
     }
   }
 }
 
-async function salvarEdicaoAtividade() {
+async function salvarEdicaoAtividade(forcarDuplicidade) {
   const idHidden = document.getElementById('painel-id-dgmb');
   const idDgmb = idHidden && idHidden.value
     ? String(idHidden.value).trim()
@@ -4085,8 +4265,12 @@ async function salvarEdicaoAtividade() {
 
   pendingEditSaveKey = editKey;
   activityMutationInProgress = true;
-  setGlobalLoadingMessage('Salvando sua atividade...');
-  syncGlobalBusyState();
+  mostrarModalMeuGiro({
+    titulo: 'Atualizando atividade...',
+    mensagem: 'Estamos salvando as alterações. Aguarde um instante.',
+    bloqueante: true,
+    processando: true
+  });
   setRegistroMsg('Salvando edição...', 'loading');
   setRegistroCardState('loading');
   setActivityFormLocked(true);
@@ -4095,16 +4279,13 @@ async function salvarEdicaoAtividade() {
     finishLoadingBase(nextMessage);
     releaseRegistroSubmitGuard();
     pendingEditSaveKey = '';
-    activityMutationInProgress = false;
-    syncGlobalBusyState();
-    setActivityFormLocked(false);
     if (nextMessage !== 'success') {
       setRegistroCardState('');
     }
   };
 
   let nextMessage = '';
-  let shouldReloadPainel = false;
+  let repetirComForce = false;
   try {
     const res = await new Promise(function(resolve, reject) {
       google.script.run
@@ -4115,13 +4296,25 @@ async function salvarEdicaoAtividade() {
           activity_id: activityId,
           chave_edicao: chaveEdicao,
           data_atividade: data,
-          km: km
+          km: km,
+          force: !!forcarDuplicidade
         });
     });
 
     if (!res || !res.ok) {
       nextMessage = 'error';
+      if (res && res.code === 'DUPLICIDADE_EDICAO' && !forcarDuplicidade) {
+        const confirmar = await confirmarDuplicidadeAtividade();
+        if (confirmar) {
+          repetirComForce = true;
+        } else {
+          nextMessage = '';
+          setRegistroMsg('Edição não confirmada. Nenhuma alteração foi feita.');
+        }
+        return;
+      }
       setRegistroMsg(getGoogleScriptErrorMessage(res, 'Não foi possível salvar a edição.'), 'error');
+      await mostrarErroAcaoAtividade();
       return;
     }
 
@@ -4137,20 +4330,37 @@ async function salvarEdicaoAtividade() {
     });
     pendingTotalPedaladoFeedback = true;
     painelProgressFeedbackMode = 'activity-registered';
-    shouldReloadPainel = true;
     nextMessage = 'success';
+    invalidarCacheRanking();
+    atualizarModalMeuGiro({
+      titulo: 'Atualizando seus desafios...',
+      mensagem: 'Estamos recalculando sua lista de atividades, total de quilômetros e desafios.',
+      tipo: 'padrao',
+      processando: true
+    });
+    await atualizarPainelAposAtividade();
+    await mostrarModalMeuGiro({
+      titulo: 'Atividade atualizada com sucesso',
+      mensagem: 'Sua lista de atividades foi atualizada.',
+      tipo: 'sucesso',
+      processando: false,
+      botoes: [{ texto: 'OK', valor: true, destaque: true }]
+    });
   } catch (err) {
     nextMessage = 'error';
     const errMsg = getGoogleScriptErrorMessage(err, 'Não foi possível salvar a edição.');
     setRegistroMsg(errMsg, 'error');
     console.error(err);
+    await mostrarErroAcaoAtividade();
   } finally {
     finishLoading(nextMessage);
-    if (shouldReloadPainel) {
-      invalidarCacheRanking();
-    }
-    if (shouldReloadPainel || painelReloadPending) {
-      carregarPainelPosSalvarLeve();
+    activityMutationInProgress = false;
+    syncGlobalBusyState();
+    setActivityFormLocked(false);
+    if (repetirComForce) {
+      window.setTimeout(function() {
+        salvarEdicaoAtividade(true);
+      }, 0);
     }
   }
 }
@@ -4237,15 +4447,28 @@ async function excluirAtividadeUI(item, btnExcluir) {
     return;
   }
 
-  const confirmar = confirm('Confirma a exclusão desta atividade? Essa ação não pode ser desfeita.');
+  const confirmar = await mostrarModalMeuGiro({
+    titulo: 'Excluir atividade?',
+    mensagem: 'Essa atividade será removida da sua lista e seus desafios serão atualizados em seguida.',
+    tipo: 'alerta',
+    processando: false,
+    botoes: [
+      { texto: 'Cancelar', valor: false },
+      { texto: 'Excluir atividade', valor: true, destaque: true }
+    ]
+  });
   if (!confirmar) {
     return;
   }
 
   pendingDeletionKeys.add(deletionKey);
   activityMutationInProgress = true;
-  setGlobalLoadingMessage('Excluindo atividade...');
-  syncGlobalBusyState();
+  mostrarModalMeuGiro({
+    titulo: 'Excluindo atividade...',
+    mensagem: 'Estamos removendo a atividade selecionada. Aguarde um instante.',
+    bloqueante: true,
+    processando: true
+  });
   setRegistroCardState('loading');
   setActivityFormLocked(true);
   if (btnExcluir) {
@@ -4256,7 +4479,6 @@ async function excluirAtividadeUI(item, btnExcluir) {
   setRegistroMsg('');
 
   let removedWithSuccess = false;
-  let shouldReloadPainel = false;
   try {
     const res = await new Promise(function(resolve, reject) {
       google.script.run
@@ -4271,6 +4493,7 @@ async function excluirAtividadeUI(item, btnExcluir) {
 
     if (!res || !res.ok) {
       setRegistroMsg((res && res.msg) ? res.msg : 'Não foi possível excluir.', 'error');
+      await mostrarErroAcaoAtividade();
       return;
     }
 
@@ -4278,11 +4501,26 @@ async function excluirAtividadeUI(item, btnExcluir) {
     setRegistroCardState('success');
     setRegistroMsg('Atividade excluída com sucesso.', 'success', 1800);
     renderAtividadesState('loading', 'Atualizando atividades registradas...', 'Removendo a atividade da lista para mostrar a versão mais recente.');
-    shouldReloadPainel = true;
     removedWithSuccess = true;
+    invalidarCacheRanking();
+    atualizarModalMeuGiro({
+      titulo: 'Atualizando seus desafios...',
+      mensagem: 'Estamos atualizando sua lista de atividades, total de quilômetros e desafios.',
+      tipo: 'padrao',
+      processando: true
+    });
+    await atualizarPainelAposAtividade();
+    await mostrarModalMeuGiro({
+      titulo: 'Atividade excluída com sucesso',
+      mensagem: 'Sua lista de atividades foi atualizada.',
+      tipo: 'sucesso',
+      processando: false,
+      botoes: [{ texto: 'OK', valor: true, destaque: true }]
+    });
   } catch (err) {
     setRegistroMsg('Não foi possível excluir a atividade.', 'error');
     console.error(err);
+    await mostrarErroAcaoAtividade();
   } finally {
     pendingDeletionKeys.delete(deletionKey);
     activityMutationInProgress = false;
@@ -4294,12 +4532,6 @@ async function excluirAtividadeUI(item, btnExcluir) {
     if (btnExcluir) {
       btnExcluir.disabled = false;
       btnExcluir.innerText = 'Excluir';
-    }
-    if (shouldReloadPainel) {
-      invalidarCacheRanking();
-    }
-    if (shouldReloadPainel || painelReloadPending) {
-      carregarPainelPosSalvarLeve();
     }
   }
 }
