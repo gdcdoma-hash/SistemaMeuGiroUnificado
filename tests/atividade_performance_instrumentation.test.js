@@ -68,6 +68,26 @@ test('reaproveita uma única leitura de REGISTRO_KM nas sincronizações da P26'
   assert.ok(fontes.includes("'leitura_REGISTRO_KM_reaproveitada'"));
 });
 
+test('reaproveita uma única leitura de dgmbDesafios ao atualizar a distância realizada', () => {
+  const atualizarDistancia = registroService.match(
+    /function atualizarDistanciaRealizada_\(idDgmb, opcoes\)\{[\s\S]*?\n\}/
+  );
+
+  assert.ok(atualizarDistancia, 'Função atualizarDistanciaRealizada_ não encontrada');
+  assert.equal(
+    (atualizarDistancia[0].match(/getDataRange\(\)\.getValues\(\)/g) || []).length,
+    1
+  );
+  assert.match(
+    atualizarDistancia[0],
+    /obterDadosInscricaoUsuario_\(idDgmb, \{\s*abaDesafio: abaDesafio,\s*values: dados\s*\}\)/
+  );
+  assert.ok(atualizarDistancia[0].includes("'leitura_dgmbDesafios_unica'"));
+  assert.ok(
+    atualizarDistancia[0].includes('quantidade_linhas_dgmbDesafios: dados && dados.length ? dados.length - 1 : 0')
+  );
+});
+
 test('reaproveita o contexto completo de ListaDesafios durante a execução', () => {
   assert.match(utils, /var LISTA_DESAFIOS_CACHE_EXECUCAO_ = null;/);
   assert.match(

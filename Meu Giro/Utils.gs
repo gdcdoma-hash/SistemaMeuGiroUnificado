@@ -255,15 +255,18 @@ function normalizeText_(value) {
     .trim();
 }
 
-function obterDadosInscricaoUsuario_(idDgmb) {
+function obterDadosInscricaoUsuario_(idDgmb, contextoDesafios) {
   var id = normalizeText_(idDgmb);
   if (!id) return null;
 
   // A inscrição do atleta é identificada diretamente na base consolidada.
   // ListaDesafios é catálogo operacional e não deve autorizar ou bloquear o login.
-  var abaDesafio = SHEETS.DESAFIO || 'dgmbDesafios';
-  var sh = getSheetByName_(abaDesafio);
-  var values = sh.getDataRange().getValues();
+  var abaDesafio = contextoDesafios && contextoDesafios.abaDesafio
+    ? contextoDesafios.abaDesafio
+    : SHEETS.DESAFIO || 'dgmbDesafios';
+  var values = contextoDesafios && Array.isArray(contextoDesafios.values)
+    ? contextoDesafios.values
+    : getSheetByName_(abaDesafio).getDataRange().getValues();
 
   if (!values || values.length < 2) {
     return null;
