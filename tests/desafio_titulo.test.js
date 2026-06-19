@@ -73,6 +73,25 @@ test('getDesafioMesAnoLabel prioriza periodo_desafio formatado como mês/ano ami
   assert.equal(ctx.getDesafioMesAnoLabel({ periodo_desafio: 'abril/2026', periodo_inicio: '2026-05-01', periodo_fim: '2026-06-30' }), 'Período: Abril/2026');
 });
 
+test('getDesafioMesAnoFromPeriodoTexto_ mantém formatos mês/ano existentes', () => {
+  assert.equal(ctx.getDesafioMesAnoFromPeriodoTexto_('junho/2026'), 'Junho/2026');
+  assert.equal(ctx.getDesafioMesAnoFromPeriodoTexto_('abril/2026'), 'Abril/2026');
+  assert.equal(ctx.getDesafioMesAnoFromPeriodoTexto_('06/2026'), 'Junho/2026');
+  assert.equal(ctx.getDesafioMesAnoFromPeriodoTexto_('2026-06'), 'Junho/2026');
+});
+
+test('getDesafioMesAnoFromPeriodoTexto_ converte Date serializado em mês/ano', () => {
+  assert.equal(ctx.getDesafioMesAnoFromPeriodoTexto_('Mon Jun 01 2026 00:00:00 GMT-0300 (Horário Padrão de Brasília)'), 'Junho/2026');
+  assert.equal(ctx.getDesafioMesAnoFromPeriodoTexto_('Fri May 01 2026 00:00:00 GMT-0300 (Horário Padrão de Brasília)'), 'Maio/2026');
+  assert.equal(ctx.getDesafioMesAnoFromPeriodoTexto_('Wed Apr 01 2026 00:00:00 GMT-0300 (Horário Padrão de Brasília)'), 'Abril/2026');
+});
+
+test('labels de desafio aceitam Date serializado em periodo_desafio', () => {
+  const periodoSerializado = 'Mon Jun 01 2026 00:00:00 GMT-0300 (Horário Padrão de Brasília)';
+  assert.equal(ctx.getDesafioMesAnoLabel({ periodo_desafio: periodoSerializado }), 'Período: Junho/2026');
+  assert.equal(ctx.getDesafioMesAnoPortugues_({ periodo_desafio: periodoSerializado }), 'Junho/2026');
+});
+
 test('getDesafioMesAnoLabel não usa periodo_inicio ou periodo_fim como período visual', () => {
   assert.equal(ctx.getDesafioMesAnoLabel({ periodo_inicio: '2026-06-01' }), 'Período: -');
   assert.equal(ctx.getDesafioMesAnoLabel({ periodo_fim: '2026-04-30' }), 'Período: -');
