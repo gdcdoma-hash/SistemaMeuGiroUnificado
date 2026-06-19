@@ -15,7 +15,11 @@ function getFunctionSlice(name, nextName) {
   return script.slice(start, end);
 }
 
-const helperCode = getFunctionSlice('getDesafioTitulo', 'getActivityDateParts_');
+const helperCode = getFunctionSlice('getDesafioTitulo', 'getActivityDateParts_') + '\n' +
+  getFunctionSlice('getDesafioMesAnoPortugues_', 'parseDesafioPeriodoDate_') + '\n' +
+  getFunctionSlice('parseDesafioPeriodoDate_', 'obterTodosDesafiosPainelV2_') + '\n' +
+  getFunctionSlice('getDesafioMesAnoLabel', 'obterCampoAtividadePainel_') + '\n' +
+  getFunctionSlice('getMesNome_', 'getMesLabel_');
 const ctx = {};
 vm.createContext(ctx);
 vm.runInContext(helperCode, ctx);
@@ -58,4 +62,21 @@ test('ranking, desafio em foco e certificados administrativos usam getDesafioTit
   assert.match(foco, /getDesafioTitulo\(item\)/);
   assert.match(ranking, /getDesafioTitulo\(item \|\| \{\}\)/);
   assert.match(adminCert, /getDesafioTitulo\(item\)/);
+});
+
+
+test('getDesafioMesAnoLabel prioriza periodo_desafio formatado como mês/ano amigável', () => {
+  assert.equal(ctx.getDesafioMesAnoLabel({ periodo_desafio: 'junho/2026', periodo_inicio: '2026-05-01' }), 'Período: Junho/2026');
+});
+
+test('getDesafioMesAnoLabel usa periodo_inicio como fallback e periodo_fim como último fallback', () => {
+  assert.equal(ctx.getDesafioMesAnoLabel({ periodo_inicio: '2026-06-01' }), 'Período: Junho/2026');
+  assert.equal(ctx.getDesafioMesAnoLabel({ periodo_fim: '2026-04-30' }), 'Período: Abril/2026');
+});
+
+test('cards em andamento e conquistas não exibem hífen quando periodo_desafio existe', () => {
+  assert.equal(ctx.getDesafioMesAnoLabel({ periodo_desafio: 'junho/2026' }), 'Período: Junho/2026');
+  assert.equal(ctx.getDesafioMesAnoPortugues_({ periodo_desafio: 'abril/2026' }), 'Abril/2026');
+  assert.notEqual(ctx.getDesafioMesAnoLabel({ periodo_desafio: 'junho/2026' }), 'Período: -');
+  assert.notEqual(ctx.getDesafioMesAnoPortugues_({ periodo_desafio: 'abril/2026' }), '-');
 });

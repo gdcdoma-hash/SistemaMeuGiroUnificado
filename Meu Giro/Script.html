@@ -2324,6 +2324,9 @@ function buildConquistaCard_(desafio) {
 
 
 function getDesafioMesAnoPortugues_(desafio) {
+  var periodoDesafio = getDesafioMesAnoFromPeriodoTexto_(desafio && desafio.periodo_desafio);
+  if (periodoDesafio) return periodoDesafio;
+
   var meses = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
@@ -2333,6 +2336,40 @@ function getDesafioMesAnoPortugues_(desafio) {
   var data = parseDesafioPeriodoDate_(inicio) || parseDesafioPeriodoDate_(fim);
   if (!data) return getDesafioPeriodoLabelV2_(desafio) || '-';
   return meses[data.getUTCMonth()] + '/' + data.getUTCFullYear();
+}
+
+function getDesafioMesAnoFromPeriodoTexto_(valor) {
+  var texto = String(valor || '').trim();
+  if (!texto) return '';
+
+  var meses = {
+    janeiro: 'Janeiro', fevereiro: 'Fevereiro', marco: 'Março', abril: 'Abril',
+    maio: 'Maio', junho: 'Junho', julho: 'Julho', agosto: 'Agosto',
+    setembro: 'Setembro', outubro: 'Outubro', novembro: 'Novembro', dezembro: 'Dezembro'
+  };
+  var normalizado = texto.toLowerCase()
+    .replace(/[áàâã]/g, 'a')
+    .replace(/[éê]/g, 'e')
+    .replace(/í/g, 'i')
+    .replace(/[óôõ]/g, 'o')
+    .replace(/ú/g, 'u')
+    .replace(/ç/g, 'c');
+  var match = normalizado.match(/^([a-z]+)\s*\/\s*(\d{4})$/);
+  if (match && meses[match[1]]) return meses[match[1]] + '/' + match[2];
+
+  match = normalizado.match(/^(0?[1-9]|1[0-2])\s*\/\s*(\d{4})$/);
+  if (match) {
+    var nomeMes = getMesNome_(String(match[1]).padStart(2, '0'));
+    return nomeMes ? nomeMes + '/' + match[2] : '';
+  }
+
+  match = normalizado.match(/^(\d{4})-(0[1-9]|1[0-2])$/);
+  if (match) {
+    var nomeIso = getMesNome_(match[2]);
+    return nomeIso ? nomeIso + '/' + match[1] : '';
+  }
+
+  return '';
 }
 
 function parseDesafioPeriodoDate_(valor) {
@@ -2833,8 +2870,15 @@ function montarPainelContextual(basePainel, desafio) {
 
 
 function getDesafioMesAnoLabel(desafio, contexto) {
+  var periodoDesafio = getDesafioMesAnoFromPeriodoTexto_(
+    (desafio && desafio.periodo_desafio) || (contexto && contexto.periodo_desafio)
+  );
+  if (periodoDesafio) return 'Período: ' + periodoDesafio;
+
   var inicio = String((desafio && desafio.periodo_inicio) || (contexto && contexto.periodo_inicio) || '').trim();
-  var match = inicio.match(/^(\d{4})-(\d{2})/);
+  var fim = String((desafio && desafio.periodo_fim) || (contexto && contexto.periodo_fim) || '').trim();
+  var referencia = inicio || fim;
+  var match = referencia.match(/^(\d{4})-(\d{2})/);
   if (!match) return 'Período: -';
   var nomeMes = getMesNome_(match[2]);
   return nomeMes ? ('Período: ' + nomeMes + '/' + match[1]) : 'Período: -';
@@ -3315,9 +3359,7 @@ function renderCardDesafioSelecionado() {
 }
 
 function getDesafioPeriodoLabel(desafio) {
-  return desafio && desafio.periodo_inicio && desafio.periodo_fim
-    ? formatDateBR(desafio.periodo_inicio) + ' a ' + formatDateBR(desafio.periodo_fim)
-    : 'Período não informado';
+  return getDesafioMesAnoPortugues_(desafio) || 'Período não informado';
 }
 
 function atualizarSeletorDesafioRanking() {
