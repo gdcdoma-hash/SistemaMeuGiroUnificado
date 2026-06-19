@@ -74,7 +74,7 @@ test('ListaDesafios alimenta nome_desafio por id_Desafio_lista mesmo sem aba', (
 });
 
 
-test('buildListaDesafiosContexto captura Periodo, Data_Inicio e Data_Fim', () => {
+test('buildListaDesafiosContexto usa Periodo e ignora Data_Inicio/Data_Fim para período visual', () => {
   const rows = [
     ['id_Desafio_lista', 'Nome_Desafio', 'Periodo', 'Data_Inicio', 'Data_Fim', 'Status'],
     ['128', 'LETRA R', 'junho/2026', '2026-05-01', '2026-06-30', 'ativo']
@@ -85,7 +85,7 @@ test('buildListaDesafiosContexto captura Periodo, Data_Inicio e Data_Fim', () =>
   const periodo = contexto.periodos.byId['128'];
 
   assert.equal(periodo.periodo_desafio, 'junho/2026');
-  assert.equal(periodo.inicio, '2026-05-01');
+  assert.equal(periodo.inicio, '2026-06-01');
   assert.equal(periodo.fim, '2026-06-30');
 });
 
@@ -127,7 +127,7 @@ test('objeto de desafio recebe periodo_desafio vindo do cache de ListaDesafios',
 
   assert.deepEqual(desafio, {
     id_desafio: '128',
-    periodo_inicio: '2026-05-01',
+    periodo_inicio: '2026-06-01',
     periodo_fim: '2026-06-30',
     periodo_desafio: 'junho/2026'
   });

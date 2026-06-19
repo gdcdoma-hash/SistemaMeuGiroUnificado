@@ -2324,8 +2324,10 @@ function buildConquistaCard_(desafio) {
 
 
 function getDesafioMesAnoPortugues_(desafio) {
-  var periodoDesafio = getDesafioMesAnoFromPeriodoTexto_(desafio && desafio.periodo_desafio);
+  var periodoDesafioTexto = String((desafio && desafio.periodo_desafio) || '').trim();
+  var periodoDesafio = getDesafioMesAnoFromPeriodoTexto_(periodoDesafioTexto);
   if (periodoDesafio) return periodoDesafio;
+  if (periodoDesafioTexto) return '-';
 
   var meses = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -2574,6 +2576,11 @@ function getDiaMesAtividade_(value) {
 }
 
 function getDesafioMesExtensoAnoLabel_(desafio) {
+  var periodoDesafioTexto = String((desafio && desafio.periodo_desafio) || '').trim();
+  var periodoDesafio = getDesafioMesAnoFromPeriodoTexto_(periodoDesafioTexto);
+  if (periodoDesafio) return periodoDesafio;
+  if (periodoDesafioTexto) return '-';
+
   var inicio = String((desafio && desafio.periodo_inicio) || '').trim();
   var fim = String((desafio && desafio.periodo_fim) || '').trim();
   var base = inicio || fim;
@@ -2870,10 +2877,12 @@ function montarPainelContextual(basePainel, desafio) {
 
 
 function getDesafioMesAnoLabel(desafio, contexto) {
-  var periodoDesafio = getDesafioMesAnoFromPeriodoTexto_(
-    (desafio && desafio.periodo_desafio) || (contexto && contexto.periodo_desafio)
-  );
+  var periodoDesafioTexto = String(
+    (desafio && desafio.periodo_desafio) || (contexto && contexto.periodo_desafio) || ''
+  ).trim();
+  var periodoDesafio = getDesafioMesAnoFromPeriodoTexto_(periodoDesafioTexto);
   if (periodoDesafio) return 'Período: ' + periodoDesafio;
+  if (periodoDesafioTexto) return 'Período: -';
 
   var inicio = String((desafio && desafio.periodo_inicio) || (contexto && contexto.periodo_inicio) || '').trim();
   var fim = String((desafio && desafio.periodo_fim) || (contexto && contexto.periodo_fim) || '').trim();

@@ -766,8 +766,6 @@ function buildListaDesafiosContexto_(ss) {
     'id desafio base'
   ]);
   var idxPeriodo = getOptionalColumnIndex_(map, ['periodo', 'período']);
-  var idxDataInicio = getOptionalColumnIndex_(map, ['data_inicio', 'data início', 'data inicio', 'inicio', 'início']);
-  var idxDataFim = getOptionalColumnIndex_(map, ['data_fim', 'data fim', 'fim']);
   var idxNome = getOptionalColumnIndex_(map, [
     'nome_desafio',
     'nome desafio',
@@ -804,12 +802,9 @@ function buildListaDesafiosContexto_(ss) {
     var periodoMensal = idxPeriodo > -1
       ? normalizarPeriodoMensal_(row[idxPeriodo])
       : { inicio: '', fim: '' };
-    var dataInicio = idxDataInicio > -1 ? normalizarDataISO_(row[idxDataInicio]) : '';
-    var dataFim = idxDataFim > -1 ? normalizarDataISO_(row[idxDataFim]) : '';
-
     var periodo = {
-      inicio: dataInicio || periodoMensal.inicio,
-      fim: dataFim || periodoMensal.fim,
+      inicio: periodoMensal.inicio,
+      fim: periodoMensal.fim,
       periodo_desafio: periodoTexto,
       nome_desafio: nomeDesafio || aba
     };
