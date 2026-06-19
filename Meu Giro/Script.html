@@ -3813,8 +3813,8 @@ function compareDesafioHistorico_(a, b) {
   var inicioB = String((b && b.periodo_inicio) || '').trim();
   if (inicioA !== inicioB) return inicioB.localeCompare(inicioA);
 
-  var nomeA = String((a && (a.nome_desafio || a.nome || a.titulo)) || '').trim();
-  var nomeB = String((b && (b.nome_desafio || b.nome || b.titulo)) || '').trim();
+  var nomeA = getDesafioTitulo(a);
+  var nomeB = getDesafioTitulo(b);
   return nomeA.localeCompare(nomeB);
 }
 
@@ -3826,17 +3826,22 @@ function isMesmoDesafio(a, b) {
 }
 
 function getDesafioTitulo(desafio) {
-  var nome = String(
-    (desafio && (
-      desafio.nome_desafio ||
-      desafio.nome ||
-      desafio.titulo ||
-      desafio.desafio_nome ||
-      desafio.identificacao
-    )) || ''
-  ).trim();
+  var camposNomeAmigavel = [
+    'nome_exibicao',
+    'nome_desafio',
+    'desafio',
+    'titulo',
+    'nome',
+    'item_nome',
+    'nome_item_estoque',
+    'descricao_item'
+  ];
 
-  if (nome) return nome;
+  for (var i = 0; i < camposNomeAmigavel.length; i++) {
+    var campo = camposNomeAmigavel[i];
+    var valor = String((desafio && desafio[campo]) || '').trim();
+    if (valor) return valor;
+  }
 
   var idDesafio = String((desafio && desafio.id_desafio) || '').trim();
   var idItem = String((desafio && desafio.id_item_estoque) || '').trim();
@@ -5153,7 +5158,7 @@ function renderAdminValidacaoLista(lista) {
 
   itens.forEach(function(item, index) {
     var idCard = 'admin-cert-obs-' + index;
-    var titulo = (item.nome_participante || 'Participante sem nome') + ' · ' + (item.nome_desafio || ('Desafio ' + (item.id_desafio || '-')));
+    var titulo = (item.nome_participante || 'Participante sem nome') + ' · ' + getDesafioTitulo(item);
     var statusValidacaoExibicao = formatAdminStatusValidacao_(item.status_validacao_certificado);
 
     var card = document.createElement('div');
