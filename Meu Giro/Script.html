@@ -2446,6 +2446,16 @@ function getDesafioMesAnoFromPeriodoTexto_(valor) {
     return nomeIso ? nomeIso + '/' + match[1] : '';
   }
 
+  if (/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat)\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}\s+\d{4}\s+/i.test(texto)) {
+    var dataSerializada = new Date(texto);
+    if (!isNaN(dataSerializada.getTime())) {
+      var mesSerializado = String(dataSerializada.getMonth() + 1).padStart(2, '0');
+      var anoSerializado = dataSerializada.getFullYear();
+      var nomeMesSerializado = getMesNome_(mesSerializado);
+      return nomeMesSerializado ? nomeMesSerializado + '/' + anoSerializado : '';
+    }
+  }
+
   return '';
 }
 
