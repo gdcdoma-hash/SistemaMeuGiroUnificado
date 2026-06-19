@@ -2038,6 +2038,7 @@ function carregarPainelPosSalvarLeve(permitirDuranteMutacao) {
       var previousPainelContextual = montarPainelContextualPorChave(previousPainel, focoAntesDaAtualizacao);
       var shouldPlayRitmoAgoraFeedback = painelProgressFeedbackMode === 'activity-registered';
       currentPainel = mesclarPainelPosSalvarLeve_(currentPainel, res.data || {});
+      bug03PeriodoDesafioLogPainelFrontend_('currentPainel/pos-salvar-leve', currentPainel);
       if (currentPainel && currentUser) {
         currentUser.nome = String(currentPainel.nome || currentUser.nome || '').trim();
         currentUser.cidade_uf = String(currentPainel.cidade_uf || currentUser.cidade_uf || '').trim();
@@ -2151,6 +2152,7 @@ function carregarPainel(triggerSource, permitirDuranteMutacao) {
       var shouldPlayRankingPreviewFeedback = painelProgressFeedbackMode === 'activity-registered';
       var shouldPlayRitmoAgoraFeedback = painelProgressFeedbackMode === 'activity-registered';
       currentPainel = res.data || {};
+      bug03PeriodoDesafioLogPainelFrontend_('currentPainel/getPainelUsuario', currentPainel);
       if (currentPainel && currentUser) {
         currentUser.nome = String(currentPainel.nome || currentUser.nome || '').trim();
         currentUser.cidade_uf = String(currentPainel.cidade_uf || currentUser.cidade_uf || '').trim();
@@ -2314,16 +2316,54 @@ function getPeriodoDesafioVisual_(desafio, contexto) {
   return '';
 }
 
-function debugPeriodoDesafioFrontend_(etapa, recebido, enviado, desafio) {
+function bug03PeriodoDesafioFrontendAtivo_() {
   try {
-    if (!window || !window.console || !window.console.debug) return;
-    console.debug('[DEBUG][periodo_desafio][' + etapa + ']', {
-      id_desafio: String((desafio && desafio.id_desafio) || '').trim(),
-      nome: getDesafioTitulo(desafio || {}),
-      periodo_desafio_recebido: String(recebido || '').trim(),
-      periodo_desafio_enviado: String(enviado || '').trim()
+    return !!(window && (window.PERFORMANCE_DEBUG || window.DEBUG_BUG03 || localStorage.getItem('PERFORMANCE_DEBUG') === 'true' || localStorage.getItem('DEBUG_BUG03') === 'true'));
+  } catch (e) {
+    return false;
+  }
+}
+
+function bug03PeriodoDesafioResumoFrontend_(desafio) {
+  return {
+    id_desafio: String((desafio && desafio.id_desafio) || '').trim(),
+    id_item_estoque: String((desafio && desafio.id_item_estoque) || '').trim(),
+    nome_desafio: getDesafioTitulo(desafio || {}),
+    periodo_desafio: String(getPeriodoDesafioVisual_(desafio) || '').trim(),
+    periodo_inicio: String((desafio && desafio.periodo_inicio) || '').trim(),
+    periodo_fim: String((desafio && desafio.periodo_fim) || '').trim()
+  };
+}
+
+function bug03PeriodoDesafioLogFrontend_(etapa, desafio, extra) {
+  try {
+    if (!bug03PeriodoDesafioFrontendAtivo_() || !window || !window.console || !window.console.log) return;
+    var payload = bug03PeriodoDesafioResumoFrontend_(desafio || {});
+    Object.keys(extra || {}).forEach(function(chave) {
+      payload[chave] = extra[chave];
+    });
+    console.log('[BUG03][periodo_desafio][' + etapa + ']', payload);
+  } catch (e) {}
+}
+
+function bug03PeriodoDesafioLogPainelFrontend_(etapa, painel) {
+  try {
+    if (!bug03PeriodoDesafioFrontendAtivo_() || !window || !window.console || !window.console.log) return;
+    var p = painel || {};
+    console.log('[BUG03][periodo_desafio][' + etapa + ']', {
+      desafios_ativos: (Array.isArray(p.desafios_ativos) ? p.desafios_ativos : []).map(bug03PeriodoDesafioResumoFrontend_),
+      desafios_historico: (Array.isArray(p.desafios_historico) ? p.desafios_historico : []).map(bug03PeriodoDesafioResumoFrontend_),
+      desafio_em_foco: p.desafio_em_foco ? bug03PeriodoDesafioResumoFrontend_(p.desafio_em_foco) : null
     });
   } catch (e) {}
+}
+
+function debugPeriodoDesafioFrontend_(etapa, recebido, enviado, desafio) {
+  bug03PeriodoDesafioLogFrontend_(etapa, desafio, {
+    valor_recebido: String(recebido || '').trim(),
+    valor_normalizado: String(recebido || '').trim(),
+    retorno_final: String(enviado || '').trim()
+  });
 }
 
 function buildConquistaCard_(desafio) {
@@ -2366,10 +2406,13 @@ function buildConquistaCard_(desafio) {
 function getDesafioMesAnoPortugues_(desafio) {
   var periodoDesafioTexto = getPeriodoDesafioVisual_(desafio);
   var periodoDesafio = getDesafioMesAnoFromPeriodoTexto_(periodoDesafioTexto);
-  if (periodoDesafio) return periodoDesafio;
-  if (periodoDesafioTexto) return '-';
-
-  return '-';
+  var retorno = periodoDesafio ? periodoDesafio : '-';
+  bug03PeriodoDesafioLogFrontend_('getDesafioMesAnoPortugues_', desafio, {
+    valor_recebido: periodoDesafioTexto,
+    valor_normalizado: periodoDesafio,
+    retorno_final: retorno
+  });
+  return retorno;
 }
 
 function getDesafioMesAnoFromPeriodoTexto_(valor) {
@@ -2516,6 +2559,7 @@ function voltarDesafiosV2() {
 }
 
 function renderDetalheDesafioV2_(desafio) {
+  bug03PeriodoDesafioLogFrontend_('renderDetalheDesafioV2_', desafio);
   var meta = toFiniteNumber(desafio.meta_km, 0);
   var realizado = toFiniteNumber(desafio.distancia_realizada, 0);
   var falta = Math.max(0, meta - realizado);
@@ -2904,10 +2948,13 @@ function montarPainelContextual(basePainel, desafio) {
 function getDesafioMesAnoLabel(desafio, contexto) {
   var periodoDesafioTexto = getPeriodoDesafioVisual_(desafio, contexto);
   var periodoDesafio = getDesafioMesAnoFromPeriodoTexto_(periodoDesafioTexto);
-  if (periodoDesafio) return 'Período: ' + periodoDesafio;
-  if (periodoDesafioTexto) return 'Período: -';
-
-  return 'Período: -';
+  var retorno = periodoDesafio ? 'Período: ' + periodoDesafio : 'Período: -';
+  bug03PeriodoDesafioLogFrontend_('getDesafioMesAnoLabel', desafio || contexto, {
+    valor_recebido: periodoDesafioTexto,
+    valor_normalizado: periodoDesafio,
+    retorno_final: retorno
+  });
+  return retorno;
 }
 
 function obterCampoAtividadePainel_(atividade, campos) {

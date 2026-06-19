@@ -1,3 +1,32 @@
+
+function painelMG_logBug03ListaDesafios_(etapa, lista, origem) {
+  if (typeof bug03PeriodoDesafioLogBackend_ !== 'function') return;
+
+  (Array.isArray(lista) ? lista : []).forEach(function(item) {
+    bug03PeriodoDesafioLogBackend_(etapa, {
+      id_dgmb: item && item.id_dgmb,
+      id_desafio: item && item.id_desafio,
+      id_inscricao: item && item.id_inscricao,
+      id_item_estoque: item && item.id_item_estoque,
+      nome_desafio: item && item.nome_desafio,
+      periodo_desafio: item && item.periodo_desafio,
+      periodo_inicio: item && item.periodo_inicio,
+      periodo_fim: item && item.periodo_fim,
+      origem: origem
+    });
+  });
+}
+
+function painelMG_logBug03Desafio_(etapa, item, origem) {
+  if (typeof bug03PeriodoDesafioLogBackend_ !== 'function') return;
+  if (!item) {
+    bug03PeriodoDesafioLogBackend_(etapa, { origem: origem });
+    return;
+  }
+
+  painelMG_logBug03ListaDesafios_(etapa, [item], origem);
+}
+
 function getPainelUsuario(idDgmb) {
   var perfTotalInicio = painelMG_perfNow_();
   var perfEtapaInicio = perfTotalInicio;
@@ -146,11 +175,9 @@ function getPainelUsuario(idDgmb) {
       total_rankings_por_desafio: rankingPorDesafio ? Object.keys(rankingPorDesafio).length : 0
     });
 
-    if (typeof debugPeriodoDesafioBackend_ === 'function') {
-      debugPeriodoDesafioBackend_('getPainelUsuario/desafio_em_foco', desafioPrincipalPainel && desafioPrincipalPainel.periodo_desafio, desafioPrincipalPainel && desafioPrincipalPainel.periodo_desafio, desafioPrincipalPainel || {});
-      debugPeriodoDesafioBackend_('getPainelUsuario/desafios_ativos', desafiosAtivosPainel[0] && desafiosAtivosPainel[0].periodo_desafio, desafiosAtivosPainel[0] && desafiosAtivosPainel[0].periodo_desafio, desafiosAtivosPainel[0] || {});
-      debugPeriodoDesafioBackend_('getPainelUsuario/desafios_historico', desafiosHistoricoPainel[0] && desafiosHistoricoPainel[0].periodo_desafio, desafiosHistoricoPainel[0] && desafiosHistoricoPainel[0].periodo_desafio, desafiosHistoricoPainel[0] || {});
-    }
+    painelMG_logBug03Desafio_('getPainelUsuario/desafio_em_foco', desafioPrincipalPainel, 'payload.data.desafio_em_foco');
+    painelMG_logBug03ListaDesafios_('getPainelUsuario/desafios_ativos', desafiosAtivosPainel, 'payload.data.desafios_ativos');
+    painelMG_logBug03ListaDesafios_('getPainelUsuario/desafios_historico', desafiosHistoricoPainel, 'payload.data.desafios_historico');
     return {
       ok: true,
       data: {
@@ -411,11 +438,9 @@ function getPainelUsuarioPosSalvarLeve(idDgmb) {
     });
 
 
-    if (typeof debugPeriodoDesafioBackend_ === 'function') {
-      debugPeriodoDesafioBackend_('getPainelUsuarioPosSalvarLeve/desafio_em_foco', desafioPrincipalPainel && desafioPrincipalPainel.periodo_desafio, desafioPrincipalPainel && desafioPrincipalPainel.periodo_desafio, desafioPrincipalPainel || {});
-      debugPeriodoDesafioBackend_('getPainelUsuarioPosSalvarLeve/desafios_ativos', desafiosAtivosPainel[0] && desafiosAtivosPainel[0].periodo_desafio, desafiosAtivosPainel[0] && desafiosAtivosPainel[0].periodo_desafio, desafiosAtivosPainel[0] || {});
-      debugPeriodoDesafioBackend_('getPainelUsuarioPosSalvarLeve/desafios_historico', desafiosHistoricoPainel[0] && desafiosHistoricoPainel[0].periodo_desafio, desafiosHistoricoPainel[0] && desafiosHistoricoPainel[0].periodo_desafio, desafiosHistoricoPainel[0] || {});
-    }
+    painelMG_logBug03Desafio_('getPainelUsuarioPosSalvarLeve/desafio_em_foco', desafioPrincipalPainel, 'payload leve data.desafio_em_foco');
+    painelMG_logBug03ListaDesafios_('getPainelUsuarioPosSalvarLeve/desafios_ativos', desafiosAtivosPainel, 'payload leve data.desafios_ativos');
+    painelMG_logBug03ListaDesafios_('getPainelUsuarioPosSalvarLeve/desafios_historico', desafiosHistoricoPainel, 'payload leve data.desafios_historico');
 
     return {
       ok: true,
