@@ -19,6 +19,7 @@ const helperCode = getFunctionSlice('getDesafioTitulo', 'getActivityDateParts_')
   getFunctionSlice('getDesafioMesAnoPortugues_', 'parseDesafioPeriodoDate_') + '\n' +
   getFunctionSlice('parseDesafioPeriodoDate_', 'obterTodosDesafiosPainelV2_') + '\n' +
   getFunctionSlice('getDesafioMesAnoLabel', 'obterCampoAtividadePainel_') + '\n' +
+  getFunctionSlice('getDesafioMesExtensoAnoLabel_', 'formatKmConquistaDetalhe_') + '\n' +
   getFunctionSlice('getMesNome_', 'getMesLabel_');
 const ctx = {};
 vm.createContext(ctx);
@@ -66,17 +67,23 @@ test('ranking, desafio em foco e certificados administrativos usam getDesafioTit
 
 
 test('getDesafioMesAnoLabel prioriza periodo_desafio formatado como mês/ano amigável', () => {
-  assert.equal(ctx.getDesafioMesAnoLabel({ periodo_desafio: 'junho/2026', periodo_inicio: '2026-05-01' }), 'Período: Junho/2026');
+  assert.equal(ctx.getDesafioMesAnoLabel({ periodo_desafio: 'junho/2026', periodo_inicio: '2026-05-01', periodo_fim: '2026-06-30' }), 'Período: Junho/2026');
+  assert.equal(ctx.getDesafioMesAnoLabel({ periodo_desafio: 'abril/2026', periodo_inicio: '2026-05-01', periodo_fim: '2026-06-30' }), 'Período: Abril/2026');
 });
 
-test('getDesafioMesAnoLabel usa periodo_inicio como fallback e periodo_fim como último fallback', () => {
+test('getDesafioMesAnoLabel usa periodo_inicio como fallback apenas sem periodo_desafio', () => {
   assert.equal(ctx.getDesafioMesAnoLabel({ periodo_inicio: '2026-06-01' }), 'Período: Junho/2026');
   assert.equal(ctx.getDesafioMesAnoLabel({ periodo_fim: '2026-04-30' }), 'Período: Abril/2026');
 });
 
-test('cards em andamento e conquistas não exibem hífen quando periodo_desafio existe', () => {
+test('cards em andamento, detalhe e conquistas usam periodo_desafio', () => {
   assert.equal(ctx.getDesafioMesAnoLabel({ periodo_desafio: 'junho/2026' }), 'Período: Junho/2026');
   assert.equal(ctx.getDesafioMesAnoPortugues_({ periodo_desafio: 'abril/2026' }), 'Abril/2026');
+  assert.equal(ctx.getDesafioMesExtensoAnoLabel_({ periodo_desafio: 'junho/2026', periodo_inicio: '2026-05-01' }), 'Junho/2026');
   assert.notEqual(ctx.getDesafioMesAnoLabel({ periodo_desafio: 'junho/2026' }), 'Período: -');
   assert.notEqual(ctx.getDesafioMesAnoPortugues_({ periodo_desafio: 'abril/2026' }), '-');
+});
+
+test('getDesafioMesAnoLabel não usa Data_Inicio/Data_Fim como fallback visual quando Periodo existe', () => {
+  assert.equal(ctx.getDesafioMesAnoLabel({ periodo_desafio: 'periodo inválido', periodo_inicio: '2026-05-01', periodo_fim: '2026-06-30' }), 'Período: -');
 });
