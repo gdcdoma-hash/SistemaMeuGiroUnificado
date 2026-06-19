@@ -796,26 +796,26 @@ function buildListaDesafiosContexto_(ss) {
   for (var i = 1; i < rows.length; i++) {
     var row = rows[i];
     var aba = normalizeText_(row[idxAba]);
+    var idDesafioPeriodo = idxIdPeriodo > -1 ? normalizeText_(row[idxIdPeriodo]) : '';
+    var nomeDesafio = idxNome > -1 ? normalizeText_(row[idxNome]) : '';
+    var periodoTexto = idxPeriodo > -1 ? normalizeText_(row[idxPeriodo]) : '';
+    var periodoMensal = idxPeriodo > -1
+      ? normalizarPeriodoMensal_(row[idxPeriodo])
+      : { inicio: '', fim: '' };
+
+    var periodo = {
+      inicio: periodoMensal.inicio,
+      fim: periodoMensal.fim,
+      periodo_desafio: periodoTexto,
+      nome_desafio: nomeDesafio || aba
+    };
 
     if (aba) {
-      var nomeDesafio = idxNome > -1 ? normalizeText_(row[idxNome]) : '';
-      var periodoTexto = idxPeriodo > -1 ? normalizeText_(row[idxPeriodo]) : '';
-      var periodoMensal = idxPeriodo > -1
-        ? normalizarPeriodoMensal_(row[idxPeriodo])
-        : { inicio: '', fim: '' };
-      var periodo = {
-        inicio: periodoMensal.inicio,
-        fim: periodoMensal.fim,
-        periodo_desafio: periodoTexto,
-        nome_desafio: nomeDesafio || aba
-      };
-
       contexto.periodos.byAba[aba] = periodo;
+    }
 
-      if (idxIdPeriodo > -1) {
-        var idDesafioPeriodo = normalizeText_(row[idxIdPeriodo]);
-        if (idDesafioPeriodo) contexto.periodos.byId[idDesafioPeriodo] = periodo;
-      }
+    if (idDesafioPeriodo) {
+      contexto.periodos.byId[idDesafioPeriodo] = periodo;
     }
 
     if (contexto.status.possuiColunaId) {
@@ -838,6 +838,14 @@ function buildPeriodoOficialPorAbaEId_(ss) {
 
 function buildMapaStatusDesafioListaPorId_(ss) {
   return buildListaDesafiosContexto_(ss).status;
+}
+
+function obterNomeDesafioListaPorId_(periodos, idDesafio, nomeAtual) {
+  var atual = normalizeText_(nomeAtual);
+  var id = normalizeText_(idDesafio);
+  var periodoLista = id && periodos && periodos.byId ? periodos.byId[id] : null;
+  var nomeLista = normalizeText_(periodoLista && periodoLista.nome_desafio);
+  return nomeLista || atual;
 }
 
 function logMeuGiroDiagnostico_(mensagem, dados) {
@@ -1043,6 +1051,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
       : aptoBase;
 
     var periodoLista = (idDesafio && periodos.byId[idDesafio]) || (!ehNormal && periodos.byAba[abaDesafio]) || { inicio: '', fim: '', nome_desafio: '' };
+    periodoLista.nome_desafio = obterNomeDesafioListaPorId_(periodos, idDesafio, periodoLista.nome_desafio);
     var periodo = montarPeriodoHistoricoVinculo_(row, {
       periodo: idxPeriodoHistorico,
       inicio: idxInicioHistorico,
@@ -1321,6 +1330,7 @@ function obterMeuGiroResumoAtualizadoLeve_(idDgmb) {
 
   var layoutResumo = meuGiroResumoObterLayout_(valoresResumo[0] || [], sheetName);
   var mapResumo = layoutResumo.map;
+  var periodosListaDesafios = buildListaDesafiosContexto_(ss).periodos;
   var idxInscricaoResumo = getOptionalColumnIndex_(mapResumo, ['id_inscricao', 'id inscrição', 'id inscricao']);
   var idxId = getOptionalColumnIndex_(mapResumo, ['id_dgmb']);
   var idxDesafio = getOptionalColumnIndex_(mapResumo, ['id_desafio']);
@@ -1345,7 +1355,7 @@ function obterMeuGiroResumoAtualizadoLeve_(idDgmb) {
       id_dgmb: id,
       id_desafio: normalizeText_(row[idxDesafio]),
       id_item_estoque: normalizeText_(row[idxItem]),
-      nome_desafio: '',
+      nome_desafio: obterNomeDesafioListaPorId_(periodosListaDesafios, row[idxDesafio], ''),
       meta_km: Math.round((meta + Number.EPSILON) * 10) / 10,
       distancia_realizada: Math.round((parseLocalizedNumber_(row[idxDistanciaResumo]) + Number.EPSILON) * 10) / 10,
       percentual_concluido: Math.round((parseLocalizedNumber_(row[idxPercentualResumo]) + Number.EPSILON) * 10) / 10,
