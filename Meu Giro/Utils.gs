@@ -766,6 +766,8 @@ function buildListaDesafiosContexto_(ss) {
     'id desafio base'
   ]);
   var idxPeriodo = getOptionalColumnIndex_(map, ['periodo', 'período']);
+  var idxDataInicio = getOptionalColumnIndex_(map, ['data_inicio', 'data início', 'data inicio', 'inicio', 'início']);
+  var idxDataFim = getOptionalColumnIndex_(map, ['data_fim', 'data fim', 'fim']);
   var idxNome = getOptionalColumnIndex_(map, [
     'nome_desafio',
     'nome desafio',
@@ -802,10 +804,12 @@ function buildListaDesafiosContexto_(ss) {
     var periodoMensal = idxPeriodo > -1
       ? normalizarPeriodoMensal_(row[idxPeriodo])
       : { inicio: '', fim: '' };
+    var dataInicio = idxDataInicio > -1 ? normalizarDataISO_(row[idxDataInicio]) : '';
+    var dataFim = idxDataFim > -1 ? normalizarDataISO_(row[idxDataFim]) : '';
 
     var periodo = {
-      inicio: periodoMensal.inicio,
-      fim: periodoMensal.fim,
+      inicio: dataInicio || periodoMensal.inicio,
+      fim: dataFim || periodoMensal.fim,
       periodo_desafio: periodoTexto,
       nome_desafio: nomeDesafio || aba
     };
@@ -1350,12 +1354,14 @@ function obterMeuGiroResumoAtualizadoLeve_(idDgmb) {
     if (normalizeText_(row[idxId]) !== id) continue;
 
     var meta = parseLocalizedNumber_(row[idxMetaResumo]);
+    var idDesafioResumo = normalizeText_(row[idxDesafio]);
+    var periodoListaResumo = (idDesafioResumo && periodosListaDesafios.byId[idDesafioResumo]) || { inicio: '', fim: '', periodo_desafio: '' };
     saida.push({
       id_inscricao: idxInscricaoResumo > -1 ? normalizeText_(row[idxInscricaoResumo]) : '',
       id_dgmb: id,
-      id_desafio: normalizeText_(row[idxDesafio]),
+      id_desafio: idDesafioResumo,
       id_item_estoque: normalizeText_(row[idxItem]),
-      nome_desafio: obterNomeDesafioListaPorId_(periodosListaDesafios, row[idxDesafio], ''),
+      nome_desafio: obterNomeDesafioListaPorId_(periodosListaDesafios, idDesafioResumo, ''),
       meta_km: Math.round((meta + Number.EPSILON) * 10) / 10,
       distancia_realizada: Math.round((parseLocalizedNumber_(row[idxDistanciaResumo]) + Number.EPSILON) * 10) / 10,
       percentual_concluido: Math.round((parseLocalizedNumber_(row[idxPercentualResumo]) + Number.EPSILON) * 10) / 10,
@@ -1365,9 +1371,9 @@ function obterMeuGiroResumoAtualizadoLeve_(idDgmb) {
       status_usuario_desafio: '',
       status_pagamento: '',
       status_lista_desafios: '',
-      periodo_inicio: '',
-      periodo_fim: '',
-      periodo_desafio: ''
+      periodo_inicio: periodoListaResumo.inicio || '',
+      periodo_fim: periodoListaResumo.fim || '',
+      periodo_desafio: periodoListaResumo.periodo_desafio || ''
     });
   }
 

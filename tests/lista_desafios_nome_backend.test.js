@@ -24,7 +24,13 @@ function buildContext(rows) {
     meuGiroPerfLog_() {},
     normalizeCell_(value) { return String(value == null ? '' : value).trim(); },
     normalizeText_(value) { return String(value == null ? '' : value).trim(); },
-    normalizarPeriodoMensal_() { return { inicio: '', fim: '' }; }
+    normalizarPeriodoMensal_(value) {
+      const text = String(value == null ? '' : value).trim().toLowerCase();
+      if (text === 'junho/2026') return { inicio: '2026-06-01', fim: '2026-06-30' };
+      if (text === 'abril/2026') return { inicio: '2026-04-01', fim: '2026-04-30' };
+      return { inicio: '', fim: '' };
+    },
+    normalizarDataISO_(value) { return String(value == null ? '' : value).trim(); }
   };
   ctx.buildHeaderMap_ = function(headerRow) {
     const map = {};
@@ -67,6 +73,22 @@ test('ListaDesafios alimenta nome_desafio por id_Desafio_lista mesmo sem aba', (
   assert.equal(contexto.periodos.byId['129'].nome_desafio, 'DESAFIO VOCÊ NA META');
 });
 
+
+test('buildListaDesafiosContexto captura Periodo, Data_Inicio e Data_Fim', () => {
+  const rows = [
+    ['id_Desafio_lista', 'Nome_Desafio', 'Periodo', 'Data_Inicio', 'Data_Fim', 'Status'],
+    ['128', 'LETRA R', 'junho/2026', '2026-05-01', '2026-06-30', 'ativo']
+  ];
+  const ctx = buildContext(rows);
+
+  const contexto = ctx.buildListaDesafiosContexto_(ctx.ss);
+  const periodo = contexto.periodos.byId['128'];
+
+  assert.equal(periodo.periodo_desafio, 'junho/2026');
+  assert.equal(periodo.inicio, '2026-05-01');
+  assert.equal(periodo.fim, '2026-06-30');
+});
+
 test('objeto de desafio usa nome_desafio vindo do cache de ListaDesafios e preserva IDs', () => {
   const rows = [
     ['id_Desafio_lista', 'Nome_Desafio', 'Status'],
@@ -88,10 +110,35 @@ test('objeto de desafio usa nome_desafio vindo do cache de ListaDesafios e prese
   });
 });
 
+
+test('objeto de desafio recebe periodo_desafio vindo do cache de ListaDesafios', () => {
+  const rows = [
+    ['id_Desafio_lista', 'Nome_Desafio', 'Periodo', 'Data_Inicio', 'Data_Fim'],
+    ['128', 'LETRA R', 'junho/2026', '2026-05-01', '2026-06-30']
+  ];
+  const ctx = buildContext(rows);
+  const periodoLista = ctx.buildListaDesafiosContexto_(ctx.ss).periodos.byId['128'];
+  const desafio = {
+    id_desafio: '128',
+    periodo_inicio: periodoLista.inicio,
+    periodo_fim: periodoLista.fim,
+    periodo_desafio: periodoLista.periodo_desafio
+  };
+
+  assert.deepEqual(desafio, {
+    id_desafio: '128',
+    periodo_inicio: '2026-05-01',
+    periodo_fim: '2026-06-30',
+    periodo_desafio: 'junho/2026'
+  });
+});
+
 test('obterMeuGiroResumoAtualizadoLeve consulta cache de ListaDesafios e injeta nome_desafio', () => {
   const light = getFunctionSlice('obterMeuGiroResumoAtualizadoLeve_', 'meuGiroResumoAgruparLinhasContiguas_');
   assert.match(light, /var periodosListaDesafios = buildListaDesafiosContexto_\(ss\)\.periodos;/);
-  assert.match(light, /nome_desafio: obterNomeDesafioListaPorId_\(periodosListaDesafios, row\[idxDesafio\], ''\)/);
+  assert.match(light, /var periodoListaResumo = \(idDesafioResumo && periodosListaDesafios\.byId\[idDesafioResumo\]\)/);
+  assert.match(light, /nome_desafio: obterNomeDesafioListaPorId_\(periodosListaDesafios, idDesafioResumo, ''\)/);
+  assert.match(light, /periodo_desafio: periodoListaResumo\.periodo_desafio/);
 });
 
 test('getPainelUsuario preserva nome_desafio em desafios_ativos e desafios_historico', () => {
