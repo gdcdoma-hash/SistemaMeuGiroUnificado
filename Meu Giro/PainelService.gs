@@ -146,6 +146,11 @@ function getPainelUsuario(idDgmb) {
       total_rankings_por_desafio: rankingPorDesafio ? Object.keys(rankingPorDesafio).length : 0
     });
 
+    if (typeof debugPeriodoDesafioBackend_ === 'function') {
+      debugPeriodoDesafioBackend_('getPainelUsuario/desafio_em_foco', desafioPrincipalPainel && desafioPrincipalPainel.periodo_desafio, desafioPrincipalPainel && desafioPrincipalPainel.periodo_desafio, desafioPrincipalPainel || {});
+      debugPeriodoDesafioBackend_('getPainelUsuario/desafios_ativos', desafiosAtivosPainel[0] && desafiosAtivosPainel[0].periodo_desafio, desafiosAtivosPainel[0] && desafiosAtivosPainel[0].periodo_desafio, desafiosAtivosPainel[0] || {});
+      debugPeriodoDesafioBackend_('getPainelUsuario/desafios_historico', desafiosHistoricoPainel[0] && desafiosHistoricoPainel[0].periodo_desafio, desafiosHistoricoPainel[0] && desafiosHistoricoPainel[0].periodo_desafio, desafiosHistoricoPainel[0] || {});
+    }
     return {
       ok: true,
       data: {
@@ -404,6 +409,13 @@ function getPainelUsuarioPosSalvarLeve(idDgmb) {
       total_desafios: desafiosConsolidados.length,
       total_atividades: atividades && atividades.length ? atividades.length : 0
     });
+
+
+    if (typeof debugPeriodoDesafioBackend_ === 'function') {
+      debugPeriodoDesafioBackend_('getPainelUsuarioPosSalvarLeve/desafio_em_foco', desafioPrincipalPainel && desafioPrincipalPainel.periodo_desafio, desafioPrincipalPainel && desafioPrincipalPainel.periodo_desafio, desafioPrincipalPainel || {});
+      debugPeriodoDesafioBackend_('getPainelUsuarioPosSalvarLeve/desafios_ativos', desafiosAtivosPainel[0] && desafiosAtivosPainel[0].periodo_desafio, desafiosAtivosPainel[0] && desafiosAtivosPainel[0].periodo_desafio, desafiosAtivosPainel[0] || {});
+      debugPeriodoDesafioBackend_('getPainelUsuarioPosSalvarLeve/desafios_historico', desafiosHistoricoPainel[0] && desafiosHistoricoPainel[0].periodo_desafio, desafiosHistoricoPainel[0] && desafiosHistoricoPainel[0].periodo_desafio, desafiosHistoricoPainel[0] || {});
+    }
 
     return {
       ok: true,
