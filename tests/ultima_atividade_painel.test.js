@@ -8,16 +8,19 @@ const script = fs.readFileSync(
 );
 
 const helperInicio = script.indexOf('function obterUltimaAtividadePainel_(atividades)');
+const sourceInicio = script.indexOf('function obterAtividadesReaisUltimaPainel_(contexto, painel)');
 const renderInicio = script.indexOf('function renderUltimaAtividadePainel(lista)');
 const syncInicio = script.indexOf('function sincronizarPainelComDesafioEmFoco()');
 const renderPainelInicio = script.indexOf('function renderPainel(p)');
 
 assert.ok(helperInicio >= 0, 'deve existir helper obterUltimaAtividadePainel_');
+assert.ok(sourceInicio >= 0, 'deve existir helper obterAtividadesReaisUltimaPainel_');
 assert.ok(renderInicio >= 0, 'renderUltimaAtividadePainel deve existir');
 assert.ok(syncInicio >= 0, 'sincronizarPainelComDesafioEmFoco deve existir');
 assert.ok(renderPainelInicio >= 0, 'renderPainel deve existir');
 
-const helper = script.slice(helperInicio, renderInicio);
+const helper = script.slice(helperInicio, sourceInicio);
+const sourceHelper = script.slice(sourceInicio, renderInicio);
 const render = script.slice(renderInicio, script.indexOf('\nfunction atualizarContextoVisualRanking', renderInicio));
 const sync = script.slice(syncInicio, script.indexOf('\nfunction setTextById', syncInicio));
 const renderPainel = script.slice(renderPainelInicio, script.indexOf('\nfunction renderDesafiosV2', renderPainelInicio));
@@ -63,9 +66,24 @@ assert.match(
   'render deve exibir o km normalizado'
 );
 assert.match(
+  sourceHelper,
+  /if \(atividadesPainel\.length\) return atividadesPainel;/,
+  'helper deve priorizar currentPainel.atividades quando houver atividades reais'
+);
+assert.match(
+  sourceHelper,
+  /return atividadesContexto;/,
+  'helper deve cair para contexto.atividades somente como fallback'
+);
+assert.match(
   sync,
-  /renderUltimaAtividadePainel\(contexto\.atividades \|\| \(currentPainel && currentPainel\.atividades\) \|\| \[\]\);/,
-  'sincronizarPainelComDesafioEmFoco deve enviar a lista atualizada para a última atividade'
+  /renderUltimaAtividadePainel\(obterAtividadesReaisUltimaPainel_\(contexto, currentPainel\)\);/,
+  'sincronizarPainelComDesafioEmFoco deve enviar a fonte real para a última atividade'
+);
+assert.match(
+  sync,
+  /renderAtividades\(atividadesReaisPainel\);/,
+  'lista de atividades deve continuar usando currentPainel.atividades'
 );
 assert.match(
   renderPainel,
