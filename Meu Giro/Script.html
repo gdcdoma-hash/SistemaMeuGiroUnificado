@@ -1730,7 +1730,7 @@ function playPainelProgressFeedback(previousPainel, nextPainel) {
     clearPainelProgressFeedback();
     setTextById('realizado-km', formatNumber(nextRealizado));
     setTextById('restante-km', formatNumber(nextRestante));
-    setTextById('progress-percent', formatNumber(nextPercentual) + '% concluído');
+    setTextById('progress-percent', formatNumber(nextPercentual) + '%');
     setTextById(
       'progress-text',
       formatNumber(nextRealizado) + ' km de ' + formatNumber(toFiniteNumber(nextPainel.meta, 0)) + ' km'
@@ -3099,6 +3099,16 @@ function atualizarContextoVisualRanking(desafioAtual) {
   }
 }
 
+
+function atualizarDonutProgressoPainel_(percentual) {
+  var percentualNormalizado = Math.max(0, Math.min(100, toFiniteNumber(percentual, 0)));
+  var donut = document.getElementById('progress-donut');
+  if (!donut) return;
+
+  donut.style.setProperty('--percent', percentualNormalizado);
+  donut.setAttribute('aria-label', formatNumber(percentualNormalizado) + '% concluído');
+}
+
 function sincronizarPainelComDesafioEmFoco() {
   var painel = currentPainel || {};
   var desafioAtual = getDesafioEmFocoAtual();
@@ -3118,12 +3128,8 @@ function sincronizarPainelComDesafioEmFoco() {
   setTextById('realizado-km', formatNumber(contexto.realizado));
   setTextById('restante-km', formatNumber(contexto.restante));
   setTextById('progress-text', formatNumber(contexto.realizado) + ' km de ' + formatNumber(contexto.meta) + ' km');
-  setTextById('progress-percent', formatNumber(contexto.percentual) + '% concluído');
-
-  const bar = document.getElementById('progress-bar');
-  if (bar) {
-    bar.style.width = Math.max(0, Math.min(100, toFiniteNumber(contexto.percentual, 0))) + '%';
-  }
+  setTextById('progress-percent', formatNumber(contexto.percentual) + '%');
+  atualizarDonutProgressoPainel_(contexto.percentual);
 
   setTextById('ritmo-dia', 'Dia ' + formatNumber(contexto.diaAtual) + ' do desafio.');
   setTextById('ritmo-ideal', formatNumber(contexto.kmIdealAtual) + ' km');
