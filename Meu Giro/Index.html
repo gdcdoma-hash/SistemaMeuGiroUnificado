@@ -103,16 +103,25 @@
           <p id="painel-desafio-periodo" class="painel-desafio-periodo">Período: -</p>
         </div>
 
-        <div class="painel-metricas-emocionais" aria-label="Resumo do desafio">
-          <p><span>Meta</span><strong><span id="meta-km">0</span> km</strong></p>
-          <p><span>Realizado</span><strong><span id="realizado-km">0</span> km</strong></p>
-          <p><span>Faltam</span><strong><span id="restante-km">0</span> km</strong></p>
+        <div class="painel-meta-destaque" aria-label="Meta do desafio">
+          <span>Meta</span>
+          <strong><span id="meta-km">0</span> km</strong>
         </div>
 
-        <p id="progress-percent" class="painel-percentual">0% concluído</p>
-        <div class="painel-progress-track" aria-hidden="true">
-          <span id="progress-bar" class="painel-progress-fill"></span>
+        <div class="painel-progresso-donut-grid" aria-label="Progresso do desafio em foco">
+          <div id="progress-donut" class="painel-progress-donut" style="--percent: 0" role="img" aria-label="0% concluído">
+            <div class="painel-progress-donut-centro">
+              <p id="progress-percent" class="painel-percentual">0%</p>
+              <span>concluído</span>
+            </div>
+          </div>
+
+          <div class="painel-metricas-emocionais">
+            <p><span>Realizado</span><strong><span id="realizado-km">0</span> km</strong></p>
+            <p><span>Faltam</span><strong><span id="restante-km">0</span> km</strong></p>
+          </div>
         </div>
+
         <p id="progress-text" class="painel-progress-text">0 km de 0 km</p>
 
         <div id="painel-status-motivacional" class="painel-status-motivacional painel-status-neutro" aria-live="polite">
