@@ -206,13 +206,13 @@ function mostrarErroAcaoAtividade() {
 
 function confirmarDuplicidadeAtividade() {
   return mostrarModalMeuGiro({
-    titulo: 'Atividade parecida encontrada',
-    mensagem: 'Já existe uma atividade registrada com a mesma data e a mesma distância.\n\nIsso pode acontecer em alguns casos. Confira antes de continuar.\n\nDeseja salvar mesmo assim?',
+    titulo: 'Encontramos uma atividade parecida',
+    mensagem: 'Já existe uma atividade registrada com a mesma data e a mesma distância.\n\nIsso pode acontecer quando você fez dois pedais parecidos ou dividiu uma atividade.\n\nConfira antes de continuar.\n\nDeseja salvar mesmo assim?',
     tipo: 'alerta',
     processando: false,
     origem: 'decisao',
     botoes: [
-      { texto: 'Cancelar', valor: false },
+      { texto: 'Conferir', valor: false },
       { texto: 'Salvar mesmo assim', valor: true, destaque: true }
     ]
   });
@@ -4125,7 +4125,7 @@ async function salvarAtividade(forcarDuplicidade) {
   mostrarModalMeuGiro({
     titulo: 'Salvando atividade...',
     origem: 'atividade',
-    mensagem: 'Estamos registrando seus quilômetros. Aguarde um instante.',
+    mensagem: 'Estamos registrando seus quilômetros.',
     bloqueante: true,
     processando: true
   });
@@ -4186,13 +4186,13 @@ async function salvarAtividade(forcarDuplicidade) {
     atualizarModalMeuGiro({
       titulo: 'Atualizando seus desafios...',
       origem: 'atividade',
-      mensagem: 'Estamos atualizando sua lista de atividades, total de quilômetros e desafios.',
+      mensagem: 'Estamos atualizando sua lista, total de km e progresso.',
       tipo: 'padrao',
       processando: true
     });
     await atualizarPainelAposAtividade();
     await mostrarModalMeuGiro({
-      titulo: 'Atividade salva com sucesso',
+      titulo: '✓ Atividade salva',
       origem: 'decisao',
       mensagem: 'Sua lista de atividades foi atualizada.',
       tipo: 'sucesso',
@@ -4280,7 +4280,7 @@ async function salvarEdicaoAtividade(forcarDuplicidade) {
   mostrarModalMeuGiro({
     titulo: 'Atualizando atividade...',
     origem: 'atividade',
-    mensagem: 'Estamos salvando as alterações. Aguarde um instante.',
+    mensagem: 'Estamos salvando as alterações.',
     bloqueante: true,
     processando: true
   });
@@ -4348,13 +4348,13 @@ async function salvarEdicaoAtividade(forcarDuplicidade) {
     atualizarModalMeuGiro({
       titulo: 'Atualizando seus desafios...',
       origem: 'atividade',
-      mensagem: 'Estamos recalculando sua lista de atividades, total de quilômetros e desafios.',
+      mensagem: 'Estamos atualizando sua lista, total de km e progresso.',
       tipo: 'padrao',
       processando: true
     });
     await atualizarPainelAposAtividade();
     await mostrarModalMeuGiro({
-      titulo: 'Atividade atualizada com sucesso',
+      titulo: '✓ Atividade atualizada',
       origem: 'decisao',
       mensagem: 'Sua lista de atividades foi atualizada.',
       tipo: 'sucesso',
@@ -4482,7 +4482,7 @@ async function excluirAtividadeUI(item, btnExcluir) {
   mostrarModalMeuGiro({
     titulo: 'Excluindo atividade...',
     origem: 'atividade',
-    mensagem: 'Estamos removendo a atividade selecionada. Aguarde um instante.',
+    mensagem: 'Estamos removendo a atividade selecionada.',
     bloqueante: true,
     processando: true
   });
@@ -4523,13 +4523,13 @@ async function excluirAtividadeUI(item, btnExcluir) {
     atualizarModalMeuGiro({
       titulo: 'Atualizando seus desafios...',
       origem: 'atividade',
-      mensagem: 'Estamos atualizando sua lista de atividades, total de quilômetros e desafios.',
+      mensagem: 'Estamos atualizando sua lista, total de km e progresso.',
       tipo: 'padrao',
       processando: true
     });
     await atualizarPainelAposAtividade();
     await mostrarModalMeuGiro({
-      titulo: 'Atividade excluída com sucesso',
+      titulo: '✓ Atividade excluída',
       origem: 'decisao',
       mensagem: 'Sua lista de atividades foi atualizada.',
       tipo: 'sucesso',
