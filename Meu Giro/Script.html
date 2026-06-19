@@ -2925,6 +2925,14 @@ function obterUltimaAtividadePainel_(atividades) {
   return ultima;
 }
 
+function obterAtividadesReaisUltimaPainel_(contexto, painel) {
+  var atividadesPainel = painel && Array.isArray(painel.atividades) ? painel.atividades : [];
+  if (atividadesPainel.length) return atividadesPainel;
+
+  var atividadesContexto = contexto && Array.isArray(contexto.atividades) ? contexto.atividades : [];
+  return atividadesContexto;
+}
+
 function renderUltimaAtividadePainel(lista) {
   var ultima = obterUltimaAtividadePainel_(lista);
   var diaEl = document.getElementById('painel-ultima-dia');
@@ -3014,8 +3022,9 @@ function sincronizarPainelComDesafioEmFoco() {
       : 'Ranking carregado somente sob demanda.';
   }
 
-  renderUltimaAtividadePainel(contexto.atividades || (currentPainel && currentPainel.atividades) || []);
-  renderAtividades(currentPainel && currentPainel.atividades || []);
+  var atividadesReaisPainel = (currentPainel && currentPainel.atividades) || [];
+  renderUltimaAtividadePainel(obterAtividadesReaisUltimaPainel_(contexto, currentPainel));
+  renderAtividades(atividadesReaisPainel);
 }
 
 function setTextById(id, text) {
