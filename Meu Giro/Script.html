@@ -213,7 +213,7 @@ function confirmarDuplicidadeAtividade() {
     origem: 'decisao',
     botoes: [
       { texto: 'Conferir', valor: false },
-      { texto: 'Salvar mesmo assim', valor: true, destaque: true }
+      { texto: 'Salvar', valor: true, destaque: true }
     ]
   });
 }
@@ -4470,7 +4470,7 @@ async function excluirAtividadeUI(item, btnExcluir) {
     processando: false,
     botoes: [
       { texto: 'Cancelar', valor: false },
-      { texto: 'Excluir atividade', valor: true, destaque: true }
+      { texto: 'Excluir', valor: true, destaque: true }
     ]
   });
   if (!confirmar) {

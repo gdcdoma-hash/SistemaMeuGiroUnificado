@@ -82,7 +82,7 @@ test('duplicidade usa texto didático e mantém ações sem bloqueio definitivo'
   assert.match(duplicidade, /Confira antes de continuar/);
   assert.match(duplicidade, /Deseja salvar mesmo assim/);
   assert.match(duplicidade, /\{ texto: 'Conferir', valor: false \}/);
-  assert.match(duplicidade, /\{ texto: 'Salvar mesmo assim', valor: true, destaque: true \}/);
+  assert.match(duplicidade, /\{ texto: 'Salvar', valor: true, destaque: true \}/);
 });
 
 test('modais de sucesso usam títulos visuais simples', () => {
