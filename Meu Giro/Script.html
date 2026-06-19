@@ -1424,33 +1424,62 @@ function normalizeRitmoText(value, fallback) {
 function getRitmoAgoraVariant(statusText) {
   var status = String(statusText || '').toLowerCase();
 
-  if (status.indexOf('adiant') !== -1 || status.indexOf('em dia') !== -1) {
+  if (status.indexOf('conclu') !== -1 || status.indexOf('alcan') !== -1 || status.indexOf('ating') !== -1) {
+    return 'alerta-ritmo-concluido';
+  }
+
+  if (status.indexOf('adiant') !== -1 || status.indexOf('à frente') !== -1 || status.indexOf('a frente') !== -1 || status.indexOf('acima') !== -1) {
+    return 'alerta-ritmo-acima';
+  }
+
+  if (status.indexOf('em dia') !== -1 || status.indexOf('no ritmo') !== -1 || status.indexOf('ritmo ideal') !== -1) {
     return 'alerta-ritmo-bom';
   }
 
-  if (status.indexOf('aten') !== -1 || status.indexOf('atras') !== -1 || status.indexOf('aceler') !== -1) {
+  if (status.indexOf('aten') !== -1 || status.indexOf('atras') !== -1 || status.indexOf('aceler') !== -1 || status.indexOf('abaixo') !== -1) {
     return 'alerta-ritmo-atencao';
   }
 
   return 'alerta-ritmo-neutro';
 }
 
+function painelMetaConcluida_(p) {
+  var meta = Number(p && p.meta);
+  var realizado = Number(p && p.realizado);
+  var restante = Number(p && p.restante);
+  var percentual = Number(p && p.percentual);
+
+  if (!Number.isFinite(restante) && Number.isFinite(meta) && Number.isFinite(realizado)) {
+    restante = Math.max(meta - realizado, 0);
+  }
+
+  if (!Number.isFinite(percentual) && Number.isFinite(meta) && meta > 0 && Number.isFinite(realizado)) {
+    percentual = (realizado / meta) * 100;
+  }
+
+  return percentual >= 100 || restante <= 0;
+}
+
 function renderRitmoAgora(p) {
   var statusText = normalizeRitmoText(p && p.ritmo_status, '');
   var alerta = document.getElementById('alerta-ritmo') || document.getElementById('painel-status-motivacional');
-  var variant = getRitmoAgoraVariant(statusText);
-  var titulo = '🚴 Hora de reagir.';
-  var mensagem = 'Sua meta está ficando distante.';
-  var statusClass = 'painel-status-reagir';
+  var variant = painelMetaConcluida_(p) ? 'alerta-ritmo-concluido' : getRitmoAgoraVariant(statusText);
+  var titulo = '✅ Você está no ritmo.';
+  var mensagem = 'Continue pedalando para manter sua evolução.';
+  var statusClass = 'painel-status-bom';
 
-  if (variant === 'alerta-ritmo-bom') {
-    titulo = '✅ Você está acima do ritmo.';
-    mensagem = 'Continue pedalando.';
+  if (variant === 'alerta-ritmo-concluido') {
+    titulo = '🏆 Desafio concluído!';
+    mensagem = 'Você alcançou sua meta. Parabéns pela conquista.';
     statusClass = 'painel-status-bom';
-  } else if (variant === 'alerta-ritmo-atencao') {
-    titulo = '⚠️ Atenção.';
-    mensagem = 'Você precisa aumentar seu ritmo.';
-    statusClass = 'painel-status-atencao';
+  } else if (variant === 'alerta-ritmo-acima') {
+    titulo = '🔥 Você está voando!';
+    mensagem = 'Seu progresso está acima do ritmo esperado.';
+    statusClass = 'painel-status-bom';
+  } else if (variant === 'alerta-ritmo-atencao' || variant === 'alerta-ritmo-neutro') {
+    titulo = '🚴 Hora de reagir.';
+    mensagem = 'Sua meta está ficando distante.';
+    statusClass = 'painel-status-reagir';
   }
 
   setTextById('alerta-ritmo-titulo', titulo);
@@ -1458,7 +1487,7 @@ function renderRitmoAgora(p) {
 
   if (!alerta) return;
 
-  alerta.classList.remove('alerta-ritmo-neutro', 'alerta-ritmo-bom', 'alerta-ritmo-atencao', 'painel-status-neutro', 'painel-status-bom', 'painel-status-atencao', 'painel-status-reagir');
+  alerta.classList.remove('alerta-ritmo-neutro', 'alerta-ritmo-bom', 'alerta-ritmo-atencao', 'alerta-ritmo-concluido', 'alerta-ritmo-acima', 'painel-status-neutro', 'painel-status-bom', 'painel-status-atencao', 'painel-status-reagir');
   alerta.classList.add(statusClass);
 }
 

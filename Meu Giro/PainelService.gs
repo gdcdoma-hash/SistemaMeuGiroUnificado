@@ -846,6 +846,16 @@ function painelMG_calcularProgresso_(meta, realizado) {
   };
 }
 
+
+function percentualMetaConcluida_(meta, realizado, restante) {
+  var metaNumero = painelMG_toNumber_(meta);
+  var realizadoNumero = painelMG_toNumber_(realizado);
+  var restanteNumero = isFinite(restante) ? painelMG_toNumber_(restante) : Math.max(metaNumero - realizadoNumero, 0);
+  var percentual = metaNumero > 0 ? (realizadoNumero / metaNumero) * 100 : 0;
+
+  return percentual >= 100 || restanteNumero <= 0;
+}
+
 function painelMG_calcularRitmo_(meta, realizado, periodoInicio, periodoFim) {
   var now = new Date();
   var inicio = painelMG_parseDataISO_(periodoInicio) || new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -872,16 +882,18 @@ function painelMG_calcularRitmo_(meta, realizado, periodoInicio, periodoFim) {
   var diferenca = painelMG_toNumber_(realizado) - kmIdealHoje;
   var tolerancia = Math.max(2, painelMG_toNumber_(meta) * 0.01);
 
-  var status = 'Você está à frente da meta.'
-  var mensagem = 'Seu progresso está acima do ritmo esperado para este momento do desafio.'
+  var status = 'Você está no ritmo.';
+  var mensagem = 'Continue pedalando para manter sua evolução.';
 
-  if (diferenca > tolerancia) {
+  if (percentualMetaConcluida_(meta, realizado, restante)) {
+    status = 'Desafio concluído!';
+    mensagem = 'Você alcançou sua meta. Parabéns pela conquista.';
+  } else if (diferenca > tolerancia) {
     status = 'Você está à frente da meta.';
-      mensagem = 'Seu progresso está acima do ritmo esperado para este momento do desafio.';
-
+    mensagem = 'Seu progresso está acima do ritmo esperado para este momento do desafio.';
   } else if (diferenca < -tolerancia) {
-    status = 'Você está um pouco abaixo do ritmo.'
-    mensagem =  'Alguns pedais extras podem ajudar a recuperar o ritmo do desafio.'
+    status = 'Você está um pouco abaixo do ritmo.';
+    mensagem = 'Alguns pedais extras podem ajudar a recuperar o ritmo do desafio.';
   }
 
   return {
