@@ -2287,7 +2287,47 @@ function renderConquistasV2() {
   });
 }
 
+
+function getPeriodoDesafioVisual_(desafio, contexto) {
+  var fontes = [desafio || {}, contexto || {}];
+  var campos = [
+    'periodo_desafio',
+    'Periodo_Desafio',
+    'PERIODO_DESAFIO',
+    'período_desafio',
+    'periodo desafio',
+    'período desafio',
+    'Periodo',
+    'periodo'
+  ];
+
+  for (var f = 0; f < fontes.length; f++) {
+    var fonte = fontes[f] || {};
+    for (var i = 0; i < campos.length; i++) {
+      var valor = fonte[campos[i]];
+      if (valor !== null && valor !== undefined && String(valor).trim() !== '') {
+        return String(valor).trim();
+      }
+    }
+  }
+
+  return '';
+}
+
+function debugPeriodoDesafioFrontend_(etapa, recebido, enviado, desafio) {
+  try {
+    if (!window || !window.console || !window.console.debug) return;
+    console.debug('[DEBUG][periodo_desafio][' + etapa + ']', {
+      id_desafio: String((desafio && desafio.id_desafio) || '').trim(),
+      nome: getDesafioTitulo(desafio || {}),
+      periodo_desafio_recebido: String(recebido || '').trim(),
+      periodo_desafio_enviado: String(enviado || '').trim()
+    });
+  } catch (e) {}
+}
+
 function buildConquistaCard_(desafio) {
+  debugPeriodoDesafioFrontend_('buildConquistaCard_', getPeriodoDesafioVisual_(desafio), getPeriodoDesafioVisual_(desafio), desafio);
   var card = document.createElement('article');
   var certificadoDisponivel = isDesafioElegivelCertificado_(desafio);
   var chave = getDesafioKey(desafio);
@@ -2324,20 +2364,12 @@ function buildConquistaCard_(desafio) {
 
 
 function getDesafioMesAnoPortugues_(desafio) {
-  var periodoDesafioTexto = String((desafio && desafio.periodo_desafio) || '').trim();
+  var periodoDesafioTexto = getPeriodoDesafioVisual_(desafio);
   var periodoDesafio = getDesafioMesAnoFromPeriodoTexto_(periodoDesafioTexto);
   if (periodoDesafio) return periodoDesafio;
   if (periodoDesafioTexto) return '-';
 
-  var meses = [
-    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-  ];
-  var inicio = String((desafio && desafio.periodo_inicio) || '').trim();
-  var fim = String((desafio && desafio.periodo_fim) || '').trim();
-  var data = parseDesafioPeriodoDate_(inicio) || parseDesafioPeriodoDate_(fim);
-  if (!data) return getDesafioPeriodoLabelV2_(desafio) || '-';
-  return meses[data.getUTCMonth()] + '/' + data.getUTCFullYear();
+  return '-';
 }
 
 function getDesafioMesAnoFromPeriodoTexto_(valor) {
@@ -2432,6 +2464,7 @@ function renderGrupoDesafiosV2_(secao, itens, grupo) {
 }
 
 function buildDesafioCardV2_(desafio, grupo) {
+  debugPeriodoDesafioFrontend_('buildDesafioCardV2_', getPeriodoDesafioVisual_(desafio), getPeriodoDesafioVisual_(desafio), desafio);
   var card = document.createElement('article');
   var meta = toFiniteNumber(desafio.meta_km, 0);
   var realizado = toFiniteNumber(desafio.distancia_realizada, 0);
@@ -2472,6 +2505,7 @@ function calcularPercentualDesafio_(meta, realizado) {
 function abrirDetalheDesafioV2_(chave) {
   var desafio = encontrarDesafioPorChaveV2_(chave);
   if (!desafio) return;
+  debugPeriodoDesafioFrontend_('abrirDetalheDesafioV2_', getPeriodoDesafioVisual_(desafio), getPeriodoDesafioVisual_(desafio), desafio);
   renderDetalheDesafioV2_(desafio);
   showScreen('desafio-detalhe');
 }
@@ -2576,24 +2610,12 @@ function getDiaMesAtividade_(value) {
 }
 
 function getDesafioMesExtensoAnoLabel_(desafio) {
-  var periodoDesafioTexto = String((desafio && desafio.periodo_desafio) || '').trim();
+  var periodoDesafioTexto = getPeriodoDesafioVisual_(desafio);
   var periodoDesafio = getDesafioMesAnoFromPeriodoTexto_(periodoDesafioTexto);
   if (periodoDesafio) return periodoDesafio;
   if (periodoDesafioTexto) return '-';
 
-  var inicio = String((desafio && desafio.periodo_inicio) || '').trim();
-  var fim = String((desafio && desafio.periodo_fim) || '').trim();
-  var base = inicio || fim;
-  if (!base) return '-';
-  var partes = base.split('-');
-  if (partes.length < 2) return getDesafioMesLabelV2_(desafio);
-  var meses = [
-    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-  ];
-  var mes = Number(partes[1]);
-  var ano = partes[0];
-  return (meses[mes - 1] || partes[1]) + '/' + ano;
+  return '-';
 }
 
 function formatKmConquistaDetalhe_(value) {
@@ -2835,6 +2857,7 @@ function montarPainelContextual(basePainel, desafio) {
   var periodoFim = possuiDesafioEmFoco
     ? String(desafioAtual.periodo_fim || '').trim()
     : String(painel.periodo_fim || '').trim();
+  var periodoDesafio = getPeriodoDesafioVisual_(desafioAtual, painel);
   var progresso = calcularProgressoDesafio(meta, realizado);
   var ritmo = calcularRitmoDesafio(meta, realizado, periodoInicio, periodoFim);
 
@@ -2852,6 +2875,7 @@ function montarPainelContextual(basePainel, desafio) {
     percentual: progresso.percentual,
     periodo_inicio: periodoInicio,
     periodo_fim: periodoFim,
+    periodo_desafio: periodoDesafio,
     diaAtual: ritmo.diaAtual,
     diasRestantes: ritmo.diasRestantes,
     kmIdealAtual: ritmo.kmIdealAtual,
@@ -2871,26 +2895,19 @@ function montarPainelContextual(basePainel, desafio) {
     atividades_mensagem: (atividadesFiltradas && atividadesFiltradas.mensagem) || ''
   };
   contexto.frase = montarFraseContextual(painel, desafioAtual, contexto);
+  debugPeriodoDesafioFrontend_('montarPainelContextual', getPeriodoDesafioVisual_(desafioAtual, painel), contexto.periodo_desafio, desafioAtual || painel.desafio_em_foco || {});
 
   return contexto;
 }
 
 
 function getDesafioMesAnoLabel(desafio, contexto) {
-  var periodoDesafioTexto = String(
-    (desafio && desafio.periodo_desafio) || (contexto && contexto.periodo_desafio) || ''
-  ).trim();
+  var periodoDesafioTexto = getPeriodoDesafioVisual_(desafio, contexto);
   var periodoDesafio = getDesafioMesAnoFromPeriodoTexto_(periodoDesafioTexto);
   if (periodoDesafio) return 'Período: ' + periodoDesafio;
   if (periodoDesafioTexto) return 'Período: -';
 
-  var inicio = String((desafio && desafio.periodo_inicio) || (contexto && contexto.periodo_inicio) || '').trim();
-  var fim = String((desafio && desafio.periodo_fim) || (contexto && contexto.periodo_fim) || '').trim();
-  var referencia = inicio || fim;
-  var match = referencia.match(/^(\d{4})-(\d{2})/);
-  if (!match) return 'Período: -';
-  var nomeMes = getMesNome_(match[2]);
-  return nomeMes ? ('Período: ' + nomeMes + '/' + match[1]) : 'Período: -';
+  return 'Período: -';
 }
 
 function obterCampoAtividadePainel_(atividade, campos) {
@@ -3034,6 +3051,7 @@ function sincronizarPainelComDesafioEmFoco() {
   }
 
   var contexto = montarPainelContextual(painel, desafioAtual);
+  debugPeriodoDesafioFrontend_('sincronizarPainelComDesafioEmFoco', getPeriodoDesafioVisual_(desafioAtual, contexto), contexto.periodo_desafio, desafioAtual || {});
   atualizarContextoVisualRanking(desafioAtual);
 
   setTextById('frase-box', contexto.frase);

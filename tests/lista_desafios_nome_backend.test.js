@@ -136,9 +136,11 @@ test('objeto de desafio recebe periodo_desafio vindo do cache de ListaDesafios',
 test('obterMeuGiroResumoAtualizadoLeve consulta cache de ListaDesafios e injeta nome_desafio', () => {
   const light = getFunctionSlice('obterMeuGiroResumoAtualizadoLeve_', 'meuGiroResumoAgruparLinhasContiguas_');
   assert.match(light, /var periodosListaDesafios = buildListaDesafiosContexto_\(ss\)\.periodos;/);
+  assert.match(light, /buildPeriodosDgmbDesafiosPorChave_\(obterDgmbDesafiosCacheExecucao_\('obterMeuGiroResumoAtualizadoLeve_'\), id\)/);
   assert.match(light, /var periodoListaResumo = \(idDesafioResumo && periodosListaDesafios\.byId\[idDesafioResumo\]\)/);
   assert.match(light, /nome_desafio: obterNomeDesafioListaPorId_\(periodosListaDesafios, idDesafioResumo, ''\)/);
-  assert.match(light, /periodo_desafio: periodoListaResumo\.periodo_desafio/);
+  assert.match(light, /var periodoLeveEnviado = periodoDgmbResumo \|\| periodoListaResumo\.periodo_desafio \|\| ''/);
+  assert.match(light, /periodo_desafio: periodoLeveEnviado/);
 });
 
 test('getPainelUsuario preserva nome_desafio em desafios_ativos e desafios_historico', () => {
@@ -152,4 +154,20 @@ test('getPainelUsuario preserva nome_desafio em desafios_ativos e desafios_histo
   assert.match(getPainelUsuario, /desafios_ativos: desafiosAtivosPainel/);
   assert.match(getPainelUsuario, /desafios_historico: desafiosHistoricoPainel/);
   assert.match(getPainelUsuario, /desafio_em_foco: desafioPrincipalPainel/);
+});
+
+
+test('obterVinculosDesafioUsuario reconhece aliases de periodo_desafio e prioriza dgmbDesafios', () => {
+  const vinculos = getFunctionSlice('obterVinculosDesafioUsuario_', 'obterActivityIdRegistroKm_');
+  assert.match(vinculos, /getOptionalColumnIndex_\(map, MEU_GIRO_PERIODO_DESAFIO_ALIASES_\)/);
+  assert.match(utils, /var MEU_GIRO_PERIODO_DESAFIO_ALIASES_[\s\S]*'Periodo_Desafio'[\s\S]*'PERIODO_DESAFIO'/);
+  assert.match(utils, /var periodoDesafioEnviado = periodoTexto \|\| normalizeText_\(periodoLista && periodoLista\.periodo_desafio\) \|\| ''/);
+  assert.match(utils, /periodo_desafio: periodoDesafioEnviado/);
+});
+
+test('obterMeuGiroResumoAtualizado preserva periodo_desafio vindo do vínculo', () => {
+  const resumo = getFunctionSlice('obterMeuGiroResumoAtualizado_', 'buildPeriodosDgmbDesafiosPorChave_');
+  assert.match(resumo, /var vinculos = obterVinculosDesafioUsuario_\(id\) \|\| \[\];/);
+  assert.match(resumo, /var resumoPeriodoDesafio = normalizeText_\(vinculoAtual\.periodo_desafio\)/);
+  assert.match(resumo, /periodo_desafio: resumoPeriodoDesafio/);
 });
