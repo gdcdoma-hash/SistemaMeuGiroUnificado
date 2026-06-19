@@ -2840,27 +2840,104 @@ function getDesafioMesAnoLabel(desafio, contexto) {
   return nomeMes ? ('Período: ' + nomeMes + '/' + match[1]) : 'Período: -';
 }
 
+function obterCampoAtividadePainel_(atividade, campos) {
+  var item = atividade || {};
+  for (var i = 0; i < campos.length; i++) {
+    var campo = campos[i];
+    if (item[campo] !== null && item[campo] !== undefined && item[campo] !== '') {
+      return item[campo];
+    }
+  }
+  return '';
+}
+
+function normalizarDataAtividadePainel_(valor) {
+  var raw = String(valor || '').trim();
+  var partes = getActivityDateParts_(raw);
+  if (!partes) return null;
+
+  var data = new Date(Number(partes.year), Number(partes.month) - 1, Number(partes.day));
+  if (
+    data.getFullYear() !== Number(partes.year)
+    || (data.getMonth() + 1) !== Number(partes.month)
+    || data.getDate() !== Number(partes.day)
+  ) {
+    return null;
+  }
+
+  return {
+    date: data,
+    timestamp: data.getTime(),
+    iso: partes.year + '-' + partes.month + '-' + partes.day,
+    br: partes.day + '/' + partes.month + '/' + partes.year
+  };
+}
+
+function normalizarKmAtividadePainel_(valor) {
+  var raw = String(valor || '').trim().replace(',', '.');
+  var km = Number(raw);
+  return Number.isFinite(km) ? km : 0;
+}
+
+function normalizarAtividadeUltimaPainel_(atividade, index) {
+  if (!atividade) return null;
+
+  var dataNormalizada = normalizarDataAtividadePainel_(obterCampoAtividadePainel_(atividade, [
+    'data_atividade',
+    'data',
+    'Data',
+    'DATA'
+  ]));
+
+  if (!dataNormalizada) return null;
+
+  return {
+    atividade: atividade,
+    index: index,
+    data: dataNormalizada,
+    km: normalizarKmAtividadePainel_(obterCampoAtividadePainel_(atividade, [
+      'km',
+      'KM',
+      'distancia',
+      'distancia_km'
+    ]))
+  };
+}
+
+function obterUltimaAtividadePainel_(atividades) {
+  var lista = Array.isArray(atividades) ? atividades : [];
+  var ultima = null;
+
+  lista.forEach(function(item, index) {
+    var normalizada = normalizarAtividadeUltimaPainel_(item, index);
+    if (!normalizada) return;
+
+    if (!ultima || normalizada.data.timestamp > ultima.data.timestamp) {
+      ultima = normalizada;
+      return;
+    }
+
+    if (normalizada.data.timestamp === ultima.data.timestamp && normalizada.index < ultima.index) {
+      ultima = normalizada;
+    }
+  });
+
+  return ultima;
+}
+
 function renderUltimaAtividadePainel(lista) {
-  var atividades = Array.isArray(lista) ? lista.slice() : [];
+  var ultima = obterUltimaAtividadePainel_(lista);
   var diaEl = document.getElementById('painel-ultima-dia');
   var kmEl = document.getElementById('painel-ultima-km');
   if (!diaEl || !kmEl) return;
 
-  atividades.sort(function(a, b) {
-    return String((b && b.data) || '').localeCompare(String((a && a.data) || ''));
-  });
-
-  var ultima = atividades[0];
   if (!ultima) {
     diaEl.innerText = 'Nenhuma atividade';
     kmEl.innerText = '0 km';
     return;
   }
 
-  var data = String(ultima.data || '').trim();
-  var partes = data.split('-');
-  var dia = partes.length >= 3 ? String(Number(partes[2])) : formatDateBR(data);
-  diaEl.innerText = dia ? ('Dia ' + dia) : 'Último pedal';
+  diaEl.innerText = 'Dia ' + ultima.data.br;
   kmEl.innerText = formatNumber(ultima.km) + ' km';
 }
 
