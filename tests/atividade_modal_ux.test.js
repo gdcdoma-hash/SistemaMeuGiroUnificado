@@ -120,3 +120,11 @@ test('falhas das três mutações convertem o processamento em modal de erro', (
   assert.match(script, /pendingDeletionKeys\.delete\(deletionKey\)/);
   assert.match(script, /setActivityFormLocked\(false\)/);
 });
+
+test('loading global bloqueante fecha quando o busy termina', () => {
+  assert.match(script, /let modalMeuGiroOrigem = '';/);
+  assert.match(script, /origem: 'global-loading'/);
+  const sync = getFunctionSlice('syncGlobalBusyState', 'showScreen');
+  assert.match(sync, /modalMeuGiroOrigem === 'global-loading'[\s\S]*hideGlobalLoading\(\)/);
+  assert.doesNotMatch(sync, /!isBusy && !modalMeuGiroBloqueante/);
+});

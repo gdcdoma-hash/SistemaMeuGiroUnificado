@@ -52,6 +52,7 @@ let certificadoProcessandoKey = '';
 let conquistaActionInProgress = false;
 let globalLoadingMessage = '';
 let modalMeuGiroBloqueante = false;
+let modalMeuGiroOrigem = '';
 let modalMeuGiroResolver = null;
 let modalMeuGiroEscapeValue = null;
 const DESAFIO_CARROSSEL_SESSION_KEY = 'meuGiro.desafioEmFocoKey';
@@ -112,6 +113,7 @@ function mostrarModalMeuGiro(opcoes) {
 
   resolverModalMeuGiro(null);
   modalMeuGiroBloqueante = !!opcoes.bloqueante;
+  modalMeuGiroOrigem = opcoes.origem || (opcoes.botoes ? 'decisao' : (opcoes.bloqueante ? 'atividade' : ''));
   globalLoadingMessage = String(opcoes.mensagem || '').trim();
   title.textContent = opcoes.titulo || 'MEU GIRO';
   message.textContent = globalLoadingMessage;
@@ -166,6 +168,7 @@ function atualizarModalMeuGiro(opcoes) {
     message.textContent = globalLoadingMessage;
   }
   if (typeof opcoes.processando === 'boolean' && spinner) spinner.hidden = !opcoes.processando;
+  if (opcoes.origem) modalMeuGiroOrigem = opcoes.origem;
   if (opcoes.tipo) overlay.className = 'global-loading-overlay modal-tipo-' + opcoes.tipo;
 }
 
@@ -181,6 +184,7 @@ function fecharModalMeuGiro(resolverPendente) {
   if (resolverPendente !== false) resolverModalMeuGiro(null);
   globalLoadingMessage = '';
   modalMeuGiroBloqueante = false;
+  modalMeuGiroOrigem = '';
   modalMeuGiroEscapeValue = null;
   if (overlay) {
     overlay.hidden = true;
@@ -195,6 +199,7 @@ function mostrarErroAcaoAtividade() {
     mensagem: 'Tente novamente em alguns instantes.',
     tipo: 'erro',
     processando: false,
+    origem: 'decisao',
     botoes: [{ texto: 'Entendi', valor: true, destaque: true }]
   });
 }
@@ -205,6 +210,7 @@ function confirmarDuplicidadeAtividade() {
     mensagem: 'Já existe uma atividade registrada com a mesma data e a mesma distância.\n\nIsso pode acontecer em alguns casos. Confira antes de continuar.\n\nDeseja salvar mesmo assim?',
     tipo: 'alerta',
     processando: false,
+    origem: 'decisao',
     botoes: [
       { texto: 'Cancelar', valor: false },
       { texto: 'Salvar mesmo assim', valor: true, destaque: true }
@@ -217,7 +223,8 @@ function showGlobalLoading(message) {
     titulo: 'MEU GIRO',
     mensagem: message || globalLoadingMessage || 'Carregando...',
     bloqueante: true,
-    processando: true
+    processando: true,
+    origem: 'global-loading'
   });
 }
 
@@ -247,9 +254,11 @@ function syncGlobalBusyState() {
     || !!certificadoProcessandoKey;
 
   root.classList.toggle('app-busy', isBusy);
-  if (isBusy && !modalMeuGiroBloqueante) {
-    showGlobalLoading(getGlobalBusyMessage());
-  } else if (!isBusy && !modalMeuGiroBloqueante) {
+  if (isBusy) {
+    if (!modalMeuGiroBloqueante || modalMeuGiroOrigem === 'global-loading') {
+      showGlobalLoading(getGlobalBusyMessage());
+    }
+  } else if (modalMeuGiroOrigem === 'global-loading') {
     hideGlobalLoading();
   }
 }
@@ -4115,6 +4124,7 @@ async function salvarAtividade(forcarDuplicidade) {
   activityMutationInProgress = true;
   mostrarModalMeuGiro({
     titulo: 'Salvando atividade...',
+    origem: 'atividade',
     mensagem: 'Estamos registrando seus quilômetros. Aguarde um instante.',
     bloqueante: true,
     processando: true
@@ -4175,6 +4185,7 @@ async function salvarAtividade(forcarDuplicidade) {
     invalidarCacheRanking();
     atualizarModalMeuGiro({
       titulo: 'Atualizando seus desafios...',
+      origem: 'atividade',
       mensagem: 'Estamos atualizando sua lista de atividades, total de quilômetros e desafios.',
       tipo: 'padrao',
       processando: true
@@ -4182,6 +4193,7 @@ async function salvarAtividade(forcarDuplicidade) {
     await atualizarPainelAposAtividade();
     await mostrarModalMeuGiro({
       titulo: 'Atividade salva com sucesso',
+      origem: 'decisao',
       mensagem: 'Sua lista de atividades foi atualizada.',
       tipo: 'sucesso',
       processando: false,
@@ -4267,6 +4279,7 @@ async function salvarEdicaoAtividade(forcarDuplicidade) {
   activityMutationInProgress = true;
   mostrarModalMeuGiro({
     titulo: 'Atualizando atividade...',
+    origem: 'atividade',
     mensagem: 'Estamos salvando as alterações. Aguarde um instante.',
     bloqueante: true,
     processando: true
@@ -4334,6 +4347,7 @@ async function salvarEdicaoAtividade(forcarDuplicidade) {
     invalidarCacheRanking();
     atualizarModalMeuGiro({
       titulo: 'Atualizando seus desafios...',
+      origem: 'atividade',
       mensagem: 'Estamos recalculando sua lista de atividades, total de quilômetros e desafios.',
       tipo: 'padrao',
       processando: true
@@ -4341,6 +4355,7 @@ async function salvarEdicaoAtividade(forcarDuplicidade) {
     await atualizarPainelAposAtividade();
     await mostrarModalMeuGiro({
       titulo: 'Atividade atualizada com sucesso',
+      origem: 'decisao',
       mensagem: 'Sua lista de atividades foi atualizada.',
       tipo: 'sucesso',
       processando: false,
@@ -4449,6 +4464,7 @@ async function excluirAtividadeUI(item, btnExcluir) {
 
   const confirmar = await mostrarModalMeuGiro({
     titulo: 'Excluir atividade?',
+    origem: 'decisao',
     mensagem: 'Essa atividade será removida da sua lista e seus desafios serão atualizados em seguida.',
     tipo: 'alerta',
     processando: false,
@@ -4465,6 +4481,7 @@ async function excluirAtividadeUI(item, btnExcluir) {
   activityMutationInProgress = true;
   mostrarModalMeuGiro({
     titulo: 'Excluindo atividade...',
+    origem: 'atividade',
     mensagem: 'Estamos removendo a atividade selecionada. Aguarde um instante.',
     bloqueante: true,
     processando: true
@@ -4505,6 +4522,7 @@ async function excluirAtividadeUI(item, btnExcluir) {
     invalidarCacheRanking();
     atualizarModalMeuGiro({
       titulo: 'Atualizando seus desafios...',
+      origem: 'atividade',
       mensagem: 'Estamos atualizando sua lista de atividades, total de quilômetros e desafios.',
       tipo: 'padrao',
       processando: true
@@ -4512,6 +4530,7 @@ async function excluirAtividadeUI(item, btnExcluir) {
     await atualizarPainelAposAtividade();
     await mostrarModalMeuGiro({
       titulo: 'Atividade excluída com sucesso',
+      origem: 'decisao',
       mensagem: 'Sua lista de atividades foi atualizada.',
       tipo: 'sucesso',
       processando: false,
