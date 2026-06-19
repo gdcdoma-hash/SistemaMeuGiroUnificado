@@ -3635,15 +3635,38 @@
 
   @media (max-width: 420px) {
     .painel-progresso-donut-grid {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(112px, 128px) minmax(0, 1fr);
+      align-items: center;
+      gap: 8px;
     }
 
     .painel-progress-donut {
-      width: min(78vw, 178px);
+      width: min(34vw, 128px);
+    }
+
+    .painel-metricas-emocionais {
+      gap: 6px;
+    }
+
+    .painel-metricas-emocionais p {
+      padding: 8px 9px;
+      border-radius: 13px;
+    }
+
+    .painel-metricas-emocionais span {
+      font-size: 10px;
     }
 
     .painel-metricas-emocionais strong {
-      font-size: 19px;
+      font-size: 16px;
+    }
+
+    .painel-percentual {
+      font-size: 18px;
+    }
+
+    .painel-progress-donut-centro span {
+      font-size: 10px;
     }
   }
 
