@@ -140,7 +140,56 @@ test('obterMeuGiroResumoAtualizadoLeve consulta cache de ListaDesafios e injeta 
   assert.match(light, /var periodoListaResumo = \(idDesafioResumo && periodosListaDesafios\.byId\[idDesafioResumo\]\)/);
   assert.match(light, /nome_desafio: obterNomeDesafioListaPorId_\(periodosListaDesafios, idDesafioResumo, ''\)/);
   assert.match(light, /var periodoLeveEnviado = periodoDgmbResumo \|\| periodoListaResumo\.periodo_desafio \|\| ''/);
+  assert.match(light, /var statusDgmbResumo = periodosDgmbDesafios\.statusPorResumoKey\[chaveResumo\] \|\| periodosDgmbDesafios\.statusPorDesafio\[idDesafioResumo\] \|\| \{\}/);
+  assert.match(light, /status_usuario_desafio: normalizeText_\(statusDgmbResumo\.status_usuario_desafio\)/);
   assert.match(light, /periodo_desafio: periodoLeveEnviado/);
+});
+
+
+test('buildPeriodosDgmbDesafiosPorChave indexa status_usuario_desafio por id_inscricao', () => {
+  const ctx = {
+    normalizeText_(value) { return String(value == null ? '' : value).trim(); },
+    parseLocalizedNumber_(value) { return Number(String(value == null ? '' : value).replace(',', '.')) || 0; },
+    MEU_GIRO_PERIODO_DESAFIO_ALIASES_: ['periodo_desafio'],
+    buildHeaderMap_(headerRow) {
+      const map = {};
+      headerRow.forEach((value, index) => {
+        const key = String(value == null ? '' : value).trim().toLowerCase();
+        if (key) map[key] = index;
+      });
+      return map;
+    },
+    getOptionalColumnIndex_(map, candidates) {
+      for (const candidate of candidates) {
+        if (Object.prototype.hasOwnProperty.call(map, candidate)) return map[candidate];
+      }
+      return -1;
+    },
+    getIdDesafioColumnIndex_(map) { return map.id_desafio ?? -1; },
+    obterIdDesafioRegistro_(row, idxIdDesafio) { return idxIdDesafio > -1 ? ctx.normalizeText_(row[idxIdDesafio]) : ''; }
+  };
+  ctx.meuGiroResumoBuildChave_ = function(idDgmb, idDesafio, idItemEstoque, metaKm, idInscricao) {
+    const inscricao = ctx.normalizeText_(idInscricao);
+    if (inscricao) return 'INSCRICAO|' + inscricao;
+    return [ctx.normalizeText_(idDgmb), ctx.normalizeText_(idDesafio), ctx.normalizeText_(idItemEstoque)].join('|');
+  };
+  vm.createContext(ctx);
+  vm.runInContext(getFunctionSlice('buildPeriodosDgmbDesafiosPorChave_', 'obterMeuGiroResumoAtualizadoLeve_'), ctx);
+
+  const cache = {
+    values: [
+      ['id_dgmb', 'id_inscricao', 'id_desafio', 'id_item_estoque', 'distancia_km', 'periodo_desafio', 'status_usuario_desafio'],
+      ['42', 'df6f4645-fe4e-482f-8fe2-461e948c339a', '128', 'GIRO_R_900', 90, 'junho/2026', 'CONCLUIDO']
+    ],
+    map: null
+  };
+  cache.map = ctx.buildHeaderMap_(cache.values[0]);
+
+  const indexed = ctx.buildPeriodosDgmbDesafiosPorChave_(cache, '42');
+  assert.equal(
+    indexed.statusPorResumoKey['INSCRICAO|df6f4645-fe4e-482f-8fe2-461e948c339a'].status_usuario_desafio,
+    'CONCLUIDO'
+  );
 });
 
 test('getPainelUsuario preserva nome_desafio em desafios_ativos e desafios_historico', () => {
