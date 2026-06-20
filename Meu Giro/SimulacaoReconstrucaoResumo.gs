@@ -92,10 +92,8 @@ function reconstruirMeuGiroResumoEmAbaTeste() {
     total_linhas_gravadas: itens.length,
     total_com_id_inscricao: 0,
     total_sem_id_inscricao: 0,
-    total_ativo: 0,
     total_concluido: 0,
-    total_expirado: 0,
-    total_inapto: 0
+    total_status_em_analise: 0
   };
 
   for (var j = 0; j < itens.length; j++) {
@@ -109,10 +107,8 @@ function reconstruirMeuGiroResumoEmAbaTeste() {
       relatorio.total_sem_id_inscricao++;
     }
 
-    if (status === 'ATIVO') relatorio.total_ativo++;
     if (status === 'CONCLUIDO') relatorio.total_concluido++;
-    if (status === 'EXPIRADO') relatorio.total_expirado++;
-    if (status === 'INAPTO') relatorio.total_inapto++;
+    if (status === 'STATUS_EM_ANALISE') relatorio.total_status_em_analise++;
 
     valores.push([
       timestampAtualizacao,
@@ -136,10 +132,8 @@ function reconstruirMeuGiroResumoEmAbaTeste() {
   Logger.log('[Meu Giro][rebuild teste] total de linhas gravadas: ' + relatorio.total_linhas_gravadas);
   Logger.log('[Meu Giro][rebuild teste] total com ID_INSCRICAO: ' + relatorio.total_com_id_inscricao);
   Logger.log('[Meu Giro][rebuild teste] total sem ID_INSCRICAO: ' + relatorio.total_sem_id_inscricao);
-  Logger.log('[Meu Giro][rebuild teste] total ATIVO: ' + relatorio.total_ativo);
   Logger.log('[Meu Giro][rebuild teste] total CONCLUIDO: ' + relatorio.total_concluido);
-  Logger.log('[Meu Giro][rebuild teste] total EXPIRADO: ' + relatorio.total_expirado);
-  Logger.log('[Meu Giro][rebuild teste] total INAPTO: ' + relatorio.total_inapto);
+  Logger.log('[Meu Giro][rebuild teste] total STATUS_EM_ANALISE: ' + relatorio.total_status_em_analise);
 
   return relatorio;
 }
@@ -171,7 +165,6 @@ function simularResumoCalcularEsperado_(dadosDesafios, dadosRegistros, dadosList
   var statusLista = simularResumoBuildStatusLista_(dadosLista);
   var registrosPorId = simularResumoBuildRegistrosPorId_(dadosRegistros);
   var vinculos = simularResumoBuildVinculos_(dadosDesafios, periodos, statusLista);
-  var hoje = normalizarDataISO_(new Date());
   var esperadoPorChave = {};
   var ordemChaves = [];
 
@@ -194,16 +187,8 @@ function simularResumoCalcularEsperado_(dadosDesafios, dadosRegistros, dadosList
     }
 
     var percentual = meta > 0 ? (distancia / meta) * 100 : 0;
-    var status = 'INAPTO';
-    if (apto) {
-      if (distancia >= meta && meta > 0) {
-        status = 'CONCLUIDO';
-      } else if (hoje >= inicio && hoje <= fim) {
-        status = 'ATIVO';
-      } else {
-        status = 'EXPIRADO';
-      }
-    }
+    var percentualArredondado = simularResumoArredondar_(percentual);
+    var status = calcularStatusMeuGiroPorPercentual_(percentualArredondado);
 
     var item = {
       id_inscricao: normalizeText_(vinculo.id_inscricao),
@@ -212,7 +197,7 @@ function simularResumoCalcularEsperado_(dadosDesafios, dadosRegistros, dadosList
       id_item_estoque: normalizeText_(vinculo.id_item_estoque),
       meta_km: metaArredondada,
       distancia_realizada: simularResumoArredondar_(distancia),
-      percentual_concluido: simularResumoArredondar_(percentual),
+      percentual_concluido: percentualArredondado,
       status_apuracao: status
     };
     var chave = meuGiroResumoBuildChave_(
