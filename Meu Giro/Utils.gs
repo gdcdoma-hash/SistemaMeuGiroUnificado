@@ -1416,7 +1416,7 @@ function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb) {
   var id = normalizeText_(idDgmb);
   var values = cacheDesafios && cacheDesafios.values ? cacheDesafios.values : [];
   var map = cacheDesafios && cacheDesafios.map ? cacheDesafios.map : {};
-  var periodos = { byResumoKey: {}, byDesafio: {} };
+  var periodos = { byResumoKey: {}, byDesafio: {}, statusPorResumoKey: {}, statusPorDesafio: {} };
 
   if (!id || !values || values.length < 2) return periodos;
 
@@ -1427,24 +1427,39 @@ function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb) {
   var idxObs = getOptionalColumnIndex_(map, ['observacao', 'observação']);
   var idxItem = getOptionalColumnIndex_(map, ['id_item_estoque', 'id item estoque']);
   var idxMeta = getOptionalColumnIndex_(map, ['distancia_km', 'distancia km', 'meta_km', 'meta km']);
+  var idxStatusUsuarioDesafio = getOptionalColumnIndex_(map, ['status_usuario_desafio', 'status usuário desafio', 'status usuario desafio']);
+  var idxStatusValidacaoCertificado = getOptionalColumnIndex_(map, ['status_validacao_certificado']);
+  var idxStatusDesafio = getOptionalColumnIndex_(map, ['status_desafio', 'status desafio']);
+  var idxStatusPag = getOptionalColumnIndex_(map, ['status_pagamento', 'pagamento_status', 'pagamento', 'pix_status']);
 
-  if (idxId === -1 || idxPeriodo === -1) return periodos;
+  if (idxId === -1) return periodos;
 
   for (var i = 1; i < values.length; i++) {
     var row = values[i] || [];
     if (normalizeText_(row[idxId]) !== id) continue;
 
-    var periodo = normalizeText_(row[idxPeriodo]);
-    if (!periodo) continue;
-
+    var periodo = idxPeriodo > -1 ? normalizeText_(row[idxPeriodo]) : '';
     var idDesafio = obterIdDesafioRegistro_(row, idxIdDesafio, idxObs);
     var idItem = idxItem > -1 ? normalizeText_(row[idxItem]) : '';
     var meta = idxMeta > -1 ? parseLocalizedNumber_(row[idxMeta]) : 0;
     var idInscricao = idxInscricao > -1 ? normalizeText_(row[idxInscricao]) : '';
     var chave = meuGiroResumoBuildChave_(id, idDesafio, idItem, meta, idInscricao);
 
-    if (chave && !periodos.byResumoKey[chave]) periodos.byResumoKey[chave] = periodo;
-    if (idDesafio && !periodos.byDesafio[idDesafio]) periodos.byDesafio[idDesafio] = periodo;
+    var statusDgmb = {
+      status_usuario_desafio: idxStatusUsuarioDesafio > -1 ? normalizeText_(row[idxStatusUsuarioDesafio]) : '',
+      status_validacao_certificado: idxStatusValidacaoCertificado > -1 ? normalizeText_(row[idxStatusValidacaoCertificado]).toUpperCase() : '',
+      status_desafio: idxStatusDesafio > -1 ? normalizeText_(row[idxStatusDesafio]) : '',
+      status_pagamento: idxStatusPag > -1 ? normalizeText_(row[idxStatusPag]) : ''
+    };
+
+    if (chave) {
+      if (periodo && !periodos.byResumoKey[chave]) periodos.byResumoKey[chave] = periodo;
+      if (!periodos.statusPorResumoKey[chave]) periodos.statusPorResumoKey[chave] = statusDgmb;
+    }
+    if (idDesafio) {
+      if (periodo && !periodos.byDesafio[idDesafio]) periodos.byDesafio[idDesafio] = periodo;
+      if (!periodos.statusPorDesafio[idDesafio]) periodos.statusPorDesafio[idDesafio] = statusDgmb;
+    }
   }
 
   return periodos;
@@ -1492,6 +1507,7 @@ function obterMeuGiroResumoAtualizadoLeve_(idDgmb) {
     var chaveResumo = meuGiroResumoBuildChave_(id, idDesafioResumo, row[idxItem], meta, idxInscricaoResumo > -1 ? idInscricaoResumo : '');
     var periodoResumoPlanilha = idxPeriodoResumo > -1 ? normalizeText_(row[idxPeriodoResumo]) : '';
     var periodoDgmbResumo = periodosDgmbDesafios.byResumoKey[chaveResumo] || periodosDgmbDesafios.byDesafio[idDesafioResumo] || '';
+    var statusDgmbResumo = periodosDgmbDesafios.statusPorResumoKey[chaveResumo] || periodosDgmbDesafios.statusPorDesafio[idDesafioResumo] || {};
     var periodoLeveEnviado = periodoDgmbResumo || periodoListaResumo.periodo_desafio || '';
     debugPeriodoDesafioBackend_('obterMeuGiroResumoAtualizadoLeve_', periodoDgmbResumo || periodoListaResumo.periodo_desafio, periodoLeveEnviado, {
       id_dgmb: id,
@@ -1514,10 +1530,10 @@ function obterMeuGiroResumoAtualizadoLeve_(idDgmb) {
       distancia_realizada: Math.round((parseLocalizedNumber_(row[idxDistanciaResumo]) + Number.EPSILON) * 10) / 10,
       percentual_concluido: Math.round((parseLocalizedNumber_(row[idxPercentualResumo]) + Number.EPSILON) * 10) / 10,
       status_apuracao: normalizeText_(row[idxStatusResumo]),
-      status_validacao_certificado: '',
-      status_desafio: '',
-      status_usuario_desafio: '',
-      status_pagamento: '',
+      status_validacao_certificado: normalizeText_(statusDgmbResumo.status_validacao_certificado).toUpperCase(),
+      status_desafio: normalizeText_(statusDgmbResumo.status_desafio),
+      status_usuario_desafio: normalizeText_(statusDgmbResumo.status_usuario_desafio),
+      status_pagamento: normalizeText_(statusDgmbResumo.status_pagamento),
       status_lista_desafios: '',
       periodo_inicio: periodoListaResumo.inicio || '',
       periodo_fim: periodoListaResumo.fim || '',
