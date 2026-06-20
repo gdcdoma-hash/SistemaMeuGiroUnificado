@@ -2635,30 +2635,9 @@ function renderCertificadoConquistaDetalhe_(desafio) {
 
   var elegivel = isDesafioElegivelCertificado_(desafio);
   var mensagem = getMensagemCertificado_(desafio);
-  var statusApuracao = String((desafio && desafio.status_apuracao) || '').trim() || '-';
-  var statusUsuarioDesafio = String((desafio && desafio.status_usuario_desafio) || '').trim() || '-';
-  var linkCertificado = String((desafio && desafio.link_certificado) || '').trim();
-  var chaveDesafio = getDesafioKey(desafio) || '-';
-  var objetoDesafio = '{}';
-  try {
-    objetoDesafio = JSON.stringify(desafio || {}, null, 2);
-  } catch (e) {
-    objetoDesafio = '[objeto desafio indisponível para diagnóstico]';
-  }
-
-  var diagnosticoHtml =
-    '<div class="msg status-msg certificado-status-local is-visible msg-inline">' +
-      '<strong>Diagnóstico temporário do certificado</strong>' +
-      '<small>status_apuracao = ' + escapeHtml(statusApuracao) + '</small>' +
-      '<small>status_usuario_desafio = ' + escapeHtml(statusUsuarioDesafio) + '</small>' +
-      '<small>elegivel = ' + (elegivel ? 'true' : 'false') + '</small>' +
-      '<small>link_certificado = ' + escapeHtml(linkCertificado ? 'preenchido' : 'vazio') + '</small>' +
-      '<small>chave_desafio = ' + escapeHtml(chaveDesafio) + '</small>' +
-      '<pre style="white-space:pre-wrap;overflow:auto;max-height:220px;margin:8px 0 0;font-size:12px;">' + escapeHtml(objetoDesafio) + '</pre>' +
-    '</div>';
 
   if (elegivel) {
-    cert.innerHTML = '<h3>Certificado</h3>' + buildCertificadoDesafioHtml_(desafio, 'conquista-detalhe', { ocultarMensagemInicial: true }) + diagnosticoHtml;
+    cert.innerHTML = '<h3>Certificado</h3>' + buildCertificadoDesafioHtml_(desafio, 'conquista-detalhe', { ocultarMensagemInicial: true });
     return;
   }
 
@@ -2666,8 +2645,7 @@ function renderCertificadoConquistaDetalhe_(desafio) {
     '<h3>Certificado</h3>' +
     '<div class="msg status-msg certificado-status-local is-visible msg-inline' + (mensagem.variante ? (' msg-' + escapeHtml(mensagem.variante)) : '') + '">' +
       escapeHtml(mensagem.texto) +
-    '</div>' +
-    diagnosticoHtml;
+    '</div>';
 }
 
 function abrirDetalheConquistaV2_(chave) {
