@@ -2640,6 +2640,12 @@ function abrirDetalheConquistaV2_(chave) {
     }
     setTextById('conquista-detalhe-titulo', getDesafioTitulo(desafio));
     setTextById('conquista-detalhe-periodo', getDesafioMesExtensoAnoLabel_(desafio));
+    var cert = document.getElementById('conquista-detalhe-certificado');
+    if (cert) {
+      cert.innerHTML = isDesafioElegivelCertificado_(desafio)
+        ? '<h3>Certificado</h3>' + buildCertificadoDesafioHtml_(desafio, 'conquista-detalhe', { ocultarMensagemInicial: true })
+        : '';
+    }
     renderConquistaDetalheAtividadesV2_(desafio);
     showScreen('conquista-detalhe');
     window.setTimeout(liberarConquistaActionLock_, 0);
