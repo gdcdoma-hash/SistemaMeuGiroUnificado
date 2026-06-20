@@ -2629,6 +2629,27 @@ function getDesafioMesLabelV2_(desafio) {
   return formatDateBR(base);
 }
 
+function renderCertificadoConquistaDetalhe_(desafio) {
+  var cert = document.getElementById('conquista-detalhe-certificado');
+  if (!cert) return;
+
+  var elegivel = isDesafioElegivelCertificado_(desafio);
+  if (elegivel) {
+    cert.innerHTML = '<h3>Certificado</h3>' + buildCertificadoDesafioHtml_(desafio, 'conquista-detalhe', { ocultarMensagemInicial: true });
+    return;
+  }
+
+  var mensagem = getMensagemCertificado_(desafio);
+  var statusApuracao = String((desafio && desafio.status_apuracao) || '').trim() || '-';
+  var statusUsuarioDesafio = String((desafio && desafio.status_usuario_desafio) || '').trim() || '-';
+  cert.innerHTML =
+    '<h3>Certificado</h3>' +
+    '<div class="msg status-msg certificado-status-local is-visible msg-inline' + (mensagem.variante ? (' msg-' + escapeHtml(mensagem.variante)) : '') + '">' +
+      escapeHtml(mensagem.texto) +
+      '<small>Diagnóstico: status_apuracao=' + escapeHtml(statusApuracao) + '; status_usuario_desafio=' + escapeHtml(statusUsuarioDesafio) + '.</small>' +
+    '</div>';
+}
+
 function abrirDetalheConquistaV2_(chave) {
   if (isConquistaActionLocked_()) return;
   setConquistaActionLock_(true);
@@ -2640,12 +2661,7 @@ function abrirDetalheConquistaV2_(chave) {
     }
     setTextById('conquista-detalhe-titulo', getDesafioTitulo(desafio));
     setTextById('conquista-detalhe-periodo', getDesafioMesExtensoAnoLabel_(desafio));
-    var cert = document.getElementById('conquista-detalhe-certificado');
-    if (cert) {
-      cert.innerHTML = isDesafioElegivelCertificado_(desafio)
-        ? '<h3>Certificado</h3>' + buildCertificadoDesafioHtml_(desafio, 'conquista-detalhe', { ocultarMensagemInicial: true })
-        : '';
-    }
+    renderCertificadoConquistaDetalhe_(desafio);
     renderConquistaDetalheAtividadesV2_(desafio);
     showScreen('conquista-detalhe');
     window.setTimeout(liberarConquistaActionLock_, 0);
