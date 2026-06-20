@@ -1322,6 +1322,13 @@ function meuGiroResumoBuildChave_(idDgmb, idDesafio, idItemEstoque, metaKm, idIn
 }
 
 
+
+function calcularStatusMeuGiroPorPercentual_(percentualConcluido) {
+  return parseLocalizedNumber_(percentualConcluido) >= 100
+    ? 'CONCLUIDO'
+    : 'STATUS_EM_ANALISE';
+}
+
 function obterMeuGiroResumoAtualizado_(idDgmb) {
   var id = normalizeText_(idDgmb);
   if (!id) return [];
@@ -1730,7 +1737,6 @@ function atualizarMeuGiroResumo_(idDgmb, opcoes) {
     linhasPorChave[chaveExistente] = numeroLinhaExistente;
   }
 
-  var hoje = normalizarDataISO_(new Date());
   var saida = [];
   var quantidadeEscritasResumo = 0;
   var duracaoEscritasResumoMs = 0;
@@ -1762,21 +1768,10 @@ function atualizarMeuGiroResumo_(idDgmb, opcoes) {
     }
 
     var percentual = meta > 0 ? (distancia / meta) * 100 : 0;
-    var status = 'INAPTO';
-
-    var dentroDoPeriodo = hoje >= inicio && hoje <= fim;
-    if (apto) {
-      if (distancia >= meta && meta > 0) {
-        status = 'CONCLUIDO';
-      } else if (dentroDoPeriodo) {
-        status = 'ATIVO';
-      } else {
-        status = 'EXPIRADO';
-      }
-    }
-
     var distanciaArredondada = Math.round((distancia + Number.EPSILON) * 10) / 10;
     var percentualArredondado = Math.round((percentual + Number.EPSILON) * 10) / 10;
+    var status = calcularStatusMeuGiroPorPercentual_(percentualArredondado);
+    var statusUsuarioDesafioCalculado = status;
     var numeroLinha = linhasPorChave[chave] || 0;
     var rowAtual = numeroLinha ? (valoresResumo[numeroLinha - 1] || []) : [];
     var houveMudanca = !numeroLinha ||
@@ -1829,7 +1824,7 @@ function atualizarMeuGiroResumo_(idDgmb, opcoes) {
       status_apuracao: status,
       status_validacao_certificado: normalizeText_(vinculo.status_validacao_certificado).toUpperCase(),
       status_desafio: normalizeText_(vinculo.status_desafio),
-      status_usuario_desafio: normalizeText_(vinculo.status_usuario_desafio),
+      status_usuario_desafio: statusUsuarioDesafioCalculado,
       status_pagamento: normalizeText_(vinculo.status_pagamento),
       status_lista_desafios: normalizeText_(vinculo.status_lista_desafios),
       periodo_inicio: inicio || '',
