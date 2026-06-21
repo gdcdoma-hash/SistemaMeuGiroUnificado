@@ -153,17 +153,20 @@ function gerarCertificadoDesafio_(contexto) {
   }
 
   var resolucao = certificadoResolverTemplateSlides_(ctx.id_desafio, ctx.id_item_estoque);
+  var templateResolvidoId = resolucao.templateId || templatePadraoId;
   var geracao = certificadoGerarPdfComTemplate_(
-    resolucao.templateId || templatePadraoId,
+    templateResolvidoId,
     nomeArquivo,
     pastaDestino,
     ctx,
     dadosVisuais
   );
   if (!geracao.ok && resolucao.source !== 'PADRAO') {
+    templateResolvidoId = templatePadraoId;
     geracao = certificadoGerarPdfComTemplate_(templatePadraoId, nomeArquivo, pastaDestino, ctx, dadosVisuais);
   }
   if (!geracao.ok) return geracao;
+  ctx._certificado_template_slides_id_ = templateResolvidoId;
 
   var arquivo = geracao.arquivo;
   arquivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);

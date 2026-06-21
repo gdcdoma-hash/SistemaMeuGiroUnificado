@@ -188,4 +188,13 @@ function generationSandbox(options = {}) {
   assert.equal(resolved, false);
 }
 
-console.log('OK: 18 cenários de template de certificado validados.');
+
+const IMAGE = fs.readFileSync(path.join(ROOT, 'Meu Giro/CertificadoImagemService.gs'), 'utf8');
+const TEMPLATE_IMAGEM_DEPRECATED = ['TEMPLATE', 'CERTIFICADO', 'IMAGEM', 'SLIDES', 'ID'].join('_') + '_';
+assert.equal(IMAGE.includes(TEMPLATE_IMAGEM_DEPRECATED), false);
+assert.match(IMAGE, /certificadoResolverTemplateSlides_\(\s*\(ctx \|\| \{\}\)\.id_desafio,\s*\(ctx \|\| \{\}\)\.id_item_estoque\s*\)/);
+for (const placeholder of ['{{NOME}}', '{{DESAFIO}}', '{{META}}', '{{KM_REALIZADO}}', '{{STATUS}}', '{{PERIODO}}']) {
+  assert.match(IMAGE, new RegExp(placeholder.replace(/[{}]/g, '\\$&')));
+}
+
+console.log('OK: 18 cenários e vínculos de imagem de template de certificado validados.');
