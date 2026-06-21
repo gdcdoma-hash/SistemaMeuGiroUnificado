@@ -1,5 +1,3 @@
-var TEMPLATE_CERTIFICADO_IMAGEM_SLIDES_ID_ = '';
-
 function gerarCertificadoImagem_(contexto) {
   var ctx = contexto || {};
   var dadosVisuais = certificadoBuscarDadosVisuais_(ctx);
@@ -25,15 +23,42 @@ function gerarCertificadoImagem_(contexto) {
     };
   }
 
-  if (!TEMPLATE_CERTIFICADO_IMAGEM_SLIDES_ID_) {
+  var templatePadraoId = String(TEMPLATE_CERTIFICADO_SLIDES_ID_ || '').trim();
+  if (!templatePadraoId) {
     return {
       ok: false,
-      code: 'CERTIFICADO_IMAGEM_TEMPLATE_NAO_CONFIGURADO',
-      msg: 'Template do certificado em imagem não configurado.'
+      code: 'CERTIFICADO_TEMPLATE_SLIDES_NAO_CONFIGURADO',
+      msg: 'Template do certificado em Google Slides não configurado.'
     };
   }
-  var templateId = String(TEMPLATE_CERTIFICADO_IMAGEM_SLIDES_ID_).trim();
 
+  var resolucao = certificadoResolverTemplateImagem_(ctx, templatePadraoId);
+  var resultado = gerarCertificadoImagemComTemplate_(ctx, dadosVisuais, pastaDestino, nomeArquivo, resolucao.templateId);
+  if ((!resultado || resultado.ok !== true) && resolucao.permiteFallbackPadrao) {
+    return gerarCertificadoImagemComTemplate_(ctx, dadosVisuais, pastaDestino, nomeArquivo, templatePadraoId);
+  }
+  return resultado;
+}
+
+function certificadoResolverTemplateImagem_(ctx, templatePadraoId) {
+  var templateGeradoPdf = String((ctx || {})._certificado_template_slides_id_ || '').trim();
+  if (templateGeradoPdf) {
+    return { templateId: templateGeradoPdf, permiteFallbackPadrao: false, source: 'PDF_GERADO' };
+  }
+
+  var resolucao = certificadoResolverTemplateSlides_(
+    (ctx || {}).id_desafio,
+    (ctx || {}).id_item_estoque
+  );
+  var templateResolvido = String(resolucao.templateId || templatePadraoId || '').trim();
+  return {
+    templateId: templateResolvido,
+    permiteFallbackPadrao: resolucao.source !== 'PADRAO' && templateResolvido !== String(templatePadraoId || '').trim(),
+    source: resolucao.source
+  };
+}
+
+function gerarCertificadoImagemComTemplate_(ctx, dadosVisuais, pastaDestino, nomeArquivo, templateId) {
   var arquivoTemporario = null;
   var arquivoImagem = null;
   try {
