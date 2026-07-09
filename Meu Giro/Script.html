@@ -2755,11 +2755,11 @@ function getDesafioKey(desafio) {
   var idItem = String(desafio.id_item_estoque || '').trim();
   var inicio = String(desafio.periodo_inicio || '').trim();
   var fim = String(desafio.periodo_fim || '').trim();
-  var meta = String(desafio.meta_km || '').trim();
+  var meta = getDesafioMetaKey_(desafio);
+  var nome = getDesafioNomeKey_(desafio);
   if (idInscricao) return 'INSCRICAO|' + idInscricao;
   if (!idDesafio) return '';
-  if (idItem) return idDesafio + '|' + idItem;
-  if (inicio || fim || meta) return [idDesafio, inicio, fim, meta].join('|');
+  if (inicio || fim || meta || nome || idItem) return [idDesafio, idItem, inicio, fim, meta, nome].join('|');
   return idDesafio;
 }
 
@@ -3778,10 +3778,35 @@ function getDesafioBaseKey_(desafio) {
   var idItem = String(desafio.id_item_estoque || '').trim();
   var inicio = String(desafio.periodo_inicio || '').trim();
   var fim = String(desafio.periodo_fim || '').trim();
-  var meta = String(desafio.meta_km || '').trim();
+  var meta = getDesafioMetaKey_(desafio);
+  var nome = getDesafioNomeKey_(desafio);
   if (idInscricao) return 'INSCRICAO|' + idInscricao;
   if (!idDesafio && !idItem) return '';
-  return [idDesafio, idItem, inicio, fim, meta].join('|');
+  return [idDesafio, idItem, inicio, fim, meta, nome].join('|');
+}
+
+function getDesafioMetaKey_(desafio) {
+  var item = desafio || {};
+  var camposMeta = ['meta_km', 'meta', 'Meta_KM', 'Meta', 'km_meta', 'distancia_meta', 'distancia_objetivo'];
+  for (var i = 0; i < camposMeta.length; i++) {
+    var valor = item[camposMeta[i]];
+    if (valor !== undefined && valor !== null && String(valor).trim() !== '') {
+      return String(valor).trim();
+    }
+  }
+  return '';
+}
+
+function getDesafioNomeKey_(desafio) {
+  var item = desafio || {};
+  var camposNome = ['nome_desafio', 'nome_exibicao', 'desafio', 'titulo', 'nome', 'item_nome', 'nome_item_estoque', 'descricao_item'];
+  for (var i = 0; i < camposNome.length; i++) {
+    var valor = item[camposNome[i]];
+    if (valor !== undefined && valor !== null && String(valor).trim() !== '') {
+      return String(valor).trim().toLowerCase();
+    }
+  }
+  return '';
 }
 
 function mapearChavesDesafiosBase_(lista) {
