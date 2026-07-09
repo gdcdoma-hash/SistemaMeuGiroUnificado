@@ -105,25 +105,17 @@ function getPainelUsuario(idDgmb) {
       return desafioPainel;
     });
 
-    var meta = painelMG_toNumber_(desafioData.meta);
-    var realizado = painelMG_toNumber_(desafioData.realizado);
-    var realizadoPainel = painelMG_round1_(realizado);
-
     var desafiosAtivosPainel = desafiosConsolidados.filter(function(d) {
-      return painelMG_isStatusAtivo_(d && d.status_apuracao);
-    });
+      return painelMG_isDesafioAtivoParaFoco_(d);
+    }).sort(painelMG_compareFocoDesafiosAtivos_);
     var desafiosHistoricoPainel = desafiosConsolidados.filter(function(d) {
       return painelMG_isStatusHistorico_(d && d.status_apuracao);
     }).sort(painelMG_compareHistoricoDesafios_);
 
-    var desafioPrincipalPainel = null;
-    if (desafiosAtivosPainel.length) {
-      desafioPrincipalPainel = desafiosAtivosPainel[0];
-    } else if (desafiosHistoricoPainel.length) {
-      desafioPrincipalPainel = desafiosHistoricoPainel[0];
-    } else if (desafiosConsolidados.length) {
-      desafioPrincipalPainel = desafiosConsolidados[0];
-    }
+    var desafioPrincipalPainel = painelMG_selecionarDesafioPrincipal_(desafiosConsolidados);
+    var meta = painelMG_toNumber_(desafioPrincipalPainel ? desafioPrincipalPainel.meta_km : desafioData.meta);
+    var realizado = painelMG_toNumber_(desafioPrincipalPainel ? desafioPrincipalPainel.distancia_realizada : desafioData.realizado);
+    var realizadoPainel = painelMG_round1_(realizado);
 
     var statusOperacionalPainel = desafioPrincipalPainel
       ? {
@@ -398,25 +390,17 @@ function getPainelUsuarioPosSalvarLeve(idDgmb) {
       total_desafios: desafiosConsolidados.length
     });
 
-    var meta = painelMG_toNumber_(desafioData.meta);
-    var realizado = painelMG_toNumber_(desafioData.realizado);
-    var realizadoPainel = painelMG_round1_(realizado);
-
     var desafiosAtivosPainel = desafiosConsolidados.filter(function(d) {
-      return painelMG_isStatusAtivo_(d && d.status_apuracao);
-    });
+      return painelMG_isDesafioAtivoParaFoco_(d);
+    }).sort(painelMG_compareFocoDesafiosAtivos_);
     var desafiosHistoricoPainel = desafiosConsolidados.filter(function(d) {
       return painelMG_isStatusHistorico_(d && d.status_apuracao);
     }).sort(painelMG_compareHistoricoDesafios_);
 
-    var desafioPrincipalPainel = null;
-    if (desafiosAtivosPainel.length) {
-      desafioPrincipalPainel = desafiosAtivosPainel[0];
-    } else if (desafiosHistoricoPainel.length) {
-      desafioPrincipalPainel = desafiosHistoricoPainel[0];
-    } else if (desafiosConsolidados.length) {
-      desafioPrincipalPainel = desafiosConsolidados[0];
-    }
+    var desafioPrincipalPainel = painelMG_selecionarDesafioPrincipal_(desafiosConsolidados);
+    var meta = painelMG_toNumber_(desafioPrincipalPainel ? desafioPrincipalPainel.meta_km : desafioData.meta);
+    var realizado = painelMG_toNumber_(desafioPrincipalPainel ? desafioPrincipalPainel.distancia_realizada : desafioData.realizado);
+    var realizadoPainel = painelMG_round1_(realizado);
 
     var statusOperacionalPainel = desafioPrincipalPainel
       ? {
@@ -659,15 +643,28 @@ function buscarInscricaoPainelMGLeve_(idDgmb, resumoAtualizado) {
   };
 }
 
+// Validação manual do Desafio em foco (GAS):
+// A) inscrição em julho/2026 sem REGISTRO_KM => julho/2026 aparece com 0 km.
+// B) abril/2026 incompleto + julho/2026 ativo => julho/2026 assume o foco.
+// C) dois ativos em julho/2026 => maior Meta_KM assume o foco.
+// D) sem desafio no mês corrente + ativo anterior => ativo mais recente assume o foco.
+// E) concluído antigo + ativo atual => ativo atual assume o foco.
+// F) julho/2026 prorrogado e ainda ativo em agosto => não perde foco só pelo mês do relógio.
+// G) mesma meta e mesmo período => desempate previsível por inscrição, desafio, item e nome.
+// H) 0 km sem linhas em REGISTRO_KM => painel carrega usando inscrição/resumo com distância 0.
 function painelMG_selecionarDesafioPrincipal_(resumo) {
-  for (var i = 0; i < resumo.length; i++) {
-    if (resumo[i].status_apuracao === 'ATIVO') return resumo[i];
-  }
-  if (!resumo.length) return null;
-  var historicos = resumo.filter(function(d) {
+  var lista = Array.isArray(resumo) ? resumo.slice() : [];
+  if (!lista.length) return null;
+
+  var ativos = lista.filter(function(item) {
+    return painelMG_isDesafioAtivoParaFoco_(item);
+  }).sort(painelMG_compareFocoDesafiosAtivos_);
+  if (ativos.length) return ativos[0];
+
+  var historicos = lista.filter(function(d) {
     return painelMG_isStatusHistorico_(d && d.status_apuracao);
   }).sort(painelMG_compareHistoricoDesafios_);
-  return historicos.length ? historicos[0] : resumo[0];
+  return historicos.length ? historicos[0] : lista.sort(painelMG_compareHistoricoDesafios_)[0];
 }
 
 function painelMG_obterInscricaoLevePorDesafio_(idDgmb, desafioPrincipal) {
@@ -1067,6 +1064,100 @@ function painelMG_normalizarStatus_(status) {
 
 function painelMG_isStatusAtivo_(status) {
   return painelMG_normalizarStatus_(status) === 'ATIVO';
+}
+
+function painelMG_isDesafioAtivoParaFoco_(desafio) {
+  var item = desafio || {};
+  var statusUsuario = painelMG_normalizarStatus_(item.status_usuario_desafio);
+  var statusApuracao = painelMG_normalizarStatus_(item.status_apuracao);
+  var statusDesafio = painelMG_normalizarStatus_(item.status_desafio);
+  var statusLista = painelMG_normalizarStatus_(item.status_lista_desafios);
+  var possuiPeriodo = !!(painelMG_normalizarDataISO_(item.periodo_inicio) || painelMG_normalizarDataISO_(item.periodo_fim));
+
+  // STATUS_EM_ANALISE é mantido como visível somente para desafios com período,
+  // pois MEU_GIRO_RESUMO usa esse status para inscrição acompanhável ainda não concluída.
+  // Status finais em qualquer fonte continuam bloqueando o foco ativo.
+  if (painelMG_isStatusFinalFoco_(statusUsuario) || painelMG_isStatusFinalFoco_(statusApuracao) ||
+      painelMG_isStatusFinalFoco_(statusDesafio) || painelMG_isStatusFinalFoco_(statusLista)) return false;
+
+  if (statusUsuario === 'EM_ANDAMENTO') return true;
+  if (statusApuracao === 'ATIVO') return true;
+  if (statusDesafio === 'ATIVO') return true;
+  if (statusLista === 'ATIVO') return true;
+
+  return possuiPeriodo && (statusUsuario === 'STATUS_EM_ANALISE' || statusApuracao === 'STATUS_EM_ANALISE');
+}
+
+function painelMG_isStatusFinalFoco_(status) {
+  var finais = {
+    CONCLUIDO: true,
+    CANCELADO: true,
+    DESISTENTE: true,
+    EXPIRADO: true,
+    ENCERRADO: true,
+    INAPTO: true,
+    NAO_CONCLUIDO: true
+  };
+  return !!finais[painelMG_normalizarStatus_(status)];
+}
+
+function painelMG_compareFocoDesafiosAtivos_(a, b) {
+  var ativoAgoraA = painelMG_desafioAtivoNaDataReferencia_(a) ? 0 : 1;
+  var ativoAgoraB = painelMG_desafioAtivoNaDataReferencia_(b) ? 0 : 1;
+  if (ativoAgoraA !== ativoAgoraB) return ativoAgoraA - ativoAgoraB;
+
+  var periodoA = painelMG_periodoOrdenacaoFoco_(a);
+  var periodoB = painelMG_periodoOrdenacaoFoco_(b);
+  var mesmoPeriodo = periodoA.chave && periodoA.chave === periodoB.chave;
+
+  if (!mesmoPeriodo) {
+    if (periodoA.fim !== periodoB.fim) return periodoB.fim.localeCompare(periodoA.fim);
+    if (periodoA.inicio !== periodoB.inicio) return periodoB.inicio.localeCompare(periodoA.inicio);
+  }
+
+  var metaA = painelMG_toNumber_(a && a.meta_km);
+  var metaB = painelMG_toNumber_(b && b.meta_km);
+  if (metaA !== metaB) return metaB - metaA;
+
+  if (mesmoPeriodo) {
+    if (periodoA.fim !== periodoB.fim) return periodoB.fim.localeCompare(periodoA.fim);
+    if (periodoA.inicio !== periodoB.inicio) return periodoB.inicio.localeCompare(periodoA.inicio);
+  }
+
+  var inscricaoA = painelMG_norm_(a && a.id_inscricao);
+  var inscricaoB = painelMG_norm_(b && b.id_inscricao);
+  if (inscricaoA !== inscricaoB) return inscricaoA.localeCompare(inscricaoB);
+
+  var desafioA = painelMG_norm_(a && a.id_desafio);
+  var desafioB = painelMG_norm_(b && b.id_desafio);
+  if (desafioA !== desafioB) return desafioA.localeCompare(desafioB);
+
+  var itemA = painelMG_norm_(a && a.id_item_estoque);
+  var itemB = painelMG_norm_(b && b.id_item_estoque);
+  if (itemA !== itemB) return itemA.localeCompare(itemB);
+
+  return String((a && a.nome_desafio) || '').localeCompare(String((b && b.nome_desafio) || ''));
+}
+
+function painelMG_desafioAtivoNaDataReferencia_(desafio) {
+  var hoje = new Date();
+  var inicio = painelMG_parseDataISO_(desafio && desafio.periodo_inicio);
+  var fim = painelMG_parseDataISO_(desafio && desafio.periodo_fim);
+
+  if (inicio && fim) return inicio.getTime() <= hoje.getTime() && fim.getTime() >= hoje.getTime();
+  if (inicio) return inicio.getTime() <= hoje.getTime();
+  if (fim) return fim.getTime() >= hoje.getTime();
+  return false;
+}
+
+function painelMG_periodoOrdenacaoFoco_(desafio) {
+  var inicio = painelMG_normalizarDataISO_(desafio && desafio.periodo_inicio);
+  var fim = painelMG_normalizarDataISO_(desafio && desafio.periodo_fim);
+  return {
+    inicio: inicio || '',
+    fim: fim || inicio || '',
+    chave: [inicio || '', fim || ''].join('|')
+  };
 }
 
 function painelMG_isStatusHistorico_(status) {

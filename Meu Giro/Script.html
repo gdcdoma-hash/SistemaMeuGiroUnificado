@@ -2806,19 +2806,61 @@ function escolherIndiceDesafioMaisRelevante(itens) {
 }
 
 function compararRelevanciaDesafio(a, b) {
-  var percentualA = toFiniteNumber(a && a.percentual_concluido, 0);
-  var percentualB = toFiniteNumber(b && b.percentual_concluido, 0);
-  if (percentualA !== percentualB) {
-    return percentualB - percentualA;
+  var ativoAgoraA = isDesafioAtivoNaDataReferencia_(a) ? 0 : 1;
+  var ativoAgoraB = isDesafioAtivoNaDataReferencia_(b) ? 0 : 1;
+  if (ativoAgoraA !== ativoAgoraB) return ativoAgoraA - ativoAgoraB;
+
+  var periodoA = getPeriodoOrdenacaoFoco_(a);
+  var periodoB = getPeriodoOrdenacaoFoco_(b);
+  var mesmoPeriodo = periodoA.chave && periodoA.chave === periodoB.chave;
+
+  if (!mesmoPeriodo) {
+    if (periodoA.fim !== periodoB.fim) return periodoB.fim.localeCompare(periodoA.fim);
+    if (periodoA.inicio !== periodoB.inicio) return periodoB.inicio.localeCompare(periodoA.inicio);
   }
 
-  var distanciaA = toFiniteNumber(a && a.distancia_realizada, 0);
-  var distanciaB = toFiniteNumber(b && b.distancia_realizada, 0);
-  if (distanciaA !== distanciaB) {
-    return distanciaB - distanciaA;
+  var metaA = toFiniteNumber(a && a.meta_km, 0);
+  var metaB = toFiniteNumber(b && b.meta_km, 0);
+  if (metaA !== metaB) return metaB - metaA;
+
+  if (mesmoPeriodo) {
+    if (periodoA.fim !== periodoB.fim) return periodoB.fim.localeCompare(periodoA.fim);
+    if (periodoA.inicio !== periodoB.inicio) return periodoB.inicio.localeCompare(periodoA.inicio);
   }
 
-  return 0;
+  var inscricaoA = String((a && a.id_inscricao) || '').trim();
+  var inscricaoB = String((b && b.id_inscricao) || '').trim();
+  if (inscricaoA !== inscricaoB) return inscricaoA.localeCompare(inscricaoB);
+
+  var desafioA = String((a && a.id_desafio) || '').trim();
+  var desafioB = String((b && b.id_desafio) || '').trim();
+  if (desafioA !== desafioB) return desafioA.localeCompare(desafioB);
+
+  var itemA = String((a && a.id_item_estoque) || '').trim();
+  var itemB = String((b && b.id_item_estoque) || '').trim();
+  if (itemA !== itemB) return itemA.localeCompare(itemB);
+
+  return getDesafioTitulo(a).localeCompare(getDesafioTitulo(b));
+}
+
+function isDesafioAtivoNaDataReferencia_(desafio) {
+  var hoje = new Date();
+  var inicio = parseDesafioPeriodoDate_(desafio && desafio.periodo_inicio);
+  var fim = parseDesafioPeriodoDate_(desafio && desafio.periodo_fim);
+  if (inicio && fim) return inicio.getTime() <= hoje.getTime() && fim.getTime() >= hoje.getTime();
+  if (inicio) return inicio.getTime() <= hoje.getTime();
+  if (fim) return fim.getTime() >= hoje.getTime();
+  return false;
+}
+
+function getPeriodoOrdenacaoFoco_(desafio) {
+  var inicio = String((desafio && desafio.periodo_inicio) || '').trim();
+  var fim = String((desafio && desafio.periodo_fim) || '').trim();
+  return {
+    inicio: inicio || '',
+    fim: fim || inicio || '',
+    chave: [inicio || '', fim || ''].join('|')
+  };
 }
 
 function parseIsoDateLocal(value) {
@@ -3265,13 +3307,21 @@ function renderDesafiosPainel(painel) {
     chavesFoco[chave] = true;
   });
 
+  var desafioServidor = painel && painel.desafio_em_foco ? painel.desafio_em_foco : null;
+  var chaveServidor = getDesafioKey(desafioServidor);
+  var focoServidorExiste = chaveServidor && desafiosFocoItems.some(function(item) { return getDesafioKey(item) === chaveServidor; });
+  var indiceAtivoPrincipal = escolherIndiceDesafioMaisRelevante(desafiosAtivos);
+  var desafioAtivoPrincipal = indiceAtivoPrincipal >= 0 ? desafiosAtivos[indiceAtivoPrincipal] : null;
   var focoMemorizado = String(desafioEmFocoKey || carregarDesafioEmFocoDaSessao() || '').trim();
   var focoExiste = focoMemorizado && desafiosFocoItems.some(function(item) { return getDesafioKey(item) === focoMemorizado; });
-  if (focoExiste) {
-    desafioEmFocoKey = focoMemorizado;
-  } else if (desafiosAtivos.length) {
-    desafioEmFocoKey = getDesafioKey(desafiosAtivos[0]);
+  if (focoServidorExiste) {
+    desafioEmFocoKey = chaveServidor;
     salvarDesafioEmFocoNaSessao(desafioEmFocoKey);
+  } else if (desafioAtivoPrincipal) {
+    desafioEmFocoKey = getDesafioKey(desafioAtivoPrincipal);
+    salvarDesafioEmFocoNaSessao(desafioEmFocoKey);
+  } else if (focoExiste) {
+    desafioEmFocoKey = focoMemorizado;
   } else if (desafiosHistorico.length) {
     desafioEmFocoKey = getDesafioKey(desafiosHistorico[0]);
     salvarDesafioEmFocoNaSessao(desafioEmFocoKey);
@@ -3745,7 +3795,27 @@ function mapearChavesDesafiosBase_(lista) {
 }
 
 function isDesafioAtivo_(desafio) {
-  return String((desafio && desafio.status_apuracao) || '').trim().toUpperCase() === 'ATIVO';
+  var item = desafio || {};
+  var statusUsuario = String(item.status_usuario_desafio || '').trim().toUpperCase();
+  var statusApuracao = String(item.status_apuracao || '').trim().toUpperCase();
+  var statusDesafio = String(item.status_desafio || '').trim().toUpperCase();
+  var statusLista = String(item.status_lista_desafios || '').trim().toUpperCase();
+  var possuiPeriodo = !!(String(item.periodo_inicio || '').trim() || String(item.periodo_fim || '').trim());
+
+  if (isStatusFinalFoco_(statusUsuario) || isStatusFinalFoco_(statusApuracao) ||
+      isStatusFinalFoco_(statusDesafio) || isStatusFinalFoco_(statusLista)) return false;
+
+  if (statusUsuario === 'EM_ANDAMENTO') return true;
+  if (statusApuracao === 'ATIVO') return true;
+  if (statusDesafio === 'ATIVO') return true;
+  if (statusLista === 'ATIVO') return true;
+
+  return possuiPeriodo && (statusUsuario === 'STATUS_EM_ANALISE' || statusApuracao === 'STATUS_EM_ANALISE');
+}
+
+function isStatusFinalFoco_(status) {
+  var finais = { CONCLUIDO: true, CANCELADO: true, DESISTENTE: true, EXPIRADO: true, ENCERRADO: true, INAPTO: true, NAO_CONCLUIDO: true };
+  return !!finais[String(status || '').trim().toUpperCase()];
 }
 
 function isDesafioHistoricoElegivel_(desafio) {
