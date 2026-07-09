@@ -1753,6 +1753,16 @@ function atualizarMeuGiroResumo_(idDgmb, opcoes) {
       metaArredondada,
       idxInscricaoResumo > -1 ? idInscricao : ''
     );
+    Logger.log(
+      '[MEU_GIRO_RESUMO][DEBUG] vinculo %s/%s | inscricao=%s | desafio=%s | item=%s | meta=%s | chave=%s',
+      v + 1,
+      vinculos.length,
+      vinculo.id_inscricao,
+      vinculo.id_desafio,
+      vinculo.id_item_estoque,
+      vinculo.meta_km,
+      chave
+    );
     var inicio = normalizarDataISO_(vinculo.periodo_inicio);
     var fim = normalizarDataISO_(vinculo.periodo_fim);
     var apto = !!vinculo.apto && !!inicio && !!fim && !!vinculo.id_desafio;
