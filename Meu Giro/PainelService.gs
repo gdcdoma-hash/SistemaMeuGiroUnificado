@@ -173,7 +173,7 @@ function getPainelUsuario(idDgmb) {
     return {
       ok: true,
       data: {
-        // Compatibilidade temporária de contrato (Meu Giro + legado InscriçãoDesafio).
+        // Compatibilidade temporária de contrato entre payloads do painel.
         // Manter aliases duplicados até convergência explícita dos consumidores.
         nome: pessoa.nome || '',
         cidade_uf: pessoa.cidade_uf || '',

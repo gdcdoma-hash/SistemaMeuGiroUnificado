@@ -1,10 +1,4 @@
 function doGet(e) {
-  const view = e && e.parameter ? e.parameter.view : '';
-
-  if (view === 'inscricao') {
-    return renderInscricaoDGMB();
-  }
-
   return HtmlService
     .createTemplateFromFile('Index')
     .evaluate()
