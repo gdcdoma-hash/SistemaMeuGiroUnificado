@@ -170,6 +170,16 @@ function gravarInscricaoDesafio(d) {
   const s = ss.getSheetByName(d.abaDesafio);
   const novaLinha = [new Date(), d.id_dgmb, d.avatar, d.distancia, d.obs, 'Sim', '', 'Pendente', '', 'Pendente', '', '', "Pedalar é superar limites!"];
   s.appendRow(novaLinha);
+  try {
+    atualizarMeuGiroResumo_(d.id_dgmb);
+  } catch (erroResumo) {
+    Logger.log(
+      '[MEU_GIRO_RESUMO][ERRO_SINCRONIZACAO] origem=gravarInscricaoDesafio id_dgmb=' +
+      d.id_dgmb +
+      ' erro=' +
+      (erroResumo && erroResumo.message ? erroResumo.message : String(erroResumo))
+    );
+  }
   const listaSheet = ss.getSheetByName(ABA_LISTA);
   const listaAtivos = listaSheet.getDataRange().getDisplayValues().slice(1).filter(l => l[3] === 'Ativo');
   let nEx = d.abaDesafio; let per = "";
