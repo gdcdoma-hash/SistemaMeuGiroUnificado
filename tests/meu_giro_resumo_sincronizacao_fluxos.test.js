@@ -4,8 +4,12 @@ const path = require('node:path');
 const test = require('node:test');
 
 const repoRoot = path.resolve(__dirname, '..');
-const inscricao = fs.readFileSync(path.join(repoRoot, 'InscriçãoDesafio', 'codeDGMB.gs'), 'utf8');
+const code = fs.readFileSync(path.join(repoRoot, 'Meu Giro', 'Code.gs'), 'utf8');
+const registro = fs.readFileSync(path.join(repoRoot, 'Meu Giro', 'RegistroService.gs'), 'utf8');
 const adminCert = fs.readFileSync(path.join(repoRoot, 'Meu Giro', 'AdminCertificadoService.gs'), 'utf8');
+const utils = fs.readFileSync(path.join(repoRoot, 'Meu Giro', 'Utils.gs'), 'utf8');
+const readme = fs.readFileSync(path.join(repoRoot, 'README.md'), 'utf8');
+const auditoria = fs.readFileSync(path.join(repoRoot, 'docs', 'auditoria-fluxo-inscricao.md'), 'utf8');
 
 function sliceFunction(source, name, nextName) {
   const start = source.indexOf(`function ${name}`);
@@ -15,24 +19,58 @@ function sliceFunction(source, name, nextName) {
   return source.slice(start, end);
 }
 
-const processarUpload = sliceFunction(inscricao, 'processarUpload', 'verificarCPF');
-const gravarInscricao = sliceFunction(inscricao, 'gravarInscricaoDesafio', 'getScriptUrl');
+function listRepoFiles(dir) {
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+    const fullPath = path.join(dir, entry.name);
+    const rel = path.relative(repoRoot, fullPath);
+    if (entry.isDirectory()) {
+      if (['.git', 'node_modules'].includes(entry.name)) return [];
+      return listRepoFiles(fullPath);
+    }
+    return [rel];
+  });
+}
+
+const doGet = sliceFunction(code, 'doGet', 'include');
+const registrarAtividade = sliceFunction(registro, 'registrarAtividade', 'gerarActivityId_');
+const atualizarDistancia = sliceFunction(registro, 'atualizarDistanciaRealizada_', 'editarAtividade');
 const atualizarStatus = sliceFunction(adminCert, 'atualizarStatusValidacaoCertificadoAdmin', 'adminCertificadoBuildMapaNomesPessoas_');
+const atualizarResumo = sliceFunction(utils, 'atualizarMeuGiroResumo_', 'atualizarMeuGiroResumoEmLote_');
 
-test('nova inscrição sincroniza MEU_GIRO_RESUMO após appendRow bem-sucedido', () => {
-  assert.match(gravarInscricao, /s\.appendRow\(novaLinha\);[\s\S]*?try \{[\s\S]*?atualizarMeuGiroResumo_\(d\.id_dgmb\);/);
-  assert.match(gravarInscricao, /\[MEU_GIRO_RESUMO\]\[ERRO_SINCRONIZACAO\] origem=gravarInscricaoDesafio id_dgmb=/);
-  assert.ok(gravarInscricao.indexOf('s.appendRow(novaLinha);') < gravarInscricao.indexOf('atualizarMeuGiroResumo_(d.id_dgmb);'));
+const arquivosOperacionais = listRepoFiles(repoRoot)
+  .filter(file => !file.startsWith('docs/') && !file.startsWith('tests/') && file !== 'README.md');
+const codigoOperacional = arquivosOperacionais
+  .map(file => fs.readFileSync(path.join(repoRoot, file), 'utf8'))
+  .join('\n');
+
+test('código ativo não referencia a pasta/funções legadas de InscriçãoDesafio', () => {
+  assert.ok(!fs.existsSync(path.join(repoRoot, 'InscriçãoDesafio')), 'pasta legada não deve existir na árvore ativa');
+  assert.doesNotMatch(doGet, /renderInscricaoDGMB/);
+  assert.doesNotMatch(doGet, /view\s*===\s*['"]inscricao['"]/);
+  assert.doesNotMatch(codigoOperacional, /InscriçãoDesafio|renderInscricaoDGMB|gravarInscricaoDesafio|formDGMB|processarUpload/);
 });
 
-test('upload de avatar ou comprovante não sincroniza resumo sem evidência de impacto', () => {
-  assert.match(processarUpload, /sheet\.getRange\(i \+ 1, col\)\.setValue\(urlArquivo\);[\s\S]*?sheet\.getRange\(i \+ 1, col \+ 1\)\.setValue\('Enviado'\);/);
-  assert.doesNotMatch(processarUpload, /atualizarMeuGiroResumo_\(/);
-  assert.doesNotMatch(processarUpload, /\[MEU_GIRO_RESUMO\]\[ERRO_SINCRONIZACAO\]/);
+test('repositório declara ausência do fluxo real de nova inscrição e aponta correção externa', () => {
+  assert.match(readme, /não foi localizado o fluxo atual que cria nova inscrição/);
+  assert.match(auditoria, /não encontrou o fluxo atual que cria novas inscrições em `dgmbDesafios`/);
+  assert.match(auditoria, /correção funcional deve ser aplicada no repositório que contém o fluxo atual de inscrição/);
+  assert.doesNotMatch(codigoOperacional, /gravarInscricao|nova inscrição|repescagem|reativar|adminAtualizarStatus/i);
 });
 
-test('validação administrativa de certificado não sincroniza resumo sem evidência de impacto', () => {
+test('não há teste falso de inscrição: fluxo de atividade sincroniza apenas após gravação própria', () => {
+  assert.match(registrarAtividade, /sheet\.getRange\(linhaInserida, 1, 1, rowLength\)\.setValues\(\[row\]\);[\s\S]*?atualizarDistanciaRealizada_\(idDgmb, opcoesRegistroKm\);[\s\S]*?atualizarMeuGiroResumo_\(idDgmb, opcoesRegistroKm\);/);
+  assert.match(atualizarDistancia, /sheet\.getRange\(i \+ 1, idxRealizado \+ 1\)\.setValue\(total\);/);
+  assert.doesNotMatch(registrarAtividade, /gravarInscricao|ID_INSCRICAO|Status_Usuario_Desafio/);
+});
+
+test('validação administrativa de certificado não sincroniza resumo sem evidência de impacto em inscrição', () => {
   assert.match(atualizarStatus, /sh\.getRange\(linhaAtualizacao, idxStatusValidacao \+ 1\)\.setValue\(novoStatus\);/);
   assert.doesNotMatch(atualizarStatus, /atualizarMeuGiroResumo_\(/);
   assert.doesNotMatch(atualizarStatus, /\[MEU_GIRO_RESUMO\]\[ERRO_SINCRONIZACAO\]/);
+});
+
+test('atualizarMeuGiroResumo_ permanece responsável por gravar MEU_GIRO_RESUMO a partir de vínculos dgmbDesafios', () => {
+  assert.match(atualizarResumo, /var vinculos = obterVinculosDesafioUsuario_\(id\);/);
+  assert.match(atualizarResumo, /shResumo\.getRange\(numeroLinha, 1, 1, totalColunasResumo\)\.setValues\(\[linha\]\);/);
+  assert.match(atualizarResumo, /shResumo\.appendRow\(linha\);/);
 });
