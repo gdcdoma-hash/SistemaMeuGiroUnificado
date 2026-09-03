@@ -1549,7 +1549,7 @@ function obterMeuGiroResumoAtualizadoLeve_(idDgmb) {
       try {
         var resumoSobLock = shResumo.getDataRange().getValues();
         if (meuGiroResumoPossuiInscricaoAusente_(resumoSobLock, idxId, idxInscricaoResumo, id, periodosDgmbDesafios.inscricoesAptas)) {
-          atualizarMeuGiroResumo_(id);
+          atualizarMeuGiroResumoComLockAdquirido_(id);
           return obterMeuGiroResumoAtualizadoLeve_(id);
         }
         valoresResumo = resumoSobLock;
@@ -1698,6 +1698,16 @@ function meuGiroResumoLerLinhasAlvo_(shResumo, cabecalho, totalColunasResumo, id
 }
 
 function atualizarMeuGiroResumo_(idDgmb, opcoes) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    return atualizarMeuGiroResumoComLockAdquirido_(idDgmb, opcoes);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function atualizarMeuGiroResumoComLockAdquirido_(idDgmb, opcoes) {
   var perfTotalInicio = meuGiroPerfNow_();
   var id = normalizeText_(idDgmb);
   if (!id) return [];
