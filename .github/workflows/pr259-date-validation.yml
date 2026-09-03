@@ -1,0 +1,85 @@
+name: PR259 date validation fix
+
+on:
+  push:
+    branches:
+      - ajuste/prazo-e-vinculos-simultaneos
+    paths:
+      - .github/workflows/pr259-date-validation.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ajuste/prazo-e-vinculos-simultaneos
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate branch head
+        run: |
+          test "$(git branch --show-current)" = "ajuste/prazo-e-vinculos-simultaneos"
+
+      - name: Apply calendar validation fix
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('Meu Giro/Utils.gs')
+          text = path.read_text(encoding='utf-8')
+          old = """function isDataIsoValida_(value) {
+  return /^\\d{4}-\\d{2}-\\d{2}$/.test(String(value || '').trim());
+}
+"""
+          new = """function isDataIsoValida_(value) {
+  var texto = String(value || '').trim();
+  var match = texto.match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);
+  if (!match) return false;
+
+  var ano = Number(match[1]);
+  var mes = Number(match[2]);
+  var dia = Number(match[3]);
+  if (mes < 1 || mes > 12 || dia < 1) return false;
+
+  var ultimoDiaMes = new Date(ano, mes, 0).getDate();
+  return dia <= ultimoDiaMes;
+}
+"""
+          if text.count(old) != 1:
+              raise SystemExit(f'Expected exactly one old isDataIsoValida_ implementation, found {text.count(old)}')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+
+      - name: Run focused tests
+        run: >-
+          node --test
+          tests/atividade_performance_instrumentation.test.js
+          tests/lista_desafios_nome_backend.test.js
+          tests/meu_giro_resumo_chave_legada.test.js
+          tests/meu_giro_resumo_leitura_cirurgica.test.js
+          tests/meu_giro_resumo_sincronizacao_fluxos.test.js
+          tests/meu_giro_status_apuracao_origem.test.js
+          tests/painel_login_resumo_leve.test.js
+          tests/prazo_vinculos_simultaneos.test.js
+          tests/prazo_validacao_calendario_lock_corte.test.js
+
+      - name: Commit validated fix
+        shell: bash
+        run: |
+          if git diff --quiet -- 'Meu Giro/Utils.gs'; then
+            echo 'No patch needed.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add 'Meu Giro/Utils.gs'
+          git commit -m 'Validate individual challenge calendar dates'
+          git push origin HEAD:ajuste/prazo-e-vinculos-simultaneos
