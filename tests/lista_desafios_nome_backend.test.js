@@ -140,7 +140,8 @@ test('obterMeuGiroResumoAtualizadoLeve consulta cache de ListaDesafios e injeta 
   assert.match(light, /var periodoListaResumo = \(idDesafioResumo && periodosListaDesafios\.byId\[idDesafioResumo\]\)/);
   assert.match(light, /nome_desafio: obterNomeDesafioListaPorId_\(periodosListaDesafios, idDesafioResumo, ''\)/);
   assert.match(light, /var periodoLeveEnviado = periodoDgmbResumo \|\| periodoListaResumo\.periodo_desafio \|\| ''/);
-  assert.match(light, /var statusDgmbResumo = periodosDgmbDesafios\.statusPorResumoKey\[chaveResumo\] \|\| periodosDgmbDesafios\.statusPorDesafio\[idDesafioResumo\] \|\| \{\}/);
+  assert.match(light, /var usarFallbackDesafio = !idInscricaoResumo/);
+  assert.match(light, /var statusDgmbResumo = periodosDgmbDesafios\.statusPorResumoKey\[chaveResumo\] \|\| \(usarFallbackDesafio \? periodosDgmbDesafios\.statusPorDesafio\[idDesafioResumo\] : null\) \|\| \{\}/);
   assert.match(light, /status_usuario_desafio: normalizeText_\(statusDgmbResumo\.status_usuario_desafio\)/);
   assert.match(light, /periodo_desafio: periodoLeveEnviado/);
 });
@@ -166,7 +167,12 @@ test('buildPeriodosDgmbDesafiosPorChave indexa status_usuario_desafio por id_ins
       return -1;
     },
     getIdDesafioColumnIndex_(map) { return map.id_desafio ?? -1; },
-    obterIdDesafioRegistro_(row, idxIdDesafio) { return idxIdDesafio > -1 ? ctx.normalizeText_(row[idxIdDesafio]) : ''; }
+    obterIdDesafioRegistro_(row, idxIdDesafio) { return idxIdDesafio > -1 ? ctx.normalizeText_(row[idxIdDesafio]) : ''; },
+    extrairPeriodoDesafioTexto_() { return { inicio: '2026-06-01', fim: '2026-06-30' }; },
+    periodoCompletoValido_(periodo) { return !!(periodo && periodo.inicio && periodo.fim); },
+    normalizarDataISO_() { return ''; },
+    validarInscricaoMinima_() { return { valida: true }; },
+    inscricaoTemBloqueioMinimo_() { return false; }
   };
   ctx.meuGiroResumoBuildChave_ = function(idDgmb, idDesafio, idItemEstoque, metaKm, idInscricao) {
     const inscricao = ctx.normalizeText_(idInscricao);
