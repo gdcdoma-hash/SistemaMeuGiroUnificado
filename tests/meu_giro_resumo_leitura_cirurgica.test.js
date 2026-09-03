@@ -8,7 +8,7 @@ const utils = fs.readFileSync(
   'utf8'
 );
 
-const inicio = utils.indexOf('function atualizarMeuGiroResumo_(idDgmb, opcoes)');
+const inicio = utils.indexOf('function atualizarMeuGiroResumoComLockAdquirido_(idDgmb, opcoes)');
 const fim = utils.indexOf('\nfunction atualizarMeuGiroResumoEmLote_', inicio);
 assert.ok(inicio >= 0 && fim > inicio, 'atualizarMeuGiroResumo_ deve existir');
 const atualizarResumo = utils.slice(inicio, fim);
