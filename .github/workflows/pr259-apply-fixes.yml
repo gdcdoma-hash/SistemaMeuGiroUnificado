@@ -1,0 +1,163 @@
+name: PR259 apply reviewed fixes
+
+on:
+  push:
+    branches:
+      - ajuste/prazo-e-vinculos-simultaneos
+    paths:
+      - .github/workflows/pr259-apply-fixes.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ajuste/prazo-e-vinculos-simultaneos
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Apply reviewed PR259 patch
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace(path, old, new, count=1):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              actual = text.count(old)
+              if actual != count:
+                  raise SystemExit(f'{path}: expected {count} occurrence(s), found {actual}: {old[:100]!r}')
+              p.write_text(text.replace(old, new, count), encoding='utf-8')
+
+          # PainelService.gs: period precedence and enrollment isolation.
+          replace('Meu Giro/PainelService.gs',
+          """    var periodoTexto = idxPeriodo > -1 ? extrairPeriodoDesafioTexto_(row[idxPeriodo]) : { inicio: '', fim: '' };\n    var inicio = periodoCompletoValido_(periodoTexto) ? periodoTexto.inicio : normalizarDataISO_(idxInicio > -1 ? row[idxInicio] : '');\n    var fim = periodoCompletoValido_(periodoTexto) ? periodoTexto.fim : normalizarDataISO_(idxFim > -1 ? row[idxFim] : '');\n""",
+          """    var periodoDatas = {\n      inicio: normalizarDataISO_(idxInicio > -1 ? row[idxInicio] : ''),\n      fim: normalizarDataISO_(idxFim > -1 ? row[idxFim] : '')\n    };\n    var periodoTexto = idxPeriodo > -1 ? extrairPeriodoDesafioTexto_(row[idxPeriodo]) : { inicio: '', fim: '' };\n    var periodoSelecionado = periodoCompletoValido_(periodoDatas) ? periodoDatas : periodoTexto;\n    var inicio = periodoCompletoValido_(periodoSelecionado) ? periodoSelecionado.inicio : '';\n    var fim = periodoCompletoValido_(periodoSelecionado) ? periodoSelecionado.fim : '';\n""")
+
+          replace('Meu Giro/PainelService.gs',
+          """    var vinculos = obterVinculosDesafioUsuario_(idDgmb) || [];\n    var idDesafioPrincipal = painelMG_norm_(desafioPrincipal && desafioPrincipal.id_desafio);\n    var idItemPrincipal = painelMG_norm_(desafioPrincipal && desafioPrincipal.id_item_estoque);\n\n    for (var i = 0; i < vinculos.length; i++) {\n      var v = vinculos[i] || {};\n      if (\n        painelMG_norm_(v.id_desafio) === idDesafioPrincipal &&\n        painelMG_norm_(v.id_item_estoque) === idItemPrincipal\n      ) {\n""",
+          """    var vinculos = obterVinculosDesafioUsuario_(idDgmb) || [];\n    var idInscricaoPrincipal = painelMG_norm_(desafioPrincipal && desafioPrincipal.id_inscricao);\n    var idDesafioPrincipal = painelMG_norm_(desafioPrincipal && desafioPrincipal.id_desafio);\n    var idItemPrincipal = painelMG_norm_(desafioPrincipal && desafioPrincipal.id_item_estoque);\n\n    for (var i = 0; i < vinculos.length; i++) {\n      var v = vinculos[i] || {};\n      var corresponde = idInscricaoPrincipal\n        ? painelMG_norm_(v.id_inscricao) === idInscricaoPrincipal\n        : painelMG_norm_(v.id_desafio) === idDesafioPrincipal &&\n          painelMG_norm_(v.id_item_estoque) === idItemPrincipal;\n      if (corresponde) {\n""")
+
+          # RegistroService.gs: these flows already hold ScriptLock.
+          replace('Meu Giro/RegistroService.gs', '      atualizarMeuGiroResumo_(idDgmb, opcoesRegistroKm);\n', '      atualizarMeuGiroResumoComLockAdquirido_(idDgmb, opcoesRegistroKm);\n', 3)
+
+          # Utils.gs: reconciliation must call internal implementation while lock is held.
+          replace('Meu Giro/Utils.gs', '          atualizarMeuGiroResumo_(id);\n          return obterMeuGiroResumoAtualizadoLeve_(id);\n', '          atualizarMeuGiroResumoComLockAdquirido_(id);\n          return obterMeuGiroResumoAtualizadoLeve_(id);\n')
+
+          # Utils.gs: central lock wrapper for every external summary update.
+          replace('Meu Giro/Utils.gs',
+          'function atualizarMeuGiroResumo_(idDgmb, opcoes) {\n  var perfTotalInicio = meuGiroPerfNow_();\n',
+          """function atualizarMeuGiroResumo_(idDgmb, opcoes) {\n  var lock = LockService.getScriptLock();\n  lock.waitLock(30000);\n  try {\n    return atualizarMeuGiroResumoComLockAdquirido_(idDgmb, opcoes);\n  } finally {\n    lock.releaseLock();\n  }\n}\n\nfunction atualizarMeuGiroResumoComLockAdquirido_(idDgmb, opcoes) {\n  var perfTotalInicio = meuGiroPerfNow_();\n""")
+
+          # Focused tests: update function names and expectations.
+          replace('tests/atividade_performance_instrumentation.test.js',
+                  '  assert.match(registroService, /atualizarMeuGiroResumo_\\(idDgmb, opcoesRegistroKm\\)/);\n',
+                  '  assert.match(registroService, /atualizarMeuGiroResumoComLockAdquirido_\\(idDgmb, opcoesRegistroKm\\)/);\n')
+
+          replace('tests/lista_desafios_nome_backend.test.js',
+                  '  assert.match(light, /var statusDgmbResumo = periodosDgmbDesafios\\.statusPorResumoKey\\[chaveResumo\\] \\|\\| periodosDgmbDesafios\\.statusPorDesafio\\[idDesafioResumo\\] \\|\\| \\{\\}/);\n',
+                  "  assert.match(light, /var usarFallbackDesafio = !idInscricaoResumo/);\n  assert.match(light, /var statusDgmbResumo = periodosDgmbDesafios\\.statusPorResumoKey\\[chaveResumo\\] \\|\\| \\(usarFallbackDesafio \\? periodosDgmbDesafios\\.statusPorDesafio\\[idDesafioResumo\\] : null\\) \\|\\| \\{\\}/);\n")
+
+          replace('tests/lista_desafios_nome_backend.test.js',
+          """    getIdDesafioColumnIndex_(map) { return map.id_desafio ?? -1; },\n    obterIdDesafioRegistro_(row, idxIdDesafio) { return idxIdDesafio > -1 ? ctx.normalizeText_(row[idxIdDesafio]) : ''; }\n""",
+          """    getIdDesafioColumnIndex_(map) { return map.id_desafio ?? -1; },\n    obterIdDesafioRegistro_(row, idxIdDesafio) { return idxIdDesafio > -1 ? ctx.normalizeText_(row[idxIdDesafio]) : ''; },\n    extrairPeriodoDesafioTexto_() { return { inicio: '2026-06-01', fim: '2026-06-30' }; },\n    periodoCompletoValido_(periodo) { return !!(periodo && periodo.inicio && periodo.fim); },\n    normalizarDataISO_() { return ''; },\n    validarInscricaoMinima_() { return { valida: true }; },\n    inscricaoTemBloqueioMinimo_() { return false; }\n""")
+
+          replace('tests/meu_giro_resumo_chave_legada.test.js',
+                  "const inicioAtualizar = utils.indexOf('function atualizarMeuGiroResumo_(idDgmb, opcoes)');\n",
+                  "const inicioAtualizar = utils.indexOf('function atualizarMeuGiroResumoComLockAdquirido_(idDgmb, opcoes)');\n")
+          replace('tests/meu_giro_resumo_chave_legada.test.js',
+                  "const fim = utils.indexOf('\\n}\\n\\n\\n\\nfunction calcularStatusMeuGiroPorPercentual_', inicio) + 3;\n",
+                  "const fim = utils.indexOf('\\nfunction calcularStatusMeuGiroPorPercentual_', inicio);\n")
+
+          replace('tests/meu_giro_resumo_leitura_cirurgica.test.js',
+                  "const inicio = utils.indexOf('function atualizarMeuGiroResumo_(idDgmb, opcoes)');\n",
+                  "const inicio = utils.indexOf('function atualizarMeuGiroResumoComLockAdquirido_(idDgmb, opcoes)');\n")
+
+          replace('tests/meu_giro_status_apuracao_origem.test.js',
+                  "const inicio = utils.indexOf('function atualizarMeuGiroResumo_(idDgmb, opcoes)');\n",
+                  "const inicio = utils.indexOf('function atualizarMeuGiroResumoComLockAdquirido_(idDgmb, opcoes)');\n")
+
+          replace('tests/meu_giro_resumo_sincronizacao_fluxos.test.js',
+                  "const atualizarResumo = sliceFunction(utils, 'atualizarMeuGiroResumo_', 'atualizarMeuGiroResumoEmLote_');\n",
+                  "const atualizarResumo = sliceFunction(utils, 'atualizarMeuGiroResumoComLockAdquirido_', 'atualizarMeuGiroResumoEmLote_');\n")
+          replace('tests/meu_giro_resumo_sincronizacao_fluxos.test.js',
+                  'atualizarMeuGiroResumo_\\(idDgmb, opcoesRegistroKm\\);/',
+                  'atualizarMeuGiroResumoComLockAdquirido_\\(idDgmb, opcoesRegistroKm\\);/')
+          replace('tests/meu_giro_resumo_sincronizacao_fluxos.test.js',
+                  "test('atualizarMeuGiroResumo_ permanece responsável por gravar MEU_GIRO_RESUMO a partir de vínculos dgmbDesafios', () => {\n",
+                  "test('implementação interna permanece responsável por gravar MEU_GIRO_RESUMO a partir de vínculos dgmbDesafios', () => {\n")
+
+          p = Path('tests/prazo_vinculos_simultaneos.test.js')
+          text = p.read_text(encoding='utf-8')
+          text = text.replace('/atualizarMeuGiroResumo_\\(id\\)/', '/atualizarMeuGiroResumoComLockAdquirido_\\(id\\)/', 1)
+          text = text.replace("trecho('atualizarMeuGiroResumo_', 'atualizarMeuGiroResumoEmLote_')", "trecho('atualizarMeuGiroResumoComLockAdquirido_', 'atualizarMeuGiroResumoEmLote_')", 1)
+          addition = r'''
+
+test('toda escrita do resumo passa pelo wrapper de lock e fluxos já travados usam a implementação interna', () => {
+  const wrapper = trecho('atualizarMeuGiroResumo_', 'atualizarMeuGiroResumoComLockAdquirido_');
+  const interna = trecho('atualizarMeuGiroResumoComLockAdquirido_', 'atualizarMeuGiroResumoEmLote_');
+  const registro = fs.readFileSync(path.resolve(__dirname, '..', 'Meu Giro', 'RegistroService.gs'), 'utf8');
+
+  assert.match(wrapper, /LockService\.getScriptLock\(\)/);
+  assert.match(wrapper, /lock\.waitLock\(30000\)/);
+  assert.match(wrapper, /return atualizarMeuGiroResumoComLockAdquirido_\(idDgmb, opcoes\)/);
+  assert.match(interna, /shResumo\.appendRow\(linha\)/);
+  assert.doesNotMatch(wrapper, /appendRow|setValues/);
+  assert.doesNotMatch(registro, /atualizarMeuGiroResumo_\(idDgmb, opcoesRegistroKm\)/);
+  assert.match(registro, /atualizarMeuGiroResumoComLockAdquirido_\(idDgmb, opcoesRegistroKm\)/);
+});
+
+test('caminho pesado seleciona inscrição exata e só usa desafio mais item para vínculo legado', () => {
+  const painel = fs.readFileSync(path.resolve(__dirname, '..', 'Meu Giro', 'PainelService.gs'), 'utf8');
+  const inicio = painel.indexOf('function painelMG_buscarVinculoPrincipal_');
+  const fim = painel.indexOf('\nfunction painelMG_parseDataISO_', inicio);
+  const fonte = painel.slice(inicio, fim);
+
+  assert.match(fonte, /var idInscricaoPrincipal = painelMG_norm_\(desafioPrincipal && desafioPrincipal\.id_inscricao\)/);
+  assert.match(fonte, /idInscricaoPrincipal\s*\? painelMG_norm_\(v\.id_inscricao\) === idInscricaoPrincipal\s*: painelMG_norm_\(v\.id_desafio\) === idDesafioPrincipal/);
+});
+
+test('leitor leve do painel prefere o par de datas individuais ao período textual', () => {
+  const painel = fs.readFileSync(path.resolve(__dirname, '..', 'Meu Giro', 'PainelService.gs'), 'utf8');
+  const inicio = painel.indexOf('function painelMG_obterInscricaoLevePorDesafio_');
+  const fim = painel.indexOf('\nfunction buscarInscricaoPainelMG_', inicio);
+  const fonte = painel.slice(inicio, fim);
+
+  assert.match(fonte, /var periodoSelecionado = periodoCompletoValido_\(periodoDatas\) \? periodoDatas : periodoTexto/);
+});
+'''
+          if "toda escrita do resumo passa pelo wrapper de lock" in text:
+              raise SystemExit('prazo_vinculos_simultaneos.test.js: focused additions already present')
+          p.write_text(text.rstrip() + addition + '\n', encoding='utf-8')
+          PY
+
+      - name: Run focused tests
+        run: |
+          node --test \
+            tests/atividade_performance_instrumentation.test.js \
+            tests/lista_desafios_nome_backend.test.js \
+            tests/meu_giro_resumo_chave_legada.test.js \
+            tests/meu_giro_resumo_leitura_cirurgica.test.js \
+            tests/meu_giro_resumo_sincronizacao_fluxos.test.js \
+            tests/meu_giro_status_apuracao_origem.test.js \
+            tests/painel_login_resumo_leve.test.js \
+            tests/prazo_vinculos_simultaneos.test.js
+
+      - name: Commit reviewed fixes and remove one-shot workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/pr259-apply-fixes.yml
+          git add "Meu Giro/PainelService.gs" "Meu Giro/RegistroService.gs" "Meu Giro/Utils.gs" tests/
+          git diff --cached --check
+          git commit -m "Fix resumo locking and enrollment isolation"
+          git push origin HEAD:ajuste/prazo-e-vinculos-simultaneos
