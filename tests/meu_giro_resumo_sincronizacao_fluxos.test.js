@@ -35,7 +35,7 @@ const doGet = sliceFunction(code, 'doGet', 'include');
 const registrarAtividade = sliceFunction(registro, 'registrarAtividade', 'gerarActivityId_');
 const atualizarDistancia = sliceFunction(registro, 'atualizarDistanciaRealizada_', 'editarAtividade');
 const atualizarStatus = sliceFunction(adminCert, 'atualizarStatusValidacaoCertificadoAdmin', 'adminCertificadoBuildMapaNomesPessoas_');
-const atualizarResumo = sliceFunction(utils, 'atualizarMeuGiroResumo_', 'atualizarMeuGiroResumoEmLote_');
+const atualizarResumo = sliceFunction(utils, 'atualizarMeuGiroResumoComLockAdquirido_', 'atualizarMeuGiroResumoEmLote_');
 
 const arquivosOperacionais = listRepoFiles(repoRoot)
   .filter(file => !file.startsWith('docs/') && !file.startsWith('tests/') && file !== 'README.md');
@@ -58,7 +58,7 @@ test('repositório declara ausência do fluxo real de nova inscrição e aponta 
 });
 
 test('não há teste falso de inscrição: fluxo de atividade sincroniza apenas após gravação própria', () => {
-  assert.match(registrarAtividade, /sheet\.getRange\(linhaInserida, 1, 1, rowLength\)\.setValues\(\[row\]\);[\s\S]*?atualizarDistanciaRealizada_\(idDgmb, opcoesRegistroKm\);[\s\S]*?atualizarMeuGiroResumo_\(idDgmb, opcoesRegistroKm\);/);
+  assert.match(registrarAtividade, /sheet\.getRange\(linhaInserida, 1, 1, rowLength\)\.setValues\(\[row\]\);[\s\S]*?atualizarDistanciaRealizada_\(idDgmb, opcoesRegistroKm\);[\s\S]*?atualizarMeuGiroResumoComLockAdquirido_\(idDgmb, opcoesRegistroKm\);/);
   assert.match(atualizarDistancia, /sheet\.getRange\(i \+ 1, idxRealizado \+ 1\)\.setValue\(total\);/);
   assert.doesNotMatch(registrarAtividade, /gravarInscricao|ID_INSCRICAO|Status_Usuario_Desafio/);
 });
@@ -69,7 +69,7 @@ test('validação administrativa de certificado não sincroniza resumo sem evid�
   assert.doesNotMatch(atualizarStatus, /\[MEU_GIRO_RESUMO\]\[ERRO_SINCRONIZACAO\]/);
 });
 
-test('atualizarMeuGiroResumo_ permanece responsável por gravar MEU_GIRO_RESUMO a partir de vínculos dgmbDesafios', () => {
+test('implementação interna permanece responsável por gravar MEU_GIRO_RESUMO a partir de vínculos dgmbDesafios', () => {
   assert.match(atualizarResumo, /var vinculos = obterVinculosDesafioUsuario_\(id\);/);
   assert.match(atualizarResumo, /shResumo\.getRange\(numeroLinha, 1, 1, totalColunasResumo\)\.setValues\(\[linha\]\);/);
   assert.match(atualizarResumo, /shResumo\.appendRow\(linha\);/);
