@@ -95,7 +95,7 @@ test('correlaciona logs internos com a operação de atividade atual', () => {
 
 test('reaproveita uma única leitura de REGISTRO_KM nas sincronizações da P26', () => {
   assert.match(registroService, /atualizarDistanciaRealizada_\(idDgmb, opcoesRegistroKm\)/);
-  assert.match(registroService, /atualizarMeuGiroResumo_\(idDgmb, opcoesRegistroKm\)/);
+  assert.match(registroService, /atualizarMeuGiroResumoComLockAdquirido_\(idDgmb, opcoesRegistroKm\)/);
   assert.match(registroService, /dados\.push\(row\.slice\(\)\)/);
   assert.match(registroService, /dados\[linha - 1\]\[cols\.idxKm\] = novoKm/);
   assert.match(registroService, /dados\.splice\(linha - 1, 1\)/);
