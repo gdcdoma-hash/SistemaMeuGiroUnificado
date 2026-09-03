@@ -43,7 +43,7 @@ test('resumo leve reconcilia vínculo ausente uma única vez sob lock', () => {
   assert.match(fonte, /LockService\.getScriptLock\(\)/);
   assert.match(fonte, /lock\.tryLock\(5000\)/);
   assert.match(fonte, /var resumoSobLock = shResumo\.getDataRange\(\)\.getValues\(\)/);
-  assert.match(fonte, /atualizarMeuGiroResumo_\(id\)/);
+  assert.match(fonte, /atualizarMeuGiroResumoComLockAdquirido_\(id\)/);
 });
 
 test('inscrição identificada não usa período nem status de outra inscrição do mesmo desafio', () => {
@@ -57,9 +57,42 @@ test('inscrição identificada não usa período nem status de outra inscrição
 });
 
 test('cada atividade continua sendo avaliada independentemente contra o período de cada vínculo', () => {
-  const fonte = trecho('atualizarMeuGiroResumo_', 'atualizarMeuGiroResumoEmLote_');
+  const fonte = trecho('atualizarMeuGiroResumoComLockAdquirido_', 'atualizarMeuGiroResumoEmLote_');
 
   assert.match(fonte, /for \(var v = 0; v < vinculos\.length; v\+\+\)/);
   assert.match(fonte, /for \(var r = 0; r < registros\.length; r\+\+\)/);
   assert.match(fonte, /atividadeDentroPeriodoOficial_\(reg\.data_atividade, inicio, fim\)/);
+});
+
+test('toda escrita do resumo passa pelo wrapper de lock e fluxos já travados usam a implementação interna', () => {
+  const wrapper = trecho('atualizarMeuGiroResumo_', 'atualizarMeuGiroResumoComLockAdquirido_');
+  const interna = trecho('atualizarMeuGiroResumoComLockAdquirido_', 'atualizarMeuGiroResumoEmLote_');
+  const registro = fs.readFileSync(path.resolve(__dirname, '..', 'Meu Giro', 'RegistroService.gs'), 'utf8');
+
+  assert.match(wrapper, /LockService\.getScriptLock\(\)/);
+  assert.match(wrapper, /lock\.waitLock\(30000\)/);
+  assert.match(wrapper, /return atualizarMeuGiroResumoComLockAdquirido_\(idDgmb, opcoes\)/);
+  assert.match(interna, /shResumo\.appendRow\(linha\)/);
+  assert.doesNotMatch(wrapper, /appendRow|setValues/);
+  assert.doesNotMatch(registro, /atualizarMeuGiroResumo_\(idDgmb, opcoesRegistroKm\)/);
+  assert.match(registro, /atualizarMeuGiroResumoComLockAdquirido_\(idDgmb, opcoesRegistroKm\)/);
+});
+
+test('caminho pesado seleciona inscrição exata e só usa desafio mais item para vínculo legado', () => {
+  const painel = fs.readFileSync(path.resolve(__dirname, '..', 'Meu Giro', 'PainelService.gs'), 'utf8');
+  const inicio = painel.indexOf('function painelMG_buscarVinculoPrincipal_');
+  const fim = painel.indexOf('\nfunction painelMG_parseDataISO_', inicio);
+  const fonte = painel.slice(inicio, fim);
+
+  assert.match(fonte, /var idInscricaoPrincipal = painelMG_norm_\(desafioPrincipal && desafioPrincipal\.id_inscricao\)/);
+  assert.match(fonte, /idInscricaoPrincipal\s*\? painelMG_norm_\(v\.id_inscricao\) === idInscricaoPrincipal\s*: painelMG_norm_\(v\.id_desafio\) === idDesafioPrincipal/);
+});
+
+test('leitor leve do painel prefere o par de datas individuais ao período textual', () => {
+  const painel = fs.readFileSync(path.resolve(__dirname, '..', 'Meu Giro', 'PainelService.gs'), 'utf8');
+  const inicio = painel.indexOf('function painelMG_obterInscricaoLevePorDesafio_');
+  const fim = painel.indexOf('\nfunction buscarInscricaoPainelMG_', inicio);
+  const fonte = painel.slice(inicio, fim);
+
+  assert.match(fonte, /var periodoSelecionado = periodoCompletoValido_\(periodoDatas\) \? periodoDatas : periodoTexto/);
 });
