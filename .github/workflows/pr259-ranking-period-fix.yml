@@ -1,0 +1,85 @@
+name: PR259 ranking period precedence fix
+
+on:
+  push:
+    branches:
+      - ajuste/prazo-e-vinculos-simultaneos
+    paths:
+      - .github/workflows/pr259-ranking-period-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-test-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ajuste/prazo-e-vinculos-simultaneos
+          fetch-depth: 0
+
+      - name: Patch ranking period precedence
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('Meu Giro/RankingService.gs')
+          s = p.read_text(encoding='utf-8')
+          old = """function rankingMG_resolverPeriodoCompetitivo_(row, periodoLista) {\n  var periodoTexto = rankingMG_firstFilled_(row, [\n    'periodo_desafio', 'Periodo_Desafio', 'período_desafio', 'periodo desafio', 'período desafio'\n  ]);\n  var periodoHistorico = extrairPeriodoDesafioTexto_(periodoTexto);\n  if (periodoCompletoValido_(periodoHistorico)) return periodoHistorico;\n  if (periodoCompletoValido_(periodoLista)) {\n    return { inicio: periodoLista.inicio, fim: periodoLista.fim };\n  }\n\n  var periodoDatas = {\n    inicio: normalizarDataISO_(rankingMG_firstFilled_(row, [\n      'data_inicio_desafio', 'Data_Inicio_Desafio', 'data inicio desafio', 'data início desafio'\n    ])),\n    fim: normalizarDataISO_(rankingMG_firstFilled_(row, [\n      'data_fim_desafio', 'Data_Fim_Desafio', 'data fim desafio'\n    ]))\n  };\n  return periodoCompletoValido_(periodoDatas) ? periodoDatas : { inicio: '', fim: '' };\n}\n"""
+          new = """function rankingMG_resolverPeriodoCompetitivo_(row, periodoLista) {\n  var periodoDatas = {\n    inicio: normalizarDataISO_(rankingMG_firstFilled_(row, [\n      'data_inicio_desafio', 'Data_Inicio_Desafio', 'data inicio desafio', 'data início desafio'\n    ])),\n    fim: normalizarDataISO_(rankingMG_firstFilled_(row, [\n      'data_fim_desafio', 'Data_Fim_Desafio', 'data fim desafio'\n    ]))\n  };\n  if (periodoCompletoValido_(periodoDatas)) return periodoDatas;\n\n  var periodoTexto = rankingMG_firstFilled_(row, [\n    'periodo_desafio', 'Periodo_Desafio', 'período_desafio', 'periodo desafio', 'período desafio'\n  ]);\n  var periodoHistorico = extrairPeriodoDesafioTexto_(periodoTexto);\n  if (periodoCompletoValido_(periodoHistorico)) return periodoHistorico;\n  if (periodoCompletoValido_(periodoLista)) {\n    return { inicio: periodoLista.inicio, fim: periodoLista.fim };\n  }\n  return { inicio: '', fim: '' };\n}\n"""
+          if old not in s:
+              raise SystemExit('Bloco esperado de rankingMG_resolverPeriodoCompetitivo_ não encontrado; abortando.')
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+          PY
+
+      - name: Add regression test
+        shell: bash
+        run: |
+          cat > tests/ranking_periodo_precedencia.test.js <<'EOF'
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const test = require('node:test');
+
+          const source = fs.readFileSync(
+            path.resolve(__dirname, '..', 'Meu Giro', 'RankingService.gs'),
+            'utf8'
+          );
+
+          test('ranking usa datas individuais antes de período textual e catálogo', () => {
+            const start = source.indexOf('function rankingMG_resolverPeriodoCompetitivo_');
+            const end = source.indexOf('\nfunction rankingMG_resolverAtributosCompetitivos_', start);
+            assert.ok(start >= 0 && end > start, 'rankingMG_resolverPeriodoCompetitivo_ deve existir');
+            const trecho = source.slice(start, end);
+            const datas = trecho.indexOf('if (periodoCompletoValido_(periodoDatas)) return periodoDatas;');
+            const texto = trecho.indexOf('if (periodoCompletoValido_(periodoHistorico)) return periodoHistorico;');
+            const catalogo = trecho.indexOf('if (periodoCompletoValido_(periodoLista))');
+            assert.ok(datas >= 0 && texto > datas && catalogo > texto);
+          });
+          EOF
+
+      - name: Run focused tests
+        run: >-
+          node --test
+          tests/atividade_performance_instrumentation.test.js
+          tests/lista_desafios_nome_backend.test.js
+          tests/meu_giro_resumo_chave_legada.test.js
+          tests/meu_giro_resumo_leitura_cirurgica.test.js
+          tests/meu_giro_resumo_sincronizacao_fluxos.test.js
+          tests/meu_giro_status_apuracao_origem.test.js
+          tests/painel_login_resumo_leve.test.js
+          tests/prazo_validacao_calendario_lock_corte.test.js
+          tests/prazo_vinculos_simultaneos.test.js
+          tests/rebuild_periodo_precedencia.test.js
+          tests/ranking_periodo_precedencia.test.js
+
+      - name: Commit validated fix
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add 'Meu Giro/RankingService.gs' tests/ranking_periodo_precedencia.test.js
+          git diff --cached --check
+          git commit -m "Fix ranking period precedence"
+          git push origin HEAD:ajuste/prazo-e-vinculos-simultaneos
