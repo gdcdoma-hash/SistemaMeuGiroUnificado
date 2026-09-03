@@ -1,0 +1,84 @@
+name: PR259 rebuild period precedence fix
+
+on:
+  push:
+    branches:
+      - ajuste/prazo-e-vinculos-simultaneos
+    paths:
+      - .github/workflows/pr259-rebuild-period-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-test-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ajuste/prazo-e-vinculos-simultaneos
+          fetch-depth: 0
+
+      - name: Patch rebuild period precedence
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('Meu Giro/SimulacaoReconstrucaoResumo.gs')
+          s = p.read_text(encoding='utf-8')
+          old = """  if (periodoCompletoValido_(periodoTextoEspecifico)) {\n    periodo = periodoTextoEspecifico;\n  } else if (periodoCompletoValido_(periodoLista)) {\n    periodo = periodoLista;\n  } else if (periodoCompletoValido_(periodoDatasEspecificas)) {\n    periodo = periodoDatasEspecificas;\n  }\n"""
+          new = """  if (periodoCompletoValido_(periodoDatasEspecificas)) {\n    periodo = periodoDatasEspecificas;\n  } else if (periodoCompletoValido_(periodoTextoEspecifico)) {\n    periodo = periodoTextoEspecifico;\n  } else if (periodoCompletoValido_(periodoLista)) {\n    periodo = periodoLista;\n  }\n"""
+          if old not in s:
+              raise SystemExit('Bloco esperado de simularResumoMontarPeriodo_ não encontrado; abortando sem alterar.')
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+          PY
+
+      - name: Add regression test
+        shell: bash
+        run: |
+          cat > tests/rebuild_periodo_precedencia.test.js <<'EOF'
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const test = require('node:test');
+
+          const source = fs.readFileSync(
+            path.resolve(__dirname, '..', 'Meu Giro', 'SimulacaoReconstrucaoResumo.gs'),
+            'utf8'
+          );
+
+          test('rebuild usa a mesma precedência de período da operação normal', () => {
+            const start = source.indexOf('function simularResumoMontarPeriodo_');
+            const end = source.indexOf('\nfunction simularResumoComparar_', start);
+            assert.ok(start >= 0 && end > start, 'simularResumoMontarPeriodo_ deve existir');
+            const trecho = source.slice(start, end);
+            const datas = trecho.indexOf('if (periodoCompletoValido_(periodoDatasEspecificas))');
+            const texto = trecho.indexOf('else if (periodoCompletoValido_(periodoTextoEspecifico))');
+            const catalogo = trecho.indexOf('else if (periodoCompletoValido_(periodoLista))');
+            assert.ok(datas >= 0 && texto > datas && catalogo > texto);
+          });
+          EOF
+
+      - name: Run focused tests
+        run: >-
+          node --test
+          tests/atividade_performance_instrumentation.test.js
+          tests/lista_desafios_nome_backend.test.js
+          tests/meu_giro_resumo_chave_legada.test.js
+          tests/meu_giro_resumo_leitura_cirurgica.test.js
+          tests/meu_giro_resumo_sincronizacao_fluxos.test.js
+          tests/meu_giro_status_apuracao_origem.test.js
+          tests/painel_login_resumo_leve.test.js
+          tests/prazo_validacao_calendario_lock_corte.test.js
+          tests/prazo_vinculos_simultaneos.test.js
+          tests/rebuild_periodo_precedencia.test.js
+
+      - name: Commit validated fix
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add 'Meu Giro/SimulacaoReconstrucaoResumo.gs' tests/rebuild_periodo_precedencia.test.js
+          git diff --cached --check
+          git commit -m "Fix rebuild period precedence"
+          git push origin HEAD:ajuste/prazo-e-vinculos-simultaneos
