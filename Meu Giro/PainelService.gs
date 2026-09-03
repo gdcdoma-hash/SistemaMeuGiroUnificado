@@ -736,9 +736,14 @@ function painelMG_obterInscricaoLevePorDesafio_(idDgmb, desafioPrincipal) {
       status_confirmacao: statusConfirmacao,
       status_pagamento: statusPagamento
     });
+    var periodoDatas = {
+      inicio: normalizarDataISO_(idxInicio > -1 ? row[idxInicio] : ''),
+      fim: normalizarDataISO_(idxFim > -1 ? row[idxFim] : '')
+    };
     var periodoTexto = idxPeriodo > -1 ? extrairPeriodoDesafioTexto_(row[idxPeriodo]) : { inicio: '', fim: '' };
-    var inicio = periodoCompletoValido_(periodoTexto) ? periodoTexto.inicio : normalizarDataISO_(idxInicio > -1 ? row[idxInicio] : '');
-    var fim = periodoCompletoValido_(periodoTexto) ? periodoTexto.fim : normalizarDataISO_(idxFim > -1 ? row[idxFim] : '');
+    var periodoSelecionado = periodoCompletoValido_(periodoDatas) ? periodoDatas : periodoTexto;
+    var inicio = periodoCompletoValido_(periodoSelecionado) ? periodoSelecionado.inicio : '';
+    var fim = periodoCompletoValido_(periodoSelecionado) ? periodoSelecionado.fim : '';
 
     var inscricao = {
       id_dgmb: id,
@@ -922,15 +927,17 @@ function painelMG_buscarVinculoPrincipal_(idDgmb, desafioPrincipal, usarResumoCo
     }
 
     var vinculos = obterVinculosDesafioUsuario_(idDgmb) || [];
+    var idInscricaoPrincipal = painelMG_norm_(desafioPrincipal && desafioPrincipal.id_inscricao);
     var idDesafioPrincipal = painelMG_norm_(desafioPrincipal && desafioPrincipal.id_desafio);
     var idItemPrincipal = painelMG_norm_(desafioPrincipal && desafioPrincipal.id_item_estoque);
 
     for (var i = 0; i < vinculos.length; i++) {
       var v = vinculos[i] || {};
-      if (
-        painelMG_norm_(v.id_desafio) === idDesafioPrincipal &&
-        painelMG_norm_(v.id_item_estoque) === idItemPrincipal
-      ) {
+      var corresponde = idInscricaoPrincipal
+        ? painelMG_norm_(v.id_inscricao) === idInscricaoPrincipal
+        : painelMG_norm_(v.id_desafio) === idDesafioPrincipal &&
+          painelMG_norm_(v.id_item_estoque) === idItemPrincipal;
+      if (corresponde) {
         return {
           periodo_inicio: painelMG_norm_(v.periodo_inicio),
           periodo_fim: painelMG_norm_(v.periodo_fim)
