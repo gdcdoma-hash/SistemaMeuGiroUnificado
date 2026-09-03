@@ -604,7 +604,17 @@ function normalizarDataISO_(value) {
 }
 
 function isDataIsoValida_(value) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || '').trim());
+  var texto = String(value || '').trim();
+  var match = texto.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return false;
+
+  var ano = Number(match[1]);
+  var mes = Number(match[2]);
+  var dia = Number(match[3]);
+  if (mes < 1 || mes > 12 || dia < 1) return false;
+
+  var ultimoDiaMes = new Date(ano, mes, 0).getDate();
+  return dia <= ultimoDiaMes;
 }
 
 function atividadeDentroPeriodoOficial_(dataAtividadeIso, periodoInicioIso, periodoFimIso) {
