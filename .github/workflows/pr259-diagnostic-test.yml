@@ -1,4 +1,5 @@
 name: PR259 diagnostic focused tests
+# rerun after contract test alignment
 on:
   push:
     branches:
