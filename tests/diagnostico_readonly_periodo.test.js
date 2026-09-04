@@ -22,7 +22,8 @@ test('diagnóstico usa resumo leve sem reconciliação e painel em modo somente-
   assert.match(utils, /function obterMeuGiroResumoAtualizadoLeve_\(idDgmb, opcoes\)/);
   assert.match(utils, /var reconciliarAusentes = !\(opcoes && opcoes\.reconciliar === false\)/);
   assert.match(utils, /if \(reconciliarAusentes && meuGiroResumoPossuiInscricaoAusente_/);
-  assert.match(painel, /function getPainelUsuario\(idDgmb, opcoes\)/);
+  assert.match(painel, /function getPainelUsuario\(idDgmb\)/);
+  assert.match(painel, /var opcoes = arguments.length > 1 \? arguments\[1\] : null/);
   assert.match(painel, /var somenteLeitura = !!\(opcoes && opcoes\.somenteLeitura\)/);
   assert.match(painel, /obterMeuGiroResumoAtualizadoLeve_\(id, \{ reconciliar: !somenteLeitura \}\)/);
   assert.match(painel, /if \(!resumoDesafios\.length && !somenteLeitura\)/);
