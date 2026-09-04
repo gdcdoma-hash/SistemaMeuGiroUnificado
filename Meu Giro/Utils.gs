@@ -1573,8 +1573,9 @@ function meuGiroResumoPossuiInscricaoAusente_(valoresResumo, idxId, idxInscricao
   return false;
 }
 
-function obterMeuGiroResumoAtualizadoLeve_(idDgmb) {
+function obterMeuGiroResumoAtualizadoLeve_(idDgmb, opcoes) {
   var id = normalizeText_(idDgmb);
+  var reconciliarAusentes = !(opcoes && opcoes.reconciliar === false);
   if (!id) return [];
 
   var ss = getSpreadsheet_();
@@ -1603,7 +1604,7 @@ function obterMeuGiroResumoAtualizadoLeve_(idDgmb) {
     return obterMeuGiroResumoAtualizado_(id);
   }
 
-  if (meuGiroResumoPossuiInscricaoAusente_(valoresResumo, idxId, idxInscricaoResumo, id, periodosDgmbDesafios.inscricoesAptas)) {
+  if (reconciliarAusentes && meuGiroResumoPossuiInscricaoAusente_(valoresResumo, idxId, idxInscricaoResumo, id, periodosDgmbDesafios.inscricoesAptas)) {
     var lock = LockService.getScriptLock();
     if (lock.tryLock(5000)) {
       try {
