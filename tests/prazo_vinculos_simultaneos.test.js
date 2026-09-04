@@ -36,6 +36,17 @@ test('índice leve preserva janela por ID_INSCRICAO e restringe fallback por ID_
   assert.match(fonte, /if \(idDesafio && !idInscricao\)/);
 });
 
+test('índice leve cria alias composto apenas quando o vínculo moderno é inequívoco', () => {
+  const fonte = trecho('buildPeriodosDgmbDesafiosPorChave_', 'meuGiroResumoPossuiInscricaoAusente_');
+
+  assert.match(fonte, /var aliasLegadoContagem = \{\}/);
+  assert.match(fonte, /var chaveAlias = meuGiroResumoBuildChave_\(id, idDesafioAlias, idItemAlias, metaAlias, ''\)/);
+  assert.match(fonte, /aliasLegadoContagem\[chaveAlias\] = \(aliasLegadoContagem\[chaveAlias\] \|\| 0\) \+ 1/);
+  assert.match(fonte, /if \(chaveLegadaUnica && aliasLegadoContagem\[chaveLegadaUnica\] === 1\)/);
+  assert.match(fonte, /periodos\.detalhePorResumoKey\[chaveLegadaUnica\] = periodoDetalhe/);
+  assert.match(fonte, /periodos\.statusPorResumoKey\[chaveLegadaUnica\] = statusDgmb/);
+});
+
 test('resumo leve reconcilia vínculo ausente uma única vez sob lock', () => {
   const fonte = trecho('obterMeuGiroResumoAtualizadoLeve_', 'meuGiroResumoAgruparLinhasContiguas_');
 
@@ -95,4 +106,16 @@ test('leitor leve do painel prefere o par de datas individuais ao período textu
   const fonte = painel.slice(inicio, fim);
 
   assert.match(fonte, /var periodoSelecionado = periodoCompletoValido_\(periodoDatas\) \? periodoDatas : periodoTexto/);
+});
+
+test('atualizador migra linha legada única para ID_INSCRICAO em vez de anexar duplicata', () => {
+  const fonte = trecho('atualizarMeuGiroResumoComLockAdquirido_', 'atualizarMeuGiroResumoEmLote_');
+
+  assert.match(fonte, /var quantidadeLinhasPorChave = \{\}/);
+  assert.match(fonte, /quantidadeLinhasPorChave\[chaveExistente\] = \(quantidadeLinhasPorChave\[chaveExistente\] \|\| 0\) \+ 1/);
+  assert.match(fonte, /var quantidadeVinculosPorChaveLegada = \{\}/);
+  assert.match(fonte, /quantidadeVinculosPorChaveLegada\[chaveLegadaVinculo\] === 1/);
+  assert.match(fonte, /quantidadeLinhasPorChave\[chaveLegadaVinculo\] === 1/);
+  assert.match(fonte, /if \(linhaLegadaUnica\) numeroLinha = linhasPorChave\[chaveLegadaVinculo\] \|\| 0/);
+  assert.match(fonte, /if \(idxInscricaoResumo > -1\) linha\[idxInscricaoResumo\] = idInscricao/);
 });
