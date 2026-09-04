@@ -88,9 +88,9 @@ function diagnosticoMeuGiroLerDgmbDesafios_(id) {
     var periodoLista = (item.id_desafio && periodosLista.byId[item.id_desafio]) || { inicio: '', fim: '' };
     var periodoSelecionado = periodoCompletoValido_(periodoTexto)
       ? periodoTexto
-      : periodoCompletoValido_(periodoDatas)
-        ? periodoDatas
-        : periodoLista;
+      : periodoCompletoValido_(periodoLista)
+        ? periodoLista
+        : periodoDatas;
     item.periodo_inicio = periodoCompletoValido_(periodoSelecionado) ? periodoSelecionado.inicio : '';
     item.periodo_fim = periodoCompletoValido_(periodoSelecionado) ? periodoSelecionado.fim : '';
     item.apto_elegivel = validacao.valida;
