@@ -15,8 +15,8 @@ const getPainelUsuario = painel.slice(inicio, fim);
 
 assert.match(
   getPainelUsuario,
-  /var resumoDesafios = obterMeuGiroResumoAtualizadoLeve_\(id\) \|\| \[\];/,
-  'login deve ler MEU_GIRO_RESUMO pela função leve'
+  /var resumoDesafios = obterMeuGiroResumoAtualizadoLeve_\(id, \{ reconciliar: !somenteLeitura \}\) \|\| \[\];/,
+  'login deve ler MEU_GIRO_RESUMO pela função leve e respeitar modo somente-leitura'
 );
 assert.doesNotMatch(
   getPainelUsuario,
@@ -25,8 +25,8 @@ assert.doesNotMatch(
 );
 assert.match(
   getPainelUsuario,
-  /if \(!resumoDesafios\.length\) \{[\s\S]*?resumoDesafios = atualizarMeuGiroResumo_\(id\) \|\| \[\];[\s\S]*?atualizarMeuGiroResumo_fallback_login_/,
-  'login deve recalcular e registrar performance somente no fallback vazio'
+  /if \(!resumoDesafios\.length && !somenteLeitura\) \{[\s\S]*?resumoDesafios = atualizarMeuGiroResumo_\(id\) \|\| \[\];[\s\S]*?atualizarMeuGiroResumo_fallback_login_/,
+  'login deve recalcular somente no fallback vazio fora do modo somente-leitura'
 );
 assert.match(
   getPainelUsuario,
