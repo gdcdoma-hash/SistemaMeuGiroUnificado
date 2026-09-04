@@ -36,12 +36,16 @@ test('índice leve preserva janela por ID_INSCRICAO e restringe fallback por ID_
   assert.match(fonte, /if \(idDesafio && !idInscricao\)/);
 });
 
-test('índice leve cria alias composto apenas quando o vínculo moderno é inequívoco', () => {
+test('índice leve cria alias composto apenas quando a chave identifica um único vínculo distinto', () => {
   const fonte = trecho('buildPeriodosDgmbDesafiosPorChave_', 'meuGiroResumoPossuiInscricaoAusente_');
 
-  assert.match(fonte, /var aliasLegadoContagem = \{\}/);
+  assert.match(fonte, /var aliasLegadoVinculos = \{\}/);
   assert.match(fonte, /var chaveAlias = meuGiroResumoBuildChave_\(id, idDesafioAlias, idItemAlias, metaAlias, ''\)/);
-  assert.match(fonte, /aliasLegadoContagem\[chaveAlias\] = \(aliasLegadoContagem\[chaveAlias\] \|\| 0\) \+ 1/);
+  assert.doesNotMatch(fonte, /if \(!idInscricaoAlias\) continue/);
+  assert.match(fonte, /'INSCRICAO\|' \+ idInscricaoAlias/);
+  assert.match(fonte, /'LEGADO'/);
+  assert.match(fonte, /aliasLegadoVinculos\[chaveAlias\]\[assinaturaAlias\] = true/);
+  assert.match(fonte, /aliasLegadoContagem\[chaveAliasContagem\] = Object\.keys\(aliasLegadoVinculos\[chaveAliasContagem\]\)\.length/);
   assert.match(fonte, /if \(chaveLegadaUnica && aliasLegadoContagem\[chaveLegadaUnica\] === 1\)/);
   assert.match(fonte, /periodos\.detalhePorResumoKey\[chaveLegadaUnica\] = periodoDetalhe/);
   assert.match(fonte, /periodos\.statusPorResumoKey\[chaveLegadaUnica\] = statusDgmb/);
