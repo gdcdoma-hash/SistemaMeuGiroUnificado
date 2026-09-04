@@ -34,3 +34,5 @@ jobs:
           tests/rebuild_periodo_precedencia.test.js
 
 # rerun with injected catalog context
+
+# rerun after test contract update
