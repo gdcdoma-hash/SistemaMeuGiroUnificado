@@ -1451,19 +1451,41 @@ function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb) {
   // o leitor leve monta a chave composta legada. Criamos esse alias somente
   // quando ele identifica um único vínculo moderno, evitando contaminação
   // entre duas inscrições equivalentes do mesmo desafio.
-  var aliasLegadoContagem = {};
+  var aliasLegadoVinculos = {};
   for (var aliasIdx = 1; aliasIdx < values.length; aliasIdx++) {
     var rowAlias = values[aliasIdx] || [];
     if (normalizeText_(rowAlias[idxId]) !== id) continue;
 
     var idInscricaoAlias = idxInscricao > -1 ? normalizeText_(rowAlias[idxInscricao]) : '';
-    if (!idInscricaoAlias) continue;
-
     var idDesafioAlias = obterIdDesafioRegistro_(rowAlias, idxIdDesafio, idxObs);
     var idItemAlias = idxItem > -1 ? normalizeText_(rowAlias[idxItem]) : '';
     var metaAlias = idxMeta > -1 ? parseLocalizedNumber_(rowAlias[idxMeta]) : 0;
     var chaveAlias = meuGiroResumoBuildChave_(id, idDesafioAlias, idItemAlias, metaAlias, '');
-    if (chaveAlias) aliasLegadoContagem[chaveAlias] = (aliasLegadoContagem[chaveAlias] || 0) + 1;
+    if (!chaveAlias) continue;
+
+    var assinaturaAlias = idInscricaoAlias
+      ? 'INSCRICAO|' + idInscricaoAlias
+      : [
+          'LEGADO',
+          idDesafioAlias,
+          idItemAlias,
+          Math.round((metaAlias + Number.EPSILON) * 10) / 10,
+          idxPeriodo > -1 ? normalizeText_(rowAlias[idxPeriodo]) : '',
+          idxInicio > -1 ? normalizarDataISO_(rowAlias[idxInicio]) : '',
+          idxFim > -1 ? normalizarDataISO_(rowAlias[idxFim]) : '',
+          idxStatusUsuarioDesafio > -1 ? normalizeText_(rowAlias[idxStatusUsuarioDesafio]) : '',
+          idxStatusDesafio > -1 ? normalizeText_(rowAlias[idxStatusDesafio]) : '',
+          idxStatusPag > -1 ? normalizeText_(rowAlias[idxStatusPag]) : ''
+        ].join('|');
+
+    if (!aliasLegadoVinculos[chaveAlias]) aliasLegadoVinculos[chaveAlias] = {};
+    aliasLegadoVinculos[chaveAlias][assinaturaAlias] = true;
+  }
+
+  var aliasLegadoContagem = {};
+  for (var chaveAliasContagem in aliasLegadoVinculos) {
+    if (!Object.prototype.hasOwnProperty.call(aliasLegadoVinculos, chaveAliasContagem)) continue;
+    aliasLegadoContagem[chaveAliasContagem] = Object.keys(aliasLegadoVinculos[chaveAliasContagem]).length;
   }
 
   for (var i = 1; i < values.length; i++) {
