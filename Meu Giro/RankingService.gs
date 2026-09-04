@@ -308,15 +308,6 @@ function rankingMG_criarIndiceCompetitivo_() {
 }
 
 function rankingMG_resolverPeriodoCompetitivo_(row, periodoLista) {
-  var periodoTexto = rankingMG_firstFilled_(row, [
-    'periodo_desafio', 'Periodo_Desafio', 'período_desafio', 'periodo desafio', 'período desafio'
-  ]);
-  var periodoHistorico = extrairPeriodoDesafioTexto_(periodoTexto);
-  if (periodoCompletoValido_(periodoHistorico)) return periodoHistorico;
-  if (periodoCompletoValido_(periodoLista)) {
-    return { inicio: periodoLista.inicio, fim: periodoLista.fim };
-  }
-
   var periodoDatas = {
     inicio: normalizarDataISO_(rankingMG_firstFilled_(row, [
       'data_inicio_desafio', 'Data_Inicio_Desafio', 'data inicio desafio', 'data início desafio'
@@ -325,7 +316,16 @@ function rankingMG_resolverPeriodoCompetitivo_(row, periodoLista) {
       'data_fim_desafio', 'Data_Fim_Desafio', 'data fim desafio'
     ]))
   };
-  return periodoCompletoValido_(periodoDatas) ? periodoDatas : { inicio: '', fim: '' };
+  var periodoTexto = rankingMG_firstFilled_(row, [
+    'periodo_desafio', 'Periodo_Desafio', 'período_desafio', 'periodo desafio', 'período desafio'
+  ]);
+  var periodoHistorico = extrairPeriodoDesafioTexto_(periodoTexto);
+  if (periodoCompletoValido_(periodoHistorico)) return periodoHistorico;
+  if (periodoCompletoValido_(periodoLista)) {
+    return { inicio: periodoLista.inicio, fim: periodoLista.fim };
+  }
+  if (periodoCompletoValido_(periodoDatas)) return periodoDatas;
+  return { inicio: '', fim: '' };
 }
 
 function rankingMG_resolverAtributosCompetitivos_(rowResumo, indice) {

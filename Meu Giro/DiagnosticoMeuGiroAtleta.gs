@@ -33,7 +33,7 @@ function diagnosticarMeuGiroAtleta(idDgmb) {
   relatorio.MEU_GIRO_RESUMO = diagnosticoMeuGiroLerResumo_(id);
   relatorio.REGISTRO_KM = diagnosticoMeuGiroLerRegistroKm_(id, relatorio.MEU_GIRO_RESUMO.linhas);
 
-  var resumoLeve = obterMeuGiroResumoAtualizadoLeve_(id) || [];
+  var resumoLeve = obterMeuGiroResumoAtualizadoLeve_(id, { reconciliar: false }) || [];
   relatorio.MEU_GIRO_RESUMO.total_obterMeuGiroResumoAtualizadoLeve = resumoLeve.length;
   relatorio.MEU_GIRO_RESUMO.linhas_obterMeuGiroResumoAtualizadoLeve = diagnosticoMeuGiroProjetarDesafios_(resumoLeve);
 
@@ -67,10 +67,16 @@ function diagnosticoMeuGiroLerDgmbDesafios_(id) {
   idx.fim = getOptionalColumnIndex_(map, ['data_fim_desafio', 'data fim desafio', 'periodo_fim']);
   if (idx.id === -1) return saida;
 
+  var periodosLista = buildListaDesafiosContexto_(getSpreadsheet_()).periodos;
+
   for (var i = 1; i < values.length; i++) {
     var row = values[i] || [];
     if (normalizeText_(row[idx.id]) !== id) continue;
     var periodoTexto = idx.periodo > -1 ? extrairPeriodoDesafioTexto_(row[idx.periodo]) : { inicio: '', fim: '' };
+    var periodoDatas = {
+      inicio: normalizarDataISO_(idx.inicio > -1 ? row[idx.inicio] : ''),
+      fim: normalizarDataISO_(idx.fim > -1 ? row[idx.fim] : '')
+    };
     var statusUsuario = idx.statusUsuario > -1 ? normalizeText_(row[idx.statusUsuario]) : '';
     var statusPagamento = idx.statusPagamento > -1 ? normalizeText_(row[idx.statusPagamento]) : '';
     var statusConfirmacao = idx.statusConfirmacao > -1 ? normalizeText_(row[idx.statusConfirmacao]) : '';
@@ -79,8 +85,14 @@ function diagnosticoMeuGiroLerDgmbDesafios_(id) {
     item.linha_planilha = i + 1;
     item.meta_km = idx.meta > -1 ? parseLocalizedNumber_(row[idx.meta]) : 0;
     item.status_lista_desafios = idx.statusLista > -1 ? normalizeText_(row[idx.statusLista]) : '';
-    item.periodo_inicio = periodoCompletoValido_(periodoTexto) ? periodoTexto.inicio : normalizarDataISO_(idx.inicio > -1 ? row[idx.inicio] : '');
-    item.periodo_fim = periodoCompletoValido_(periodoTexto) ? periodoTexto.fim : normalizarDataISO_(idx.fim > -1 ? row[idx.fim] : '');
+    var periodoLista = (item.id_desafio && periodosLista.byId[item.id_desafio]) || { inicio: '', fim: '' };
+    var periodoSelecionado = periodoCompletoValido_(periodoTexto)
+      ? periodoTexto
+      : periodoCompletoValido_(periodoLista)
+        ? periodoLista
+        : periodoDatas;
+    item.periodo_inicio = periodoCompletoValido_(periodoSelecionado) ? periodoSelecionado.inicio : '';
+    item.periodo_fim = periodoCompletoValido_(periodoSelecionado) ? periodoSelecionado.fim : '';
     item.apto_elegivel = validacao.valida;
     item.criterio_elegibilidade = validacao.criterio;
     saida.linhas.push(item);
@@ -163,7 +175,7 @@ function diagnosticoMeuGiroExecutarGetPainelUsuarioSeguro_(id, totalResumo) {
   if (!totalResumo) {
     return { executado: false, motivo: 'Não executado para preservar somente-leitura: getPainelUsuario chama atualizarMeuGiroResumo_ quando MEU_GIRO_RESUMO está vazio.' };
   }
-  var payload = getPainelUsuario(id);
+  var payload = getPainelUsuario(id, { somenteLeitura: true });
   var data = payload && payload.data ? payload.data : {};
   return {
     executado: true,

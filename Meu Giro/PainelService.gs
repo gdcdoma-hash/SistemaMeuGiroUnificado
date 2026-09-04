@@ -28,6 +28,8 @@ function painelMG_logBug03Desafio_(etapa, item, origem) {
 }
 
 function getPainelUsuario(idDgmb) {
+  var opcoes = arguments.length > 1 ? arguments[1] : null;
+  var somenteLeitura = !!(opcoes && opcoes.somenteLeitura);
   var perfTotalInicio = painelMG_perfNow_();
   var perfEtapaInicio = perfTotalInicio;
   var auditoria = painelMG_criarAuditoriaCarregamentoInicial_();
@@ -44,13 +46,13 @@ function getPainelUsuario(idDgmb) {
     painelMG_perfLog_('painel-inicial', 'buscarPessoaPainelMG_', perfEtapaInicio, { encontrado: !!pessoa });
 
     perfEtapaInicio = painelMG_perfNow_();
-    var resumoDesafios = obterMeuGiroResumoAtualizadoLeve_(id) || [];
+    var resumoDesafios = obterMeuGiroResumoAtualizadoLeve_(id, { reconciliar: !somenteLeitura }) || [];
     painelMG_perfLog_('painel-inicial', 'lerMeuGiroResumoAtualizadoLogin_', perfEtapaInicio, {
       total_desafios_resumo: resumoDesafios.length,
       fallback: false
     });
 
-    if (!resumoDesafios.length) {
+    if (!resumoDesafios.length && !somenteLeitura) {
       perfEtapaInicio = painelMG_perfNow_();
       resumoDesafios = atualizarMeuGiroResumo_(id) || [];
       painelMG_perfLog_('painel-inicial', 'atualizarMeuGiroResumo_fallback_login_', perfEtapaInicio, {
@@ -710,6 +712,7 @@ function painelMG_obterInscricaoLevePorDesafio_(idDgmb, desafioPrincipal) {
   var idxPeriodo = getOptionalColumnIndex_(map, ['periodo_desafio', 'periodo desafio', 'período_desafio', 'período desafio']);
   var idxInicio = getOptionalColumnIndex_(map, ['data_inicio_desafio', 'data inicio desafio', 'data início desafio']);
   var idxFim = getOptionalColumnIndex_(map, ['data_fim_desafio', 'data fim desafio']);
+  var periodosLista = buildListaDesafiosContexto_(getSpreadsheet_()).periodos;
 
   var alvoInscricao = painelMG_norm_(desafioPrincipal && desafioPrincipal.id_inscricao);
   var alvoDesafio = painelMG_norm_(desafioPrincipal && desafioPrincipal.id_desafio);
@@ -736,9 +739,19 @@ function painelMG_obterInscricaoLevePorDesafio_(idDgmb, desafioPrincipal) {
       status_confirmacao: statusConfirmacao,
       status_pagamento: statusPagamento
     });
+    var periodoDatas = {
+      inicio: normalizarDataISO_(idxInicio > -1 ? row[idxInicio] : ''),
+      fim: normalizarDataISO_(idxFim > -1 ? row[idxFim] : '')
+    };
     var periodoTexto = idxPeriodo > -1 ? extrairPeriodoDesafioTexto_(row[idxPeriodo]) : { inicio: '', fim: '' };
-    var inicio = periodoCompletoValido_(periodoTexto) ? periodoTexto.inicio : normalizarDataISO_(idxInicio > -1 ? row[idxInicio] : '');
-    var fim = periodoCompletoValido_(periodoTexto) ? periodoTexto.fim : normalizarDataISO_(idxFim > -1 ? row[idxFim] : '');
+    var periodoLista = (idDesafio && periodosLista.byId[idDesafio]) || { inicio: '', fim: '' };
+    var periodoSelecionado = periodoCompletoValido_(periodoTexto)
+      ? periodoTexto
+      : periodoCompletoValido_(periodoLista)
+        ? periodoLista
+        : periodoDatas;
+    var inicio = periodoCompletoValido_(periodoSelecionado) ? periodoSelecionado.inicio : '';
+    var fim = periodoCompletoValido_(periodoSelecionado) ? periodoSelecionado.fim : '';
 
     var inscricao = {
       id_dgmb: id,
@@ -922,15 +935,17 @@ function painelMG_buscarVinculoPrincipal_(idDgmb, desafioPrincipal, usarResumoCo
     }
 
     var vinculos = obterVinculosDesafioUsuario_(idDgmb) || [];
+    var idInscricaoPrincipal = painelMG_norm_(desafioPrincipal && desafioPrincipal.id_inscricao);
     var idDesafioPrincipal = painelMG_norm_(desafioPrincipal && desafioPrincipal.id_desafio);
     var idItemPrincipal = painelMG_norm_(desafioPrincipal && desafioPrincipal.id_item_estoque);
 
     for (var i = 0; i < vinculos.length; i++) {
       var v = vinculos[i] || {};
-      if (
-        painelMG_norm_(v.id_desafio) === idDesafioPrincipal &&
-        painelMG_norm_(v.id_item_estoque) === idItemPrincipal
-      ) {
+      var corresponde = idInscricaoPrincipal
+        ? painelMG_norm_(v.id_inscricao) === idInscricaoPrincipal
+        : painelMG_norm_(v.id_desafio) === idDesafioPrincipal &&
+          painelMG_norm_(v.id_item_estoque) === idItemPrincipal;
+      if (corresponde) {
         return {
           periodo_inicio: painelMG_norm_(v.periodo_inicio),
           periodo_fim: painelMG_norm_(v.periodo_fim)

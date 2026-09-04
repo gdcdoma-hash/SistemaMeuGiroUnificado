@@ -7,9 +7,22 @@
  * substituição, cria uma cópia integral da aba oficial para auditoria e
  * eventual recuperação manual.
  *
+ * A operação inteira usa o mesmo ScriptLock das demais gravações de
+ * MEU_GIRO_RESUMO para impedir escrita concorrente durante clear/setValues.
+ *
  * @return {Object} Resumo da operação executada.
  */
 function substituirMeuGiroResumoPorRebuildTeste() {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    return substituirMeuGiroResumoPorRebuildTesteComLockAdquirido_();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function substituirMeuGiroResumoPorRebuildTesteComLockAdquirido_() {
   var nomeOrigem = 'MEU_GIRO_RESUMO_REBUILD_TESTE';
   var nomeDestino = SHEETS.MEU_GIRO_RESUMO || 'MEU_GIRO_RESUMO';
   var ss = getSpreadsheet_();

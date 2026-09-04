@@ -136,11 +136,12 @@ test('objeto de desafio recebe periodo_desafio vindo do cache de ListaDesafios',
 test('obterMeuGiroResumoAtualizadoLeve consulta cache de ListaDesafios e injeta nome_desafio', () => {
   const light = getFunctionSlice('obterMeuGiroResumoAtualizadoLeve_', 'meuGiroResumoAgruparLinhasContiguas_');
   assert.match(light, /var periodosListaDesafios = buildListaDesafiosContexto_\(ss\)\.periodos;/);
-  assert.match(light, /buildPeriodosDgmbDesafiosPorChave_\(obterDgmbDesafiosCacheExecucao_\('obterMeuGiroResumoAtualizadoLeve_'\), id\)/);
+  assert.match(light, /buildPeriodosDgmbDesafiosPorChave_\([\s\S]*obterDgmbDesafiosCacheExecucao_\('obterMeuGiroResumoAtualizadoLeve_'\),[\s\S]*id,[\s\S]*periodosListaDesafios[\s\S]*\)/);
   assert.match(light, /var periodoListaResumo = \(idDesafioResumo && periodosListaDesafios\.byId\[idDesafioResumo\]\)/);
   assert.match(light, /nome_desafio: obterNomeDesafioListaPorId_\(periodosListaDesafios, idDesafioResumo, ''\)/);
   assert.match(light, /var periodoLeveEnviado = periodoDgmbResumo \|\| periodoListaResumo\.periodo_desafio \|\| ''/);
-  assert.match(light, /var statusDgmbResumo = periodosDgmbDesafios\.statusPorResumoKey\[chaveResumo\] \|\| periodosDgmbDesafios\.statusPorDesafio\[idDesafioResumo\] \|\| \{\}/);
+  assert.match(light, /var usarFallbackDesafio = !idInscricaoResumo/);
+  assert.match(light, /var statusDgmbResumo = periodosDgmbDesafios\.statusPorResumoKey\[chaveResumo\] \|\| \(usarFallbackDesafio \? periodosDgmbDesafios\.statusPorDesafio\[idDesafioResumo\] : null\) \|\| \{\}/);
   assert.match(light, /status_usuario_desafio: normalizeText_\(statusDgmbResumo\.status_usuario_desafio\)/);
   assert.match(light, /periodo_desafio: periodoLeveEnviado/);
 });
@@ -166,7 +167,12 @@ test('buildPeriodosDgmbDesafiosPorChave indexa status_usuario_desafio por id_ins
       return -1;
     },
     getIdDesafioColumnIndex_(map) { return map.id_desafio ?? -1; },
-    obterIdDesafioRegistro_(row, idxIdDesafio) { return idxIdDesafio > -1 ? ctx.normalizeText_(row[idxIdDesafio]) : ''; }
+    obterIdDesafioRegistro_(row, idxIdDesafio) { return idxIdDesafio > -1 ? ctx.normalizeText_(row[idxIdDesafio]) : ''; },
+    extrairPeriodoDesafioTexto_() { return { inicio: '2026-06-01', fim: '2026-06-30' }; },
+    periodoCompletoValido_(periodo) { return !!(periodo && periodo.inicio && periodo.fim); },
+    normalizarDataISO_() { return ''; },
+    validarInscricaoMinima_() { return { valida: true }; },
+    inscricaoTemBloqueioMinimo_() { return false; }
   };
   ctx.meuGiroResumoBuildChave_ = function(idDgmb, idDesafio, idItemEstoque, metaKm, idInscricao) {
     const inscricao = ctx.normalizeText_(idInscricao);

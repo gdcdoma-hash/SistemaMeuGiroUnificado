@@ -604,7 +604,17 @@ function normalizarDataISO_(value) {
 }
 
 function isDataIsoValida_(value) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || '').trim());
+  var texto = String(value || '').trim();
+  var match = texto.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return false;
+
+  var ano = Number(match[1]);
+  var mes = Number(match[2]);
+  var dia = Number(match[3]);
+  if (mes < 1 || mes > 12 || dia < 1) return false;
+
+  var ultimoDiaMes = new Date(ano, mes, 0).getDate();
+  return dia <= ultimoDiaMes;
 }
 
 function atividadeDentroPeriodoOficial_(dataAtividadeIso, periodoInicioIso, periodoFimIso) {
@@ -895,7 +905,6 @@ function periodoCompletoValido_(periodo) {
     periodo.inicio <= periodo.fim;
 }
 
-
 function bug03PeriodoDesafioLogBackend_(etapa, dados) {
   if (!meuGiroPerfDebugAtivo_()) return;
 
@@ -943,25 +952,23 @@ function montarPeriodoHistoricoVinculo_(row, indices, periodoLista, contextoLog)
   };
   var periodoTextoEspecifico = extrairPeriodoDesafioTexto_(periodoTexto);
   var periodo = { inicio: '', fim: '' };
-  var usouFallbackLista = false;
-  var usouFallbackDatasEspecificas = false;
+  var origemPeriodo = '';
 
+  // Desafio mensal explícito usa sua janela mensal oficial.
+  // Datas individuais assumem somente quando o texto não resolve uma janela completa.
   if (periodoCompletoValido_(periodoTextoEspecifico)) {
     periodo = periodoTextoEspecifico;
+    origemPeriodo = 'dgmbDesafios.periodo_desafio';
   } else if (periodoCompletoValido_(periodoLista)) {
+    // Enquanto o modelo por prazo individual não tiver um marcador explícito,
+    // Data_Inicio/Data_Fim herdados de ListaDesafios não podem sobrepor a
+    // janela mensal oficial do desafio.
     periodo = periodoLista;
-    usouFallbackLista = true;
+    origemPeriodo = 'ListaDesafios.Periodo';
+    logMeuGiroDiagnostico_('Fallback de período via ListaDesafios.Periodo usado.', contextoLog);
   } else if (periodoCompletoValido_(periodoDatasEspecificas)) {
     periodo = periodoDatasEspecificas;
-    usouFallbackDatasEspecificas = true;
-  }
-
-  if (usouFallbackLista) {
-    logMeuGiroDiagnostico_('Fallback de período via ListaDesafios.Periodo usado.', contextoLog);
-  }
-
-  if (usouFallbackDatasEspecificas) {
-    logMeuGiroDiagnostico_('Fallback legado de período via data_inicio_desafio/data_fim_desafio usado.', contextoLog);
+    origemPeriodo = 'dgmbDesafios.data_inicio_desafio/data_fim_desafio';
   }
 
   if (!periodoCompletoValido_(periodo)) {
@@ -977,7 +984,7 @@ function montarPeriodoHistoricoVinculo_(row, indices, periodoLista, contextoLog)
     nome: periodoLista && periodoLista.nome_desafio,
     periodo_inicio: periodo.inicio || '',
     periodo_fim: periodo.fim || '',
-    origem: 'dgmbDesafios.periodo_desafio=' + periodoTexto + '; ListaDesafios.Periodo=' + normalizeText_(periodoLista && periodoLista.periodo_desafio)
+    origem: origemPeriodo + '; dgmbDesafios.periodo_desafio=' + periodoTexto + '; ListaDesafios.Periodo=' + normalizeText_(periodoLista && periodoLista.periodo_desafio)
   });
 
   return {
@@ -1114,8 +1121,6 @@ function obterVinculosDesafioUsuario_(idDgmb) {
       });
     }
 
-    // Para o Meu Giro, vínculo normal em dgmbDesafios não é bloqueado por ListaDesafios.Status.
-    // ListaDesafios segue como fallback de período/status visual e permanece preservada para inscrições.
     var apto = ehNormal
       ? aptoBase && !!idDesafio && metaKm > 0
       : aptoBase;
@@ -1147,7 +1152,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
       nome: periodo.nome_desafio || abaDesafio || '',
       periodo_inicio: periodo.inicio || '',
       periodo_fim: periodo.fim || '',
-      origem: 'vinculo final; dgmbDesafios.periodo_desafio ou ListaDesafios.Periodo'
+      origem: 'vinculo final; dgmbDesafios ou ListaDesafios'
     });
 
     vinculos.push({
@@ -1301,8 +1306,6 @@ function ensureMeuGiroResumoSheet_() {
     return sh;
   }
 
-  // Aceita tanto a estrutura legada quanto a futura. A validação por nome evita
-  // sobrescrever ou deslocar dados durante a inserção manual de ID_INSCRICAO.
   meuGiroResumoObterLayout_(atual, sheetName);
   return sh;
 }
@@ -1316,12 +1319,8 @@ function meuGiroResumoBuildChave_(idDgmb, idDesafio, idItemEstoque, metaKm, idIn
   var item = normalizeText_(idItemEstoque);
   var meta = Math.round((parseLocalizedNumber_(metaKm) + Number.EPSILON) * 10) / 10;
 
-  // Fallback legado para abas sem a coluna ID_INSCRICAO e para linhas ou
-  // vínculos em que esse identificador ainda não esteja preenchido.
   return [id, desafio, item || ('META_' + meta)].join('|');
 }
-
-
 
 function calcularStatusMeuGiroPorPercentual_(percentualConcluido) {
   return parseLocalizedNumber_(percentualConcluido) >= 100
@@ -1418,53 +1417,148 @@ function obterMeuGiroResumoAtualizado_(idDgmb) {
   return saida;
 }
 
-
-function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb) {
+function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb, periodosLista) {
   var id = normalizeText_(idDgmb);
   var values = cacheDesafios && cacheDesafios.values ? cacheDesafios.values : [];
   var map = cacheDesafios && cacheDesafios.map ? cacheDesafios.map : {};
-  var periodos = { byResumoKey: {}, byDesafio: {}, statusPorResumoKey: {}, statusPorDesafio: {} };
+  var periodos = {
+    byResumoKey: {},
+    byDesafio: {},
+    detalhePorResumoKey: {},
+    detalhePorDesafio: {},
+    statusPorResumoKey: {},
+    statusPorDesafio: {},
+    inscricoesAptas: {}
+  };
 
   if (!id || !values || values.length < 2) return periodos;
 
+  periodosLista = periodosLista || { byId: {} };
+
   var idxId = getOptionalColumnIndex_(map, ['id_dgmb']);
   var idxPeriodo = getOptionalColumnIndex_(map, MEU_GIRO_PERIODO_DESAFIO_ALIASES_);
+  var idxInicio = getOptionalColumnIndex_(map, ['data_inicio_desafio', 'data inicio desafio', 'data início desafio']);
+  var idxFim = getOptionalColumnIndex_(map, ['data_fim_desafio', 'data fim desafio']);
   var idxInscricao = getOptionalColumnIndex_(map, ['id_inscricao', 'id inscrição', 'id inscricao']);
   var idxIdDesafio = getIdDesafioColumnIndex_(map);
   var idxObs = getOptionalColumnIndex_(map, ['observacao', 'observação']);
   var idxItem = getOptionalColumnIndex_(map, ['id_item_estoque', 'id item estoque']);
   var idxMeta = getOptionalColumnIndex_(map, ['distancia_km', 'distancia km', 'meta_km', 'meta km']);
+  var idxTipo = getOptionalColumnIndex_(map, ['tipo_do_desafio', 'tipo do desafio', 'tipo_desafio', 'tipo desafio']);
   var idxStatusUsuarioDesafio = getOptionalColumnIndex_(map, ['status_usuario_desafio', 'status usuário desafio', 'status usuario desafio']);
   var idxStatusValidacaoCertificado = getOptionalColumnIndex_(map, ['status_validacao_certificado']);
   var idxStatusDesafio = getOptionalColumnIndex_(map, ['status_desafio', 'status desafio']);
   var idxStatusPag = getOptionalColumnIndex_(map, ['status_pagamento', 'pagamento_status', 'pagamento', 'pix_status']);
+  var idxStatusInscricao = getOptionalColumnIndex_(map, ['status_inscricao', 'status inscrição']);
+  var idxConfirmacao = getOptionalColumnIndex_(map, ['confirmacao', 'confirmação', 'confirmado', 'inscricao_confirmada']);
 
   if (idxId === -1) return periodos;
+
+  // Compatibilidade: quando MEU_GIRO_RESUMO ainda não possui ID_INSCRICAO,
+  // o leitor leve monta a chave composta legada. Criamos esse alias somente
+  // quando ele identifica um único vínculo moderno, evitando contaminação
+  // entre duas inscrições equivalentes do mesmo desafio.
+  var aliasLegadoVinculos = {};
+  for (var aliasIdx = 1; aliasIdx < values.length; aliasIdx++) {
+    var rowAlias = values[aliasIdx] || [];
+    if (normalizeText_(rowAlias[idxId]) !== id) continue;
+
+    var idInscricaoAlias = idxInscricao > -1 ? normalizeText_(rowAlias[idxInscricao]) : '';
+    var idDesafioAlias = obterIdDesafioRegistro_(rowAlias, idxIdDesafio, idxObs);
+    var idItemAlias = idxItem > -1 ? normalizeText_(rowAlias[idxItem]) : '';
+    var metaAlias = idxMeta > -1 ? parseLocalizedNumber_(rowAlias[idxMeta]) : 0;
+    var chaveAlias = meuGiroResumoBuildChave_(id, idDesafioAlias, idItemAlias, metaAlias, '');
+    if (!chaveAlias) continue;
+
+    var assinaturaAlias = idInscricaoAlias
+      ? 'INSCRICAO|' + idInscricaoAlias
+      : [
+          'LEGADO',
+          idDesafioAlias,
+          idItemAlias,
+          Math.round((metaAlias + Number.EPSILON) * 10) / 10,
+          idxPeriodo > -1 ? normalizeText_(rowAlias[idxPeriodo]) : '',
+          idxInicio > -1 ? normalizarDataISO_(rowAlias[idxInicio]) : '',
+          idxFim > -1 ? normalizarDataISO_(rowAlias[idxFim]) : '',
+          idxStatusUsuarioDesafio > -1 ? normalizeText_(rowAlias[idxStatusUsuarioDesafio]) : '',
+          idxStatusDesafio > -1 ? normalizeText_(rowAlias[idxStatusDesafio]) : '',
+          idxStatusPag > -1 ? normalizeText_(rowAlias[idxStatusPag]) : ''
+        ].join('|');
+
+    if (!aliasLegadoVinculos[chaveAlias]) aliasLegadoVinculos[chaveAlias] = {};
+    aliasLegadoVinculos[chaveAlias][assinaturaAlias] = true;
+  }
+
+  var aliasLegadoContagem = {};
+  for (var chaveAliasContagem in aliasLegadoVinculos) {
+    if (!Object.prototype.hasOwnProperty.call(aliasLegadoVinculos, chaveAliasContagem)) continue;
+    aliasLegadoContagem[chaveAliasContagem] = Object.keys(aliasLegadoVinculos[chaveAliasContagem]).length;
+  }
 
   for (var i = 1; i < values.length; i++) {
     var row = values[i] || [];
     if (normalizeText_(row[idxId]) !== id) continue;
 
-    var periodo = idxPeriodo > -1 ? normalizeText_(row[idxPeriodo]) : '';
+    var periodoTexto = idxPeriodo > -1 ? normalizeText_(row[idxPeriodo]) : '';
+    var periodoDatas = {
+      inicio: idxInicio > -1 ? normalizarDataISO_(row[idxInicio]) : '',
+      fim: idxFim > -1 ? normalizarDataISO_(row[idxFim]) : ''
+    };
+    var periodoTextoNormalizado = extrairPeriodoDesafioTexto_(periodoTexto);
     var idDesafio = obterIdDesafioRegistro_(row, idxIdDesafio, idxObs);
+    var periodoLista = (idDesafio && periodosLista.byId[idDesafio]) || { inicio: '', fim: '', periodo_desafio: '' };
+    var periodoDetalhe = periodoCompletoValido_(periodoTextoNormalizado)
+      ? { inicio: periodoTextoNormalizado.inicio, fim: periodoTextoNormalizado.fim, periodo_desafio: periodoTexto }
+      : periodoCompletoValido_(periodoLista)
+        ? { inicio: periodoLista.inicio, fim: periodoLista.fim, periodo_desafio: periodoTexto || normalizeText_(periodoLista.periodo_desafio) }
+        : periodoCompletoValido_(periodoDatas)
+          ? { inicio: periodoDatas.inicio, fim: periodoDatas.fim, periodo_desafio: periodoTexto }
+          : { inicio: '', fim: '', periodo_desafio: periodoTexto };
+
+
     var idItem = idxItem > -1 ? normalizeText_(row[idxItem]) : '';
     var meta = idxMeta > -1 ? parseLocalizedNumber_(row[idxMeta]) : 0;
     var idInscricao = idxInscricao > -1 ? normalizeText_(row[idxInscricao]) : '';
     var chave = meuGiroResumoBuildChave_(id, idDesafio, idItem, meta, idInscricao);
+    var chaveLegadaUnica = idInscricao
+      ? meuGiroResumoBuildChave_(id, idDesafio, idItem, meta, '')
+      : '';
 
+    var statusUsuarioDesafio = idxStatusUsuarioDesafio > -1 ? normalizeText_(row[idxStatusUsuarioDesafio]) : '';
     var statusDgmb = {
-      status_usuario_desafio: idxStatusUsuarioDesafio > -1 ? normalizeText_(row[idxStatusUsuarioDesafio]) : '',
+      status_usuario_desafio: statusUsuarioDesafio,
       status_validacao_certificado: idxStatusValidacaoCertificado > -1 ? normalizeText_(row[idxStatusValidacaoCertificado]).toUpperCase() : '',
       status_desafio: idxStatusDesafio > -1 ? normalizeText_(row[idxStatusDesafio]) : '',
       status_pagamento: idxStatusPag > -1 ? normalizeText_(row[idxStatusPag]) : ''
     };
 
+    var tipoDesafio = idxTipo > -1 ? normalizeText_(row[idxTipo]) : '';
+    var tipoSemAcento = tipoDesafio.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    var ehNormal = tipoSemAcento === 'normal';
+    var validacao = validarInscricaoMinima_({
+      status_inscricao: idxStatusInscricao > -1 ? normalizeText_(row[idxStatusInscricao]) || statusUsuarioDesafio : statusUsuarioDesafio,
+      status_confirmacao: idxConfirmacao > -1 ? normalizeText_(row[idxConfirmacao]) : '',
+      status_pagamento: idxStatusPag > -1 ? normalizeText_(row[idxStatusPag]) : ''
+    });
+    var aptoBase = validacao.valida && !inscricaoTemBloqueioMinimo_(statusUsuarioDesafio);
+    var apto = ehNormal ? aptoBase && !!idDesafio && meta > 0 : aptoBase;
+    if (idInscricao && apto) periodos.inscricoesAptas[idInscricao] = true;
+
     if (chave) {
-      if (periodo && !periodos.byResumoKey[chave]) periodos.byResumoKey[chave] = periodo;
+      if (periodoTexto && !periodos.byResumoKey[chave]) periodos.byResumoKey[chave] = periodoTexto;
+      if (!periodos.detalhePorResumoKey[chave]) periodos.detalhePorResumoKey[chave] = periodoDetalhe;
       if (!periodos.statusPorResumoKey[chave]) periodos.statusPorResumoKey[chave] = statusDgmb;
     }
-    if (idDesafio) {
-      if (periodo && !periodos.byDesafio[idDesafio]) periodos.byDesafio[idDesafio] = periodo;
+
+    if (chaveLegadaUnica && aliasLegadoContagem[chaveLegadaUnica] === 1) {
+      if (periodoTexto && !periodos.byResumoKey[chaveLegadaUnica]) periodos.byResumoKey[chaveLegadaUnica] = periodoTexto;
+      if (!periodos.detalhePorResumoKey[chaveLegadaUnica]) periodos.detalhePorResumoKey[chaveLegadaUnica] = periodoDetalhe;
+      if (!periodos.statusPorResumoKey[chaveLegadaUnica]) periodos.statusPorResumoKey[chaveLegadaUnica] = statusDgmb;
+    }
+
+    if (idDesafio && !idInscricao) {
+      if (periodoTexto && !periodos.byDesafio[idDesafio]) periodos.byDesafio[idDesafio] = periodoTexto;
+      if (!periodos.detalhePorDesafio[idDesafio]) periodos.detalhePorDesafio[idDesafio] = periodoDetalhe;
       if (!periodos.statusPorDesafio[idDesafio]) periodos.statusPorDesafio[idDesafio] = statusDgmb;
     }
   }
@@ -1472,8 +1566,27 @@ function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb) {
   return periodos;
 }
 
-function obterMeuGiroResumoAtualizadoLeve_(idDgmb) {
+function meuGiroResumoPossuiInscricaoAusente_(valoresResumo, idxId, idxInscricaoResumo, idDgmb, inscricoesAptas) {
+  if (idxInscricaoResumo < 0 || !inscricoesAptas) return false;
+
+  var existentes = {};
+  for (var i = 1; i < (valoresResumo || []).length; i++) {
+    var row = valoresResumo[i] || [];
+    if (normalizeText_(row[idxId]) !== idDgmb) continue;
+    var idInscricao = normalizeText_(row[idxInscricaoResumo]);
+    if (idInscricao) existentes[idInscricao] = true;
+  }
+
+  var ids = Object.keys(inscricoesAptas);
+  for (var j = 0; j < ids.length; j++) {
+    if (!existentes[ids[j]]) return true;
+  }
+  return false;
+}
+
+function obterMeuGiroResumoAtualizadoLeve_(idDgmb, opcoes) {
   var id = normalizeText_(idDgmb);
+  var reconciliarAusentes = !(opcoes && opcoes.reconciliar === false);
   if (!id) return [];
 
   var ss = getSpreadsheet_();
@@ -1487,7 +1600,11 @@ function obterMeuGiroResumoAtualizadoLeve_(idDgmb) {
   var layoutResumo = meuGiroResumoObterLayout_(valoresResumo[0] || [], sheetName);
   var mapResumo = layoutResumo.map;
   var periodosListaDesafios = buildListaDesafiosContexto_(ss).periodos;
-  var periodosDgmbDesafios = buildPeriodosDgmbDesafiosPorChave_(obterDgmbDesafiosCacheExecucao_('obterMeuGiroResumoAtualizadoLeve_'), id);
+  var periodosDgmbDesafios = buildPeriodosDgmbDesafiosPorChave_(
+    obterDgmbDesafiosCacheExecucao_('obterMeuGiroResumoAtualizadoLeve_'),
+    id,
+    periodosListaDesafios
+  );
   var idxInscricaoResumo = getOptionalColumnIndex_(mapResumo, ['id_inscricao', 'id inscrição', 'id inscricao']);
   var idxId = getOptionalColumnIndex_(mapResumo, ['id_dgmb']);
   var idxDesafio = getOptionalColumnIndex_(mapResumo, ['id_desafio']);
@@ -1502,6 +1619,22 @@ function obterMeuGiroResumoAtualizadoLeve_(idDgmb) {
     return obterMeuGiroResumoAtualizado_(id);
   }
 
+  if (reconciliarAusentes && meuGiroResumoPossuiInscricaoAusente_(valoresResumo, idxId, idxInscricaoResumo, id, periodosDgmbDesafios.inscricoesAptas)) {
+    var lock = LockService.getScriptLock();
+    if (lock.tryLock(5000)) {
+      try {
+        var resumoSobLock = shResumo.getDataRange().getValues();
+        if (meuGiroResumoPossuiInscricaoAusente_(resumoSobLock, idxId, idxInscricaoResumo, id, periodosDgmbDesafios.inscricoesAptas)) {
+          atualizarMeuGiroResumoComLockAdquirido_(id);
+          return obterMeuGiroResumoAtualizadoLeve_(id);
+        }
+        valoresResumo = resumoSobLock;
+      } finally {
+        lock.releaseLock();
+      }
+    }
+  }
+
   var saida = [];
   for (var i = 1; i < valoresResumo.length; i++) {
     var row = valoresResumo[i] || [];
@@ -1511,19 +1644,24 @@ function obterMeuGiroResumoAtualizadoLeve_(idDgmb) {
     var idDesafioResumo = normalizeText_(row[idxDesafio]);
     var periodoListaResumo = (idDesafioResumo && periodosListaDesafios.byId[idDesafioResumo]) || { inicio: '', fim: '', periodo_desafio: '' };
     var idInscricaoResumo = idxInscricaoResumo > -1 ? normalizeText_(row[idxInscricaoResumo]) : '';
-    var chaveResumo = meuGiroResumoBuildChave_(id, idDesafioResumo, row[idxItem], meta, idxInscricaoResumo > -1 ? idInscricaoResumo : '');
+    var chaveResumo = meuGiroResumoBuildChave_(id, idDesafioResumo, row[idxItem], meta, idInscricaoResumo);
     var periodoResumoPlanilha = idxPeriodoResumo > -1 ? normalizeText_(row[idxPeriodoResumo]) : '';
-    var periodoDgmbResumo = periodosDgmbDesafios.byResumoKey[chaveResumo] || periodosDgmbDesafios.byDesafio[idDesafioResumo] || '';
-    var statusDgmbResumo = periodosDgmbDesafios.statusPorResumoKey[chaveResumo] || periodosDgmbDesafios.statusPorDesafio[idDesafioResumo] || {};
+    var usarFallbackDesafio = !idInscricaoResumo;
+    var periodoDgmbResumo = periodosDgmbDesafios.byResumoKey[chaveResumo] || (usarFallbackDesafio ? periodosDgmbDesafios.byDesafio[idDesafioResumo] : '') || '';
+    var detalhePeriodoDgmb = periodosDgmbDesafios.detalhePorResumoKey[chaveResumo] || (usarFallbackDesafio ? periodosDgmbDesafios.detalhePorDesafio[idDesafioResumo] : null) || null;
+    var statusDgmbResumo = periodosDgmbDesafios.statusPorResumoKey[chaveResumo] || (usarFallbackDesafio ? periodosDgmbDesafios.statusPorDesafio[idDesafioResumo] : null) || {};
+    var periodoInicioLeve = periodoCompletoValido_(detalhePeriodoDgmb) ? detalhePeriodoDgmb.inicio : periodoListaResumo.inicio || '';
+    var periodoFimLeve = periodoCompletoValido_(detalhePeriodoDgmb) ? detalhePeriodoDgmb.fim : periodoListaResumo.fim || '';
     var periodoLeveEnviado = periodoDgmbResumo || periodoListaResumo.periodo_desafio || '';
+
     debugPeriodoDesafioBackend_('obterMeuGiroResumoAtualizadoLeve_', periodoDgmbResumo || periodoListaResumo.periodo_desafio, periodoLeveEnviado, {
       id_dgmb: id,
       id_desafio: idDesafioResumo,
       id_inscricao: idInscricaoResumo,
       id_item_estoque: normalizeText_(row[idxItem]),
       nome: obterNomeDesafioListaPorId_(periodosListaDesafios, idDesafioResumo, ''),
-      periodo_inicio: periodoListaResumo.inicio || '',
-      periodo_fim: periodoListaResumo.fim || '',
+      periodo_inicio: periodoInicioLeve,
+      periodo_fim: periodoFimLeve,
       origem: 'MEU_GIRO_RESUMO.periodo_desafio=' + periodoResumoPlanilha + '; possui_coluna_MEU_GIRO_RESUMO=' + (idxPeriodoResumo > -1) + '; dgmbDesafios.periodo_desafio=' + periodoDgmbResumo + '; ListaDesafios.Periodo=' + normalizeText_(periodoListaResumo.periodo_desafio)
     });
 
@@ -1542,8 +1680,8 @@ function obterMeuGiroResumoAtualizadoLeve_(idDgmb) {
       status_usuario_desafio: normalizeText_(statusDgmbResumo.status_usuario_desafio),
       status_pagamento: normalizeText_(statusDgmbResumo.status_pagamento),
       status_lista_desafios: '',
-      periodo_inicio: periodoListaResumo.inicio || '',
-      periodo_fim: periodoListaResumo.fim || '',
+      periodo_inicio: periodoInicioLeve,
+      periodo_fim: periodoFimLeve,
       periodo_desafio: periodoLeveEnviado
     });
   }
@@ -1574,15 +1712,7 @@ function meuGiroResumoLeituraIntegralFallback_(shResumo) {
   return shResumo.getDataRange().getValues();
 }
 
-function meuGiroResumoLerLinhasAlvo_(
-  shResumo,
-  cabecalho,
-  totalColunasResumo,
-  id,
-  vinculos,
-  idxId,
-  idxInscricaoResumo
-) {
+function meuGiroResumoLerLinhasAlvo_(shResumo, cabecalho, totalColunasResumo, id, vinculos, idxId, idxInscricaoResumo) {
   var perfIndicesInicio = meuGiroPerfNow_();
   var ultimaLinha = shResumo.getLastRow();
   var valoresResumo = [];
@@ -1607,9 +1737,7 @@ function meuGiroResumoLerLinhasAlvo_(
 
     for (var i = 0; i < quantidadeLinhasConsultadas; i++) {
       var pertenceAoId = normalizeText_((idsDgmb[i] || [])[0]) === id;
-      var idInscricaoLinha = usouIdInscricao
-        ? normalizeText_((idsInscricao[i] || [])[0])
-        : '';
+      var idInscricaoLinha = usouIdInscricao ? normalizeText_((idsInscricao[i] || [])[0]) : '';
       if (pertenceAoId || (idInscricaoLinha && inscricoesDoAtleta[idInscricaoLinha])) {
         linhasCandidatas.push(i + 2);
       }
@@ -1626,12 +1754,7 @@ function meuGiroResumoLerLinhasAlvo_(
   var blocos = meuGiroResumoAgruparLinhasContiguas_(linhasCandidatas);
   for (var b = 0; b < blocos.length; b++) {
     var bloco = blocos[b];
-    var valoresBloco = shResumo.getRange(
-      bloco.linhaInicial,
-      1,
-      bloco.quantidadeLinhas,
-      totalColunasResumo
-    ).getValues();
+    var valoresBloco = shResumo.getRange(bloco.linhaInicial, 1, bloco.quantidadeLinhas, totalColunasResumo).getValues();
     for (var linhaBloco = 0; linhaBloco < valoresBloco.length; linhaBloco++) {
       valoresResumo[bloco.linhaInicial + linhaBloco - 1] = valoresBloco[linhaBloco];
     }
@@ -1640,8 +1763,7 @@ function meuGiroResumoLerLinhasAlvo_(
   meuGiroPerfLog_('atualizar-meu-giro-resumo', 'leitura_MEU_GIRO_RESUMO_linhas_alvo', perfLinhasAlvoInicio, {
     quantidade_linhas_completas_lidas: linhasCandidatas.length,
     quantidade_blocos_lidos: blocos.length,
-    quantidade_celulas_estimadas: (quantidadeLinhasConsultadas * (usouIdInscricao ? 2 : 1)) +
-      (linhasCandidatas.length * totalColunasResumo)
+    quantidade_celulas_estimadas: (quantidadeLinhasConsultadas * (usouIdInscricao ? 2 : 1)) + (linhasCandidatas.length * totalColunasResumo)
   });
 
   return {
@@ -1652,6 +1774,16 @@ function meuGiroResumoLerLinhasAlvo_(
 }
 
 function atualizarMeuGiroResumo_(idDgmb, opcoes) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    return atualizarMeuGiroResumoComLockAdquirido_(idDgmb, opcoes);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function atualizarMeuGiroResumoComLockAdquirido_(idDgmb, opcoes) {
   var perfTotalInicio = meuGiroPerfNow_();
   var id = normalizeText_(idDgmb);
   if (!id) return [];
@@ -1670,10 +1802,7 @@ function atualizarMeuGiroResumo_(idDgmb, opcoes) {
   var shResumo = ensureMeuGiroResumoSheet_();
   var totalColunasResumo = Math.max(shResumo.getLastColumn(), 1);
   var cabecalhoResumo = shResumo.getRange(1, 1, 1, totalColunasResumo).getValues()[0] || [];
-  var layoutResumo = meuGiroResumoObterLayout_(
-    cabecalhoResumo,
-    SHEETS.MEU_GIRO_RESUMO || 'MEU_GIRO_RESUMO'
-  );
+  var layoutResumo = meuGiroResumoObterLayout_(cabecalhoResumo, SHEETS.MEU_GIRO_RESUMO || 'MEU_GIRO_RESUMO');
   var mapResumo = layoutResumo.map;
   var idxTimestamp = getOptionalColumnIndex_(mapResumo, ['timestamp_atualizacao']);
   var idxInscricaoResumo = getOptionalColumnIndex_(mapResumo, ['id_inscricao', 'id inscrição', 'id inscricao']);
@@ -1686,15 +1815,7 @@ function atualizarMeuGiroResumo_(idDgmb, opcoes) {
   var idxStatusResumo = getOptionalColumnIndex_(mapResumo, ['status_apuracao', 'status apuracao', 'status apuração']);
   var leituraResumo;
   try {
-    leituraResumo = meuGiroResumoLerLinhasAlvo_(
-      shResumo,
-      cabecalhoResumo,
-      totalColunasResumo,
-      id,
-      vinculos,
-      idxId,
-      idxInscricaoResumo
-    );
+    leituraResumo = meuGiroResumoLerLinhasAlvo_(shResumo, cabecalhoResumo, totalColunasResumo, id, vinculos, idxId, idxInscricaoResumo);
   } catch (erroLeituraCirurgica) {
     leituraResumo = {
       valores: meuGiroResumoLeituraIntegralFallback_(shResumo),
@@ -1711,30 +1832,41 @@ function atualizarMeuGiroResumo_(idDgmb, opcoes) {
     leitura_integral_fallback: leituraResumo.fallbackIntegral
   });
   var linhasPorChave = {};
+  var quantidadeLinhasPorChave = {};
   var linhasParaIndexar = leituraResumo.linhasCandidatas;
   if (!linhasParaIndexar) {
     linhasParaIndexar = [];
-    for (var linhaIntegral = 2; linhaIntegral <= valoresResumo.length; linhaIntegral++) {
-      linhasParaIndexar.push(linhaIntegral);
-    }
+    for (var linhaIntegral = 2; linhaIntegral <= valoresResumo.length; linhaIntegral++) linhasParaIndexar.push(linhaIntegral);
   }
 
   for (var i = 0; i < linhasParaIndexar.length; i++) {
     var numeroLinhaExistente = linhasParaIndexar[i];
     var row = valoresResumo[numeroLinhaExistente - 1] || [];
-    var idInscricaoExistente = idxInscricaoResumo > -1
-      ? normalizeText_(row[idxInscricaoResumo])
-      : '';
+    var idInscricaoExistente = idxInscricaoResumo > -1 ? normalizeText_(row[idxInscricaoResumo]) : '';
     if (!idInscricaoExistente && normalizeText_(row[idxId]) !== id) continue;
 
-    var chaveExistente = meuGiroResumoBuildChave_(
-      row[idxId],
-      row[idxDesafio],
-      row[idxItem],
-      row[idxMetaResumo],
-      idInscricaoExistente
-    );
+    var chaveExistente = meuGiroResumoBuildChave_(row[idxId], row[idxDesafio], row[idxItem], row[idxMetaResumo], idInscricaoExistente);
     linhasPorChave[chaveExistente] = numeroLinhaExistente;
+    quantidadeLinhasPorChave[chaveExistente] = (quantidadeLinhasPorChave[chaveExistente] || 0) + 1;
+  }
+
+  // Uma linha legada só pode ser promovida para ID_INSCRICAO quando o vínculo
+  // composto for inequívoco. Isso evita append duplicado sem arriscar associar
+  // a linha antiga à inscrição errada.
+  var quantidadeVinculosPorChaveLegada = {};
+  for (var indiceVinculo = 0; indiceVinculo < vinculos.length; indiceVinculo++) {
+    var vinculoIndice = vinculos[indiceVinculo] || {};
+    var chaveLegadaIndice = meuGiroResumoBuildChave_(
+      id,
+      vinculoIndice.id_desafio,
+      vinculoIndice.id_item_estoque,
+      vinculoIndice.meta_km,
+      ''
+    );
+    if (chaveLegadaIndice) {
+      quantidadeVinculosPorChaveLegada[chaveLegadaIndice] =
+        (quantidadeVinculosPorChaveLegada[chaveLegadaIndice] || 0) + 1;
+    }
   }
 
   var saida = [];
@@ -1746,13 +1878,7 @@ function atualizarMeuGiroResumo_(idDgmb, opcoes) {
     var idInscricao = normalizeText_(vinculo.id_inscricao);
     var meta = Number(vinculo.meta_km || 0);
     var metaArredondada = Math.round((meta + Number.EPSILON) * 10) / 10;
-    var chave = meuGiroResumoBuildChave_(
-      id,
-      vinculo.id_desafio,
-      vinculo.id_item_estoque,
-      metaArredondada,
-      idxInscricaoResumo > -1 ? idInscricao : ''
-    );
+    var chave = meuGiroResumoBuildChave_(id, vinculo.id_desafio, vinculo.id_item_estoque, metaArredondada, idxInscricaoResumo > -1 ? idInscricao : '');
     var inicio = normalizarDataISO_(vinculo.periodo_inicio);
     var fim = normalizarDataISO_(vinculo.periodo_fim);
     var apto = !!vinculo.apto && !!inicio && !!fim && !!vinculo.id_desafio;
@@ -1771,8 +1897,22 @@ function atualizarMeuGiroResumo_(idDgmb, opcoes) {
     var distanciaArredondada = Math.round((distancia + Number.EPSILON) * 10) / 10;
     var percentualArredondado = Math.round((percentual + Number.EPSILON) * 10) / 10;
     var status = calcularStatusMeuGiroPorPercentual_(percentualArredondado);
-    var statusUsuarioDesafioCalculado = status;
     var numeroLinha = linhasPorChave[chave] || 0;
+
+    if (!numeroLinha && idxInscricaoResumo > -1 && idInscricao) {
+      var chaveLegadaVinculo = meuGiroResumoBuildChave_(
+        id,
+        vinculo.id_desafio,
+        vinculo.id_item_estoque,
+        metaArredondada,
+        ''
+      );
+      var linhaLegadaUnica =
+        quantidadeVinculosPorChaveLegada[chaveLegadaVinculo] === 1 &&
+        quantidadeLinhasPorChave[chaveLegadaVinculo] === 1;
+      if (linhaLegadaUnica) numeroLinha = linhasPorChave[chaveLegadaVinculo] || 0;
+    }
+
     var rowAtual = numeroLinha ? (valoresResumo[numeroLinha - 1] || []) : [];
     var houveMudanca = !numeroLinha ||
       (idxInscricaoResumo > -1 && normalizeText_(rowAtual[idxInscricaoResumo]) !== idInscricao) ||
@@ -1783,9 +1923,7 @@ function atualizarMeuGiroResumo_(idDgmb, opcoes) {
 
     if (houveMudanca) {
       var linha = [];
-      for (var c = 0; c < totalColunasResumo; c++) {
-        linha[c] = numeroLinha ? rowAtual[c] : '';
-      }
+      for (var c = 0; c < totalColunasResumo; c++) linha[c] = numeroLinha ? rowAtual[c] : '';
       linha[idxTimestamp] = new Date();
       if (idxInscricaoResumo > -1) linha[idxInscricaoResumo] = idInscricao;
       linha[idxId] = id;
@@ -1824,7 +1962,7 @@ function atualizarMeuGiroResumo_(idDgmb, opcoes) {
       status_apuracao: status,
       status_validacao_certificado: normalizeText_(vinculo.status_validacao_certificado).toUpperCase(),
       status_desafio: normalizeText_(vinculo.status_desafio),
-      status_usuario_desafio: statusUsuarioDesafioCalculado,
+      status_usuario_desafio: normalizeText_(vinculo.status_usuario_desafio),
       status_pagamento: normalizeText_(vinculo.status_pagamento),
       status_lista_desafios: normalizeText_(vinculo.status_lista_desafios),
       periodo_inicio: inicio || '',

@@ -12,7 +12,7 @@ const simulacao = fs.readFileSync(
   'utf8'
 );
 
-const inicio = utils.indexOf('function atualizarMeuGiroResumo_(idDgmb, opcoes)');
+const inicio = utils.indexOf('function atualizarMeuGiroResumoComLockAdquirido_(idDgmb, opcoes)');
 const fim = utils.indexOf('\nfunction atualizarMeuGiroResumoEmLote_', inicio);
 assert.ok(inicio >= 0 && fim > inicio, 'atualizarMeuGiroResumo_ deve existir');
 const atualizarResumo = utils.slice(inicio, fim);
@@ -24,10 +24,10 @@ test('Status_Apuracao nasce do percentual concluído na geração do MEU_GIRO_RE
   assert.match(atualizarResumo, /linha\[idxStatusResumo\] = status;/);
 });
 
-test('Status_Usuario_Desafio retornado pela geração acompanha o status calculado na origem', () => {
-  assert.match(atualizarResumo, /var statusUsuarioDesafioCalculado = status;/);
-  assert.match(atualizarResumo, /status_usuario_desafio: statusUsuarioDesafioCalculado/);
-  assert.doesNotMatch(atualizarResumo, /status_usuario_desafio: normalizeText_\(vinculo\.status_usuario_desafio\)/);
+test('Status_Usuario_Desafio retornado permanece administrativo e separado da apuração', () => {
+  assert.match(atualizarResumo, /status_usuario_desafio: normalizeText_\(vinculo\.status_usuario_desafio\)/);
+  assert.doesNotMatch(atualizarResumo, /var statusUsuarioDesafioCalculado = status;/);
+  assert.doesNotMatch(atualizarResumo, /status_usuario_desafio: statusUsuarioDesafioCalculado/);
 });
 
 test('simulação de reconstrução usa a mesma origem de cálculo de status', () => {
