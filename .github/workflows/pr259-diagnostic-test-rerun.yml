@@ -32,3 +32,5 @@ jobs:
           tests/prazo_vinculos_simultaneos.test.js
           tests/ranking_periodo_precedencia.test.js
           tests/rebuild_periodo_precedencia.test.js
+
+# rerun after signature assertion fix
