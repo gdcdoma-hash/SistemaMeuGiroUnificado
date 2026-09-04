@@ -325,9 +325,6 @@ function rankingMG_resolverPeriodoCompetitivo_(row, periodoLista) {
     return { inicio: periodoLista.inicio, fim: periodoLista.fim };
   }
   if (periodoCompletoValido_(periodoDatas)) return periodoDatas;
-  if (periodoCompletoValido_(periodoLista)) {
-    return { inicio: periodoLista.inicio, fim: periodoLista.fim };
-  }
   return { inicio: '', fim: '' };
 }
 
