@@ -41,7 +41,8 @@ test('índice leve preserva janela por ID_INSCRICAO e restringe fallback por ID_
 test('índice leve usa catálogo mensal antes das datas herdadas', () => {
   const fonte = trecho('buildPeriodosDgmbDesafiosPorChave_', 'meuGiroResumoPossuiInscricaoAusente_');
 
-  assert.match(fonte, /var periodosLista = buildListaDesafiosContexto_\(getSpreadsheet_\(\)\)\.periodos/);
+  assert.match(fonte, /function buildPeriodosDgmbDesafiosPorChave_\(cacheDesafios, idDgmb, periodosLista\)/);
+  assert.match(fonte, /periodosLista = periodosLista \|\| \{ byId: \{\} \}/);
   assert.match(fonte, /var periodoLista = \(idDesafio && periodosLista\.byId\[idDesafio\]\)/);
   const texto = fonte.indexOf('var periodoDetalhe = periodoCompletoValido_(periodoTextoNormalizado)');
   const catalogo = fonte.indexOf(': periodoCompletoValido_(periodoLista)');
