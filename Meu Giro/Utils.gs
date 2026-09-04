@@ -1417,7 +1417,7 @@ function obterMeuGiroResumoAtualizado_(idDgmb) {
   return saida;
 }
 
-function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb) {
+function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb, periodosLista) {
   var id = normalizeText_(idDgmb);
   var values = cacheDesafios && cacheDesafios.values ? cacheDesafios.values : [];
   var map = cacheDesafios && cacheDesafios.map ? cacheDesafios.map : {};
@@ -1433,7 +1433,7 @@ function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb) {
 
   if (!id || !values || values.length < 2) return periodos;
 
-  var periodosLista = buildListaDesafiosContexto_(getSpreadsheet_()).periodos;
+  periodosLista = periodosLista || { byId: {} };
 
   var idxId = getOptionalColumnIndex_(map, ['id_dgmb']);
   var idxPeriodo = getOptionalColumnIndex_(map, MEU_GIRO_PERIODO_DESAFIO_ALIASES_);
@@ -1600,7 +1600,11 @@ function obterMeuGiroResumoAtualizadoLeve_(idDgmb, opcoes) {
   var layoutResumo = meuGiroResumoObterLayout_(valoresResumo[0] || [], sheetName);
   var mapResumo = layoutResumo.map;
   var periodosListaDesafios = buildListaDesafiosContexto_(ss).periodos;
-  var periodosDgmbDesafios = buildPeriodosDgmbDesafiosPorChave_(obterDgmbDesafiosCacheExecucao_('obterMeuGiroResumoAtualizadoLeve_'), id);
+  var periodosDgmbDesafios = buildPeriodosDgmbDesafiosPorChave_(
+    obterDgmbDesafiosCacheExecucao_('obterMeuGiroResumoAtualizadoLeve_'),
+    id,
+    periodosListaDesafios
+  );
   var idxInscricaoResumo = getOptionalColumnIndex_(mapResumo, ['id_inscricao', 'id inscrição', 'id inscricao']);
   var idxId = getOptionalColumnIndex_(mapResumo, ['id_dgmb']);
   var idxDesafio = getOptionalColumnIndex_(mapResumo, ['id_desafio']);
