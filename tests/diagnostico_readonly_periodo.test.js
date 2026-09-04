@@ -29,18 +29,18 @@ test('diagnóstico usa resumo leve sem reconciliação e painel em modo somente-
   assert.match(painel, /if \(!resumoDesafios\.length && !somenteLeitura\)/);
 });
 
-test('diagnóstico aplica precedência datas individuais, texto e catálogo', () => {
+test('diagnóstico aplica precedência período mensal, datas individuais e catálogo', () => {
   const inicio = diagnostico.indexOf('function diagnosticoMeuGiroLerDgmbDesafios_');
   const fim = diagnostico.indexOf('\nfunction diagnosticoMeuGiroLerResumo_', inicio);
   const fonte = diagnostico.slice(inicio, fim);
 
-  const datas = fonte.indexOf('var periodoSelecionado = periodoCompletoValido_(periodoDatas)');
-  const texto = fonte.indexOf('? periodoDatas');
+  const texto = fonte.indexOf('var periodoSelecionado = periodoCompletoValido_(periodoTexto)');
+  const datas = fonte.indexOf('? periodoTexto');
   const catalogo = fonte.indexOf(': periodoLista;');
 
-  assert.ok(datas >= 0);
-  assert.ok(texto > datas);
-  assert.ok(catalogo > texto);
+  assert.ok(texto >= 0);
+  assert.ok(datas > texto);
+  assert.ok(catalogo > datas);
   assert.match(fonte, /buildListaDesafiosContexto_\(getSpreadsheet_\(\)\)\.periodos/);
   assert.match(fonte, /periodosLista\.byId\[item\.id_desafio\]/);
 });
