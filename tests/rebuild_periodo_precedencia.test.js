@@ -14,7 +14,7 @@ test('rebuild usa a mesma precedência de período da operação normal', () => 
   assert.ok(start >= 0 && end > start, 'simularResumoMontarPeriodo_ deve existir');
   const trecho = source.slice(start, end);
   const texto = trecho.indexOf('if (periodoCompletoValido_(periodoTextoEspecifico))');
-  const datas = trecho.indexOf('else if (periodoCompletoValido_(periodoDatasEspecificas))');
   const catalogo = trecho.indexOf('else if (periodoCompletoValido_(periodoLista))');
-  assert.ok(texto >= 0 && datas > texto && catalogo > datas);
+  const datas = trecho.indexOf('else if (periodoCompletoValido_(periodoDatasEspecificas))');
+  assert.ok(texto >= 0 && catalogo > texto && datas > catalogo);
 });
