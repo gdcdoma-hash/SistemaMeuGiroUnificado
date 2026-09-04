@@ -16,14 +16,15 @@ function trecho(nome, proximo) {
   return utils.slice(inicio, fim);
 }
 
-test('período mensal explícito tem precedência sobre datas individuais e catálogo', () => {
+test('período mensal usa texto, depois catálogo, e só então datas herdadas', () => {
   const fonte = trecho('montarPeriodoHistoricoVinculo_', 'obterLinhasDgmbDesafiosUsuario_');
   const texto = fonte.indexOf('if (periodoCompletoValido_(periodoTextoEspecifico))');
-  const datas = fonte.indexOf('else if (periodoCompletoValido_(periodoDatasEspecificas))');
   const catalogo = fonte.indexOf('else if (periodoCompletoValido_(periodoLista))');
+  const datas = fonte.indexOf('else if (periodoCompletoValido_(periodoDatasEspecificas))');
 
-  assert.ok(texto >= 0 && datas > texto && catalogo > datas);
+  assert.ok(texto >= 0 && catalogo > texto && datas > catalogo);
   assert.match(fonte, /origemPeriodo = 'dgmbDesafios\.periodo_desafio'/);
+  assert.match(fonte, /origemPeriodo = 'ListaDesafios\.Periodo'/);
   assert.match(fonte, /origemPeriodo = 'dgmbDesafios\.data_inicio_desafio\/data_fim_desafio'/);
 });
 
