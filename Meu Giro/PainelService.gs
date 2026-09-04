@@ -27,7 +27,8 @@ function painelMG_logBug03Desafio_(etapa, item, origem) {
   painelMG_logBug03ListaDesafios_(etapa, [item], origem);
 }
 
-function getPainelUsuario(idDgmb, opcoes) {
+function getPainelUsuario(idDgmb) {
+  var opcoes = arguments.length > 1 ? arguments[1] : null;
   var somenteLeitura = !!(opcoes && opcoes.somenteLeitura);
   var perfTotalInicio = painelMG_perfNow_();
   var perfEtapaInicio = perfTotalInicio;
