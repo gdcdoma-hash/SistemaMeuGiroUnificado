@@ -35,12 +35,12 @@ test('diagnóstico aplica precedência período mensal, datas individuais e cat�
   const fonte = diagnostico.slice(inicio, fim);
 
   const texto = fonte.indexOf('var periodoSelecionado = periodoCompletoValido_(periodoTexto)');
-  const datas = fonte.indexOf('? periodoTexto');
-  const catalogo = fonte.indexOf(': periodoLista;');
+  const catalogo = fonte.indexOf('? periodoTexto');
+  const datas = fonte.indexOf(': periodoDatas;');
 
   assert.ok(texto >= 0);
-  assert.ok(datas > texto);
-  assert.ok(catalogo > datas);
+  assert.ok(catalogo > texto);
+  assert.ok(datas > catalogo);
   assert.match(fonte, /buildListaDesafiosContexto_\(getSpreadsheet_\(\)\)\.periodos/);
   assert.match(fonte, /periodosLista\.byId\[item\.id_desafio\]/);
 });
