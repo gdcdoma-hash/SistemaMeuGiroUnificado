@@ -38,6 +38,17 @@ test('índice leve preserva janela por ID_INSCRICAO e restringe fallback por ID_
   assert.match(fonte, /if \(idDesafio && !idInscricao\)/);
 });
 
+test('índice leve usa catálogo mensal antes das datas herdadas', () => {
+  const fonte = trecho('buildPeriodosDgmbDesafiosPorChave_', 'meuGiroResumoPossuiInscricaoAusente_');
+
+  assert.match(fonte, /var periodosLista = buildListaDesafiosContexto_\(getSpreadsheet_\(\)\)\.periodos/);
+  assert.match(fonte, /var periodoLista = \(idDesafio && periodosLista\.byId\[idDesafio\]\)/);
+  const texto = fonte.indexOf('var periodoDetalhe = periodoCompletoValido_(periodoTextoNormalizado)');
+  const catalogo = fonte.indexOf(': periodoCompletoValido_(periodoLista)');
+  const datas = fonte.indexOf(': periodoCompletoValido_(periodoDatas)');
+  assert.ok(texto >= 0 && catalogo > texto && datas > catalogo);
+});
+
 test('índice leve cria alias composto apenas quando a chave identifica um único vínculo distinto', () => {
   const fonte = trecho('buildPeriodosDgmbDesafiosPorChave_', 'meuGiroResumoPossuiInscricaoAusente_');
 
@@ -105,13 +116,18 @@ test('caminho pesado seleciona inscrição exata e só usa desafio mais item par
   assert.match(fonte, /idInscricaoPrincipal\s*\? painelMG_norm_\(v\.id_inscricao\) === idInscricaoPrincipal\s*: painelMG_norm_\(v\.id_desafio\) === idDesafioPrincipal/);
 });
 
-test('leitor leve do painel prefere período mensal explícito ao par de datas individuais', () => {
+test('leitor leve do painel usa texto, catálogo e só então datas individuais', () => {
   const painel = fs.readFileSync(path.resolve(__dirname, '..', 'Meu Giro', 'PainelService.gs'), 'utf8');
   const inicio = painel.indexOf('function painelMG_obterInscricaoLevePorDesafio_');
   const fim = painel.indexOf('\nfunction buscarInscricaoPainelMG_', inicio);
   const fonte = painel.slice(inicio, fim);
 
-  assert.match(fonte, /var periodoSelecionado = periodoCompletoValido_\(periodoTexto\) \? periodoTexto : periodoDatas/);
+  assert.match(fonte, /var periodosLista = buildListaDesafiosContexto_\(getSpreadsheet_\(\)\)\.periodos/);
+  assert.match(fonte, /var periodoLista = \(idDesafio && periodosLista\.byId\[idDesafio\]\) \|\| \{ inicio: '', fim: '' \}/);
+  const texto = fonte.indexOf('var periodoSelecionado = periodoCompletoValido_(periodoTexto)');
+  const catalogo = fonte.indexOf('? periodoTexto');
+  const datas = fonte.indexOf(': periodoDatas;');
+  assert.ok(texto >= 0 && catalogo > texto && datas > catalogo);
 });
 
 test('atualizador migra linha legada única para ID_INSCRICAO em vez de anexar duplicata', () => {
