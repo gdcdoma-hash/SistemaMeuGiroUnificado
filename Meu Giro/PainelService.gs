@@ -712,6 +712,7 @@ function painelMG_obterInscricaoLevePorDesafio_(idDgmb, desafioPrincipal) {
   var idxPeriodo = getOptionalColumnIndex_(map, ['periodo_desafio', 'periodo desafio', 'período_desafio', 'período desafio']);
   var idxInicio = getOptionalColumnIndex_(map, ['data_inicio_desafio', 'data inicio desafio', 'data início desafio']);
   var idxFim = getOptionalColumnIndex_(map, ['data_fim_desafio', 'data fim desafio']);
+  var periodosLista = buildListaDesafiosContexto_(getSpreadsheet_()).periodos;
 
   var alvoInscricao = painelMG_norm_(desafioPrincipal && desafioPrincipal.id_inscricao);
   var alvoDesafio = painelMG_norm_(desafioPrincipal && desafioPrincipal.id_desafio);
@@ -743,7 +744,12 @@ function painelMG_obterInscricaoLevePorDesafio_(idDgmb, desafioPrincipal) {
       fim: normalizarDataISO_(idxFim > -1 ? row[idxFim] : '')
     };
     var periodoTexto = idxPeriodo > -1 ? extrairPeriodoDesafioTexto_(row[idxPeriodo]) : { inicio: '', fim: '' };
-    var periodoSelecionado = periodoCompletoValido_(periodoTexto) ? periodoTexto : periodoDatas;
+    var periodoLista = (idDesafio && periodosLista.byId[idDesafio]) || { inicio: '', fim: '' };
+    var periodoSelecionado = periodoCompletoValido_(periodoTexto)
+      ? periodoTexto
+      : periodoCompletoValido_(periodoLista)
+        ? periodoLista
+        : periodoDatas;
     var inicio = periodoCompletoValido_(periodoSelecionado) ? periodoSelecionado.inicio : '';
     var fim = periodoCompletoValido_(periodoSelecionado) ? periodoSelecionado.fim : '';
 
