@@ -86,10 +86,10 @@ function diagnosticoMeuGiroLerDgmbDesafios_(id) {
     item.meta_km = idx.meta > -1 ? parseLocalizedNumber_(row[idx.meta]) : 0;
     item.status_lista_desafios = idx.statusLista > -1 ? normalizeText_(row[idx.statusLista]) : '';
     var periodoLista = (item.id_desafio && periodosLista.byId[item.id_desafio]) || { inicio: '', fim: '' };
-    var periodoSelecionado = periodoCompletoValido_(periodoDatas)
-      ? periodoDatas
-      : periodoCompletoValido_(periodoTexto)
-        ? periodoTexto
+    var periodoSelecionado = periodoCompletoValido_(periodoTexto)
+      ? periodoTexto
+      : periodoCompletoValido_(periodoDatas)
+        ? periodoDatas
         : periodoLista;
     item.periodo_inicio = periodoCompletoValido_(periodoSelecionado) ? periodoSelecionado.inicio : '';
     item.periodo_fim = periodoCompletoValido_(periodoSelecionado) ? periodoSelecionado.fim : '';
