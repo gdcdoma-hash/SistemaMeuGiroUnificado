@@ -743,7 +743,7 @@ function painelMG_obterInscricaoLevePorDesafio_(idDgmb, desafioPrincipal) {
       fim: normalizarDataISO_(idxFim > -1 ? row[idxFim] : '')
     };
     var periodoTexto = idxPeriodo > -1 ? extrairPeriodoDesafioTexto_(row[idxPeriodo]) : { inicio: '', fim: '' };
-    var periodoSelecionado = periodoCompletoValido_(periodoDatas) ? periodoDatas : periodoTexto;
+    var periodoSelecionado = periodoCompletoValido_(periodoTexto) ? periodoTexto : periodoDatas;
     var inicio = periodoCompletoValido_(periodoSelecionado) ? periodoSelecionado.inicio : '';
     var fim = periodoCompletoValido_(periodoSelecionado) ? periodoSelecionado.fim : '';
 
