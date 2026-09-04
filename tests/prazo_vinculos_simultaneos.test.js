@@ -16,13 +16,14 @@ function trecho(nome, proximo) {
   return utils.slice(inicio, fim);
 }
 
-test('datas específicas da inscrição têm precedência sobre período textual e catálogo', () => {
+test('período mensal explícito tem precedência sobre datas individuais e catálogo', () => {
   const fonte = trecho('montarPeriodoHistoricoVinculo_', 'obterLinhasDgmbDesafiosUsuario_');
-  const datas = fonte.indexOf('if (periodoCompletoValido_(periodoDatasEspecificas))');
-  const texto = fonte.indexOf('else if (periodoCompletoValido_(periodoTextoEspecifico))');
+  const texto = fonte.indexOf('if (periodoCompletoValido_(periodoTextoEspecifico))');
+  const datas = fonte.indexOf('else if (periodoCompletoValido_(periodoDatasEspecificas))');
   const catalogo = fonte.indexOf('else if (periodoCompletoValido_(periodoLista))');
 
-  assert.ok(datas >= 0 && texto > datas && catalogo > texto);
+  assert.ok(texto >= 0 && datas > texto && catalogo > datas);
+  assert.match(fonte, /origemPeriodo = 'dgmbDesafios\.periodo_desafio'/);
   assert.match(fonte, /origemPeriodo = 'dgmbDesafios\.data_inicio_desafio\/data_fim_desafio'/);
 });
 
@@ -103,13 +104,13 @@ test('caminho pesado seleciona inscrição exata e só usa desafio mais item par
   assert.match(fonte, /idInscricaoPrincipal\s*\? painelMG_norm_\(v\.id_inscricao\) === idInscricaoPrincipal\s*: painelMG_norm_\(v\.id_desafio\) === idDesafioPrincipal/);
 });
 
-test('leitor leve do painel prefere o par de datas individuais ao período textual', () => {
+test('leitor leve do painel prefere período mensal explícito ao par de datas individuais', () => {
   const painel = fs.readFileSync(path.resolve(__dirname, '..', 'Meu Giro', 'PainelService.gs'), 'utf8');
   const inicio = painel.indexOf('function painelMG_obterInscricaoLevePorDesafio_');
   const fim = painel.indexOf('\nfunction buscarInscricaoPainelMG_', inicio);
   const fonte = painel.slice(inicio, fim);
 
-  assert.match(fonte, /var periodoSelecionado = periodoCompletoValido_\(periodoDatas\) \? periodoDatas : periodoTexto/);
+  assert.match(fonte, /var periodoSelecionado = periodoCompletoValido_\(periodoTexto\) \? periodoTexto : periodoDatas/);
 });
 
 test('atualizador migra linha legada única para ID_INSCRICAO em vez de anexar duplicata', () => {
