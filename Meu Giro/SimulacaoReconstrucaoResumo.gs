@@ -407,10 +407,10 @@ function simularResumoMontarPeriodo_(row, indices, periodoLista) {
 
   if (periodoCompletoValido_(periodoTextoEspecifico)) {
     periodo = periodoTextoEspecifico;
-  } else if (periodoCompletoValido_(periodoDatasEspecificas)) {
-    periodo = periodoDatasEspecificas;
   } else if (periodoCompletoValido_(periodoLista)) {
     periodo = periodoLista;
+  } else if (periodoCompletoValido_(periodoDatasEspecificas)) {
+    periodo = periodoDatasEspecificas;
   }
 
   return {
