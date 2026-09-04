@@ -136,7 +136,7 @@ test('objeto de desafio recebe periodo_desafio vindo do cache de ListaDesafios',
 test('obterMeuGiroResumoAtualizadoLeve consulta cache de ListaDesafios e injeta nome_desafio', () => {
   const light = getFunctionSlice('obterMeuGiroResumoAtualizadoLeve_', 'meuGiroResumoAgruparLinhasContiguas_');
   assert.match(light, /var periodosListaDesafios = buildListaDesafiosContexto_\(ss\)\.periodos;/);
-  assert.match(light, /buildPeriodosDgmbDesafiosPorChave_\(obterDgmbDesafiosCacheExecucao_\('obterMeuGiroResumoAtualizadoLeve_'\), id\)/);
+  assert.match(light, /buildPeriodosDgmbDesafiosPorChave_\([\s\S]*obterDgmbDesafiosCacheExecucao_\('obterMeuGiroResumoAtualizadoLeve_'\),[\s\S]*id,[\s\S]*periodosListaDesafios[\s\S]*\)/);
   assert.match(light, /var periodoListaResumo = \(idDesafioResumo && periodosListaDesafios\.byId\[idDesafioResumo\]\)/);
   assert.match(light, /nome_desafio: obterNomeDesafioListaPorId_\(periodosListaDesafios, idDesafioResumo, ''\)/);
   assert.match(light, /var periodoLeveEnviado = periodoDgmbResumo \|\| periodoListaResumo\.periodo_desafio \|\| ''/);
