@@ -1433,6 +1433,8 @@ function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb) {
 
   if (!id || !values || values.length < 2) return periodos;
 
+  var periodosLista = buildListaDesafiosContexto_(getSpreadsheet_()).periodos;
+
   var idxId = getOptionalColumnIndex_(map, ['id_dgmb']);
   var idxPeriodo = getOptionalColumnIndex_(map, MEU_GIRO_PERIODO_DESAFIO_ALIASES_);
   var idxInicio = getOptionalColumnIndex_(map, ['data_inicio_desafio', 'data inicio desafio', 'data início desafio']);
@@ -1503,13 +1505,17 @@ function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb) {
       fim: idxFim > -1 ? normalizarDataISO_(row[idxFim]) : ''
     };
     var periodoTextoNormalizado = extrairPeriodoDesafioTexto_(periodoTexto);
+    var idDesafio = obterIdDesafioRegistro_(row, idxIdDesafio, idxObs);
+    var periodoLista = (idDesafio && periodosLista.byId[idDesafio]) || { inicio: '', fim: '', periodo_desafio: '' };
     var periodoDetalhe = periodoCompletoValido_(periodoTextoNormalizado)
       ? { inicio: periodoTextoNormalizado.inicio, fim: periodoTextoNormalizado.fim, periodo_desafio: periodoTexto }
-      : periodoCompletoValido_(periodoDatas)
-        ? { inicio: periodoDatas.inicio, fim: periodoDatas.fim, periodo_desafio: periodoTexto }
-        : { inicio: '', fim: '', periodo_desafio: periodoTexto };
+      : periodoCompletoValido_(periodoLista)
+        ? { inicio: periodoLista.inicio, fim: periodoLista.fim, periodo_desafio: periodoTexto || normalizeText_(periodoLista.periodo_desafio) }
+        : periodoCompletoValido_(periodoDatas)
+          ? { inicio: periodoDatas.inicio, fim: periodoDatas.fim, periodo_desafio: periodoTexto }
+          : { inicio: '', fim: '', periodo_desafio: periodoTexto };
 
-    var idDesafio = obterIdDesafioRegistro_(row, idxIdDesafio, idxObs);
+
     var idItem = idxItem > -1 ? normalizeText_(row[idxItem]) : '';
     var meta = idxMeta > -1 ? parseLocalizedNumber_(row[idxMeta]) : 0;
     var idInscricao = idxInscricao > -1 ? normalizeText_(row[idxInscricao]) : '';
