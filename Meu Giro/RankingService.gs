@@ -321,6 +321,9 @@ function rankingMG_resolverPeriodoCompetitivo_(row, periodoLista) {
   ]);
   var periodoHistorico = extrairPeriodoDesafioTexto_(periodoTexto);
   if (periodoCompletoValido_(periodoHistorico)) return periodoHistorico;
+  if (periodoCompletoValido_(periodoLista)) {
+    return { inicio: periodoLista.inicio, fim: periodoLista.fim };
+  }
   if (periodoCompletoValido_(periodoDatas)) return periodoDatas;
   if (periodoCompletoValido_(periodoLista)) {
     return { inicio: periodoLista.inicio, fim: periodoLista.fim };
