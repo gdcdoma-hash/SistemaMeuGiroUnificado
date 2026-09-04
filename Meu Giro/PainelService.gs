@@ -27,7 +27,8 @@ function painelMG_logBug03Desafio_(etapa, item, origem) {
   painelMG_logBug03ListaDesafios_(etapa, [item], origem);
 }
 
-function getPainelUsuario(idDgmb) {
+function getPainelUsuario(idDgmb, opcoes) {
+  var somenteLeitura = !!(opcoes && opcoes.somenteLeitura);
   var perfTotalInicio = painelMG_perfNow_();
   var perfEtapaInicio = perfTotalInicio;
   var auditoria = painelMG_criarAuditoriaCarregamentoInicial_();
@@ -44,13 +45,13 @@ function getPainelUsuario(idDgmb) {
     painelMG_perfLog_('painel-inicial', 'buscarPessoaPainelMG_', perfEtapaInicio, { encontrado: !!pessoa });
 
     perfEtapaInicio = painelMG_perfNow_();
-    var resumoDesafios = obterMeuGiroResumoAtualizadoLeve_(id) || [];
+    var resumoDesafios = obterMeuGiroResumoAtualizadoLeve_(id, { reconciliar: !somenteLeitura }) || [];
     painelMG_perfLog_('painel-inicial', 'lerMeuGiroResumoAtualizadoLogin_', perfEtapaInicio, {
       total_desafios_resumo: resumoDesafios.length,
       fallback: false
     });
 
-    if (!resumoDesafios.length) {
+    if (!resumoDesafios.length && !somenteLeitura) {
       perfEtapaInicio = painelMG_perfNow_();
       resumoDesafios = atualizarMeuGiroResumo_(id) || [];
       painelMG_perfLog_('painel-inicial', 'atualizarMeuGiroResumo_fallback_login_', perfEtapaInicio, {
