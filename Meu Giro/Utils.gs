@@ -954,12 +954,14 @@ function montarPeriodoHistoricoVinculo_(row, indices, periodoLista, contextoLog)
   var periodo = { inicio: '', fim: '' };
   var origemPeriodo = '';
 
-  if (periodoCompletoValido_(periodoDatasEspecificas)) {
-    periodo = periodoDatasEspecificas;
-    origemPeriodo = 'dgmbDesafios.data_inicio_desafio/data_fim_desafio';
-  } else if (periodoCompletoValido_(periodoTextoEspecifico)) {
+  // Desafio mensal explícito usa sua janela mensal oficial.
+  // Datas individuais assumem somente quando o texto não resolve uma janela completa.
+  if (periodoCompletoValido_(periodoTextoEspecifico)) {
     periodo = periodoTextoEspecifico;
     origemPeriodo = 'dgmbDesafios.periodo_desafio';
+  } else if (periodoCompletoValido_(periodoDatasEspecificas)) {
+    periodo = periodoDatasEspecificas;
+    origemPeriodo = 'dgmbDesafios.data_inicio_desafio/data_fim_desafio';
   } else if (periodoCompletoValido_(periodoLista)) {
     periodo = periodoLista;
     origemPeriodo = 'ListaDesafios.Periodo';
@@ -1498,10 +1500,10 @@ function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb) {
       fim: idxFim > -1 ? normalizarDataISO_(row[idxFim]) : ''
     };
     var periodoTextoNormalizado = extrairPeriodoDesafioTexto_(periodoTexto);
-    var periodoDetalhe = periodoCompletoValido_(periodoDatas)
-      ? { inicio: periodoDatas.inicio, fim: periodoDatas.fim, periodo_desafio: periodoTexto }
-      : periodoCompletoValido_(periodoTextoNormalizado)
-        ? { inicio: periodoTextoNormalizado.inicio, fim: periodoTextoNormalizado.fim, periodo_desafio: periodoTexto }
+    var periodoDetalhe = periodoCompletoValido_(periodoTextoNormalizado)
+      ? { inicio: periodoTextoNormalizado.inicio, fim: periodoTextoNormalizado.fim, periodo_desafio: periodoTexto }
+      : periodoCompletoValido_(periodoDatas)
+        ? { inicio: periodoDatas.inicio, fim: periodoDatas.fim, periodo_desafio: periodoTexto }
         : { inicio: '', fim: '', periodo_desafio: periodoTexto };
 
     var idDesafio = obterIdDesafioRegistro_(row, idxIdDesafio, idxObs);
