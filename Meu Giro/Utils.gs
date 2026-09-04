@@ -1447,6 +1447,25 @@ function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb) {
 
   if (idxId === -1) return periodos;
 
+  // Compatibilidade: quando MEU_GIRO_RESUMO ainda não possui ID_INSCRICAO,
+  // o leitor leve monta a chave composta legada. Criamos esse alias somente
+  // quando ele identifica um único vínculo moderno, evitando contaminação
+  // entre duas inscrições equivalentes do mesmo desafio.
+  var aliasLegadoContagem = {};
+  for (var aliasIdx = 1; aliasIdx < values.length; aliasIdx++) {
+    var rowAlias = values[aliasIdx] || [];
+    if (normalizeText_(rowAlias[idxId]) !== id) continue;
+
+    var idInscricaoAlias = idxInscricao > -1 ? normalizeText_(rowAlias[idxInscricao]) : '';
+    if (!idInscricaoAlias) continue;
+
+    var idDesafioAlias = obterIdDesafioRegistro_(rowAlias, idxIdDesafio, idxObs);
+    var idItemAlias = idxItem > -1 ? normalizeText_(rowAlias[idxItem]) : '';
+    var metaAlias = idxMeta > -1 ? parseLocalizedNumber_(rowAlias[idxMeta]) : 0;
+    var chaveAlias = meuGiroResumoBuildChave_(id, idDesafioAlias, idItemAlias, metaAlias, '');
+    if (chaveAlias) aliasLegadoContagem[chaveAlias] = (aliasLegadoContagem[chaveAlias] || 0) + 1;
+  }
+
   for (var i = 1; i < values.length; i++) {
     var row = values[i] || [];
     if (normalizeText_(row[idxId]) !== id) continue;
@@ -1468,6 +1487,9 @@ function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb) {
     var meta = idxMeta > -1 ? parseLocalizedNumber_(row[idxMeta]) : 0;
     var idInscricao = idxInscricao > -1 ? normalizeText_(row[idxInscricao]) : '';
     var chave = meuGiroResumoBuildChave_(id, idDesafio, idItem, meta, idInscricao);
+    var chaveLegadaUnica = idInscricao
+      ? meuGiroResumoBuildChave_(id, idDesafio, idItem, meta, '')
+      : '';
 
     var statusUsuarioDesafio = idxStatusUsuarioDesafio > -1 ? normalizeText_(row[idxStatusUsuarioDesafio]) : '';
     var statusDgmb = {
@@ -1493,6 +1515,12 @@ function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb) {
       if (periodoTexto && !periodos.byResumoKey[chave]) periodos.byResumoKey[chave] = periodoTexto;
       if (!periodos.detalhePorResumoKey[chave]) periodos.detalhePorResumoKey[chave] = periodoDetalhe;
       if (!periodos.statusPorResumoKey[chave]) periodos.statusPorResumoKey[chave] = statusDgmb;
+    }
+
+    if (chaveLegadaUnica && aliasLegadoContagem[chaveLegadaUnica] === 1) {
+      if (periodoTexto && !periodos.byResumoKey[chaveLegadaUnica]) periodos.byResumoKey[chaveLegadaUnica] = periodoTexto;
+      if (!periodos.detalhePorResumoKey[chaveLegadaUnica]) periodos.detalhePorResumoKey[chaveLegadaUnica] = periodoDetalhe;
+      if (!periodos.statusPorResumoKey[chaveLegadaUnica]) periodos.statusPorResumoKey[chaveLegadaUnica] = statusDgmb;
     }
 
     if (idDesafio && !idInscricao) {
@@ -1766,6 +1794,7 @@ function atualizarMeuGiroResumoComLockAdquirido_(idDgmb, opcoes) {
     leitura_integral_fallback: leituraResumo.fallbackIntegral
   });
   var linhasPorChave = {};
+  var quantidadeLinhasPorChave = {};
   var linhasParaIndexar = leituraResumo.linhasCandidatas;
   if (!linhasParaIndexar) {
     linhasParaIndexar = [];
@@ -1780,6 +1809,26 @@ function atualizarMeuGiroResumoComLockAdquirido_(idDgmb, opcoes) {
 
     var chaveExistente = meuGiroResumoBuildChave_(row[idxId], row[idxDesafio], row[idxItem], row[idxMetaResumo], idInscricaoExistente);
     linhasPorChave[chaveExistente] = numeroLinhaExistente;
+    quantidadeLinhasPorChave[chaveExistente] = (quantidadeLinhasPorChave[chaveExistente] || 0) + 1;
+  }
+
+  // Uma linha legada só pode ser promovida para ID_INSCRICAO quando o vínculo
+  // composto for inequívoco. Isso evita append duplicado sem arriscar associar
+  // a linha antiga à inscrição errada.
+  var quantidadeVinculosPorChaveLegada = {};
+  for (var indiceVinculo = 0; indiceVinculo < vinculos.length; indiceVinculo++) {
+    var vinculoIndice = vinculos[indiceVinculo] || {};
+    var chaveLegadaIndice = meuGiroResumoBuildChave_(
+      id,
+      vinculoIndice.id_desafio,
+      vinculoIndice.id_item_estoque,
+      vinculoIndice.meta_km,
+      ''
+    );
+    if (chaveLegadaIndice) {
+      quantidadeVinculosPorChaveLegada[chaveLegadaIndice] =
+        (quantidadeVinculosPorChaveLegada[chaveLegadaIndice] || 0) + 1;
+    }
   }
 
   var saida = [];
@@ -1811,6 +1860,21 @@ function atualizarMeuGiroResumoComLockAdquirido_(idDgmb, opcoes) {
     var percentualArredondado = Math.round((percentual + Number.EPSILON) * 10) / 10;
     var status = calcularStatusMeuGiroPorPercentual_(percentualArredondado);
     var numeroLinha = linhasPorChave[chave] || 0;
+
+    if (!numeroLinha && idxInscricaoResumo > -1 && idInscricao) {
+      var chaveLegadaVinculo = meuGiroResumoBuildChave_(
+        id,
+        vinculo.id_desafio,
+        vinculo.id_item_estoque,
+        metaArredondada,
+        ''
+      );
+      var linhaLegadaUnica =
+        quantidadeVinculosPorChaveLegada[chaveLegadaVinculo] === 1 &&
+        quantidadeLinhasPorChave[chaveLegadaVinculo] === 1;
+      if (linhaLegadaUnica) numeroLinha = linhasPorChave[chaveLegadaVinculo] || 0;
+    }
+
     var rowAtual = numeroLinha ? (valoresResumo[numeroLinha - 1] || []) : [];
     var houveMudanca = !numeroLinha ||
       (idxInscricaoResumo > -1 && normalizeText_(rowAtual[idxInscricaoResumo]) !== idInscricao) ||
