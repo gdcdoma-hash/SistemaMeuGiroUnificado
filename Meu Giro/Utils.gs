@@ -959,13 +959,16 @@ function montarPeriodoHistoricoVinculo_(row, indices, periodoLista, contextoLog)
   if (periodoCompletoValido_(periodoTextoEspecifico)) {
     periodo = periodoTextoEspecifico;
     origemPeriodo = 'dgmbDesafios.periodo_desafio';
-  } else if (periodoCompletoValido_(periodoDatasEspecificas)) {
-    periodo = periodoDatasEspecificas;
-    origemPeriodo = 'dgmbDesafios.data_inicio_desafio/data_fim_desafio';
   } else if (periodoCompletoValido_(periodoLista)) {
+    // Enquanto o modelo por prazo individual não tiver um marcador explícito,
+    // Data_Inicio/Data_Fim herdados de ListaDesafios não podem sobrepor a
+    // janela mensal oficial do desafio.
     periodo = periodoLista;
     origemPeriodo = 'ListaDesafios.Periodo';
     logMeuGiroDiagnostico_('Fallback de período via ListaDesafios.Periodo usado.', contextoLog);
+  } else if (periodoCompletoValido_(periodoDatasEspecificas)) {
+    periodo = periodoDatasEspecificas;
+    origemPeriodo = 'dgmbDesafios.data_inicio_desafio/data_fim_desafio';
   }
 
   if (!periodoCompletoValido_(periodo)) {
