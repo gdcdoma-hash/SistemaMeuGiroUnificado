@@ -316,13 +316,12 @@ function rankingMG_resolverPeriodoCompetitivo_(row, periodoLista) {
       'data_fim_desafio', 'Data_Fim_Desafio', 'data fim desafio'
     ]))
   };
-  if (periodoCompletoValido_(periodoDatas)) return periodoDatas;
-
   var periodoTexto = rankingMG_firstFilled_(row, [
     'periodo_desafio', 'Periodo_Desafio', 'período_desafio', 'periodo desafio', 'período desafio'
   ]);
   var periodoHistorico = extrairPeriodoDesafioTexto_(periodoTexto);
   if (periodoCompletoValido_(periodoHistorico)) return periodoHistorico;
+  if (periodoCompletoValido_(periodoDatas)) return periodoDatas;
   if (periodoCompletoValido_(periodoLista)) {
     return { inicio: periodoLista.inicio, fim: periodoLista.fim };
   }
