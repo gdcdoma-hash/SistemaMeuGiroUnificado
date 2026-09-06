@@ -1484,6 +1484,8 @@ function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb, periodosLista
   var idxStatusPag = getOptionalColumnIndex_(map, ['status_pagamento', 'pagamento_status', 'pagamento', 'pix_status']);
   var idxStatusInscricao = getOptionalColumnIndex_(map, ['status_inscricao', 'status inscrição']);
   var idxConfirmacao = getOptionalColumnIndex_(map, ['confirmacao', 'confirmação', 'confirmado', 'inscricao_confirmada']);
+  var idxPrazoDias = getOptionalColumnIndex_(map, ['prazo_dias', 'prazo dias']);
+  var idxDataConsolidacao = getOptionalColumnIndex_(map, ['data_consolidacao', 'data consolidação', 'data consolidacao']);
 
   if (idxId === -1) return periodos;
 
