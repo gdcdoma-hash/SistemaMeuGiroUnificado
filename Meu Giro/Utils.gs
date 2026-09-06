@@ -411,6 +411,8 @@ function obterDadosInscricaoUsuario_(idDgmb, contextoDesafios) {
   var idxStatus = getOptionalColumnIndex_(map, ['status_inscricao', 'status inscrição', 'status', 'situacao', 'situação']);
   var idxStatusUsuarioDesafio = getOptionalColumnIndex_(map, ['status_usuario_desafio', 'status usuário desafio', 'status usuario desafio']);
   var idxConfirmacao = getOptionalColumnIndex_(map, ['confirmacao', 'confirmação', 'confirmado', 'inscricao_confirmada']);
+  var idxPrazoDias = getOptionalColumnIndex_(map, ['prazo_dias', 'prazo dias']);
+  var idxDataConsolidacao = getOptionalColumnIndex_(map, ['data_consolidacao', 'data consolidação', 'data consolidacao']);
   var idxPagamento = getOptionalColumnIndex_(map, ['status_pagamento', 'pagamento_status', 'pagto_status', 'pagamento', 'pix_status']);
   var primeiraInscricaoInvalida = null;
 
@@ -743,7 +745,8 @@ function buildListaDesafiosContexto_(ss) {
   meuGiroPerfLog_('obter-vinculos-desafio-usuario', 'cache_miss_lista_desafios', perfTotalInicio);
   var contexto = {
     periodos: { byAba: {}, byId: {} },
-    status: { byId: {}, possuiColunaId: false }
+    status: { byId: {}, possuiColunaId: false },
+    tipoMeta: { byId: {} }
   };
   var lista = ss.getSheetByName(SHEETS.LISTA_DESAFIOS || 'ListaDesafios');
   if (!lista) {
@@ -807,6 +810,11 @@ function buildListaDesafiosContexto_(ss) {
     'situacao',
     'situação'
   ]);
+  var idxTipoMeta = getOptionalColumnIndex_(map, [
+    'tipo_meta',
+    'tipo meta',
+    'tipometa'
+  ]);
 
   if (idxAba === -1) idxAba = 1;
   if (idxIdStatus > -1 && idxStatus > -1) contexto.status.possuiColunaId = true;
@@ -820,11 +828,13 @@ function buildListaDesafiosContexto_(ss) {
     var periodoMensal = idxPeriodo > -1
       ? normalizarPeriodoMensal_(row[idxPeriodo])
       : { inicio: '', fim: '' };
+    var tipoMeta = idxTipoMeta > -1 ? normalizeText_(row[idxTipoMeta]).toUpperCase() : '';
     var periodo = {
       inicio: periodoMensal.inicio,
       fim: periodoMensal.fim,
       periodo_desafio: periodoTexto,
-      nome_desafio: nomeDesafio || aba
+      nome_desafio: nomeDesafio || aba,
+      tipo_meta: tipoMeta
     };
 
     if (aba) {
@@ -833,6 +843,7 @@ function buildListaDesafiosContexto_(ss) {
 
     if (idDesafioPeriodo) {
       contexto.periodos.byId[idDesafioPeriodo] = periodo;
+      contexto.tipoMeta.byId[idDesafioPeriodo] = tipoMeta;
     }
 
     if (contexto.status.possuiColunaId) {
@@ -905,6 +916,10 @@ function periodoCompletoValido_(periodo) {
     periodo.inicio <= periodo.fim;
 }
 
+function ehTipoMetaPrazoDias_(tipoMeta) {
+  return normalizeText_(tipoMeta).toUpperCase() === 'PRAZO_DIAS';
+}
+
 function bug03PeriodoDesafioLogBackend_(etapa, dados) {
   if (!meuGiroPerfDebugAtivo_()) return;
 
@@ -944,7 +959,7 @@ function debugPeriodoDesafioBackend_(etapa, recebido, enviado, extra) {
   } catch (e) {}
 }
 
-function montarPeriodoHistoricoVinculo_(row, indices, periodoLista, contextoLog) {
+function montarPeriodoHistoricoVinculo_(row, indices, periodoLista, contextoLog, tipoMeta) {
   var periodoTexto = indices.periodo > -1 ? normalizeText_(row[indices.periodo]) : '';
   var periodoDatasEspecificas = {
     inicio: indices.inicio > -1 ? normalizarDataISO_(row[indices.inicio]) : '',
@@ -953,16 +968,19 @@ function montarPeriodoHistoricoVinculo_(row, indices, periodoLista, contextoLog)
   var periodoTextoEspecifico = extrairPeriodoDesafioTexto_(periodoTexto);
   var periodo = { inicio: '', fim: '' };
   var origemPeriodo = '';
+  var prazoDias = ehTipoMetaPrazoDias_(tipoMeta);
 
-  // Desafio mensal explícito usa sua janela mensal oficial.
-  // Datas individuais assumem somente quando o texto não resolve uma janela completa.
-  if (periodoCompletoValido_(periodoTextoEspecifico)) {
+  // PRAZO_DIAS tem janela individual persistida na inscrição.
+  // Sem consolidação/datas individuais completas, não usar a janela operacional da ListaDesafios.
+  if (prazoDias) {
+    if (periodoCompletoValido_(periodoDatasEspecificas)) {
+      periodo = periodoDatasEspecificas;
+      origemPeriodo = 'dgmbDesafios.data_inicio_desafio/data_fim_desafio[PRAZO_DIAS]';
+    }
+  } else if (periodoCompletoValido_(periodoTextoEspecifico)) {
     periodo = periodoTextoEspecifico;
     origemPeriodo = 'dgmbDesafios.periodo_desafio';
   } else if (periodoCompletoValido_(periodoLista)) {
-    // Enquanto o modelo por prazo individual não tiver um marcador explícito,
-    // Data_Inicio/Data_Fim herdados de ListaDesafios não podem sobrepor a
-    // janela mensal oficial do desafio.
     periodo = periodoLista;
     origemPeriodo = 'ListaDesafios.Periodo';
     logMeuGiroDiagnostico_('Fallback de período via ListaDesafios.Periodo usado.', contextoLog);
@@ -1072,6 +1090,8 @@ function obterVinculosDesafioUsuario_(idDgmb) {
   var idxPeriodoHistorico = getOptionalColumnIndex_(map, MEU_GIRO_PERIODO_DESAFIO_ALIASES_);
   var idxInicioHistorico = getOptionalColumnIndex_(map, ['data_inicio_desafio', 'data inicio desafio', 'data início desafio']);
   var idxFimHistorico = getOptionalColumnIndex_(map, ['data_fim_desafio', 'data fim desafio']);
+  var idxPrazoDias = getOptionalColumnIndex_(map, ['prazo_dias', 'prazo dias']);
+  var idxDataConsolidacao = getOptionalColumnIndex_(map, ['data_consolidacao', 'data consolidação', 'data consolidacao']);
 
   var vinculos = [];
   var chaves = {};
@@ -1125,8 +1145,11 @@ function obterVinculosDesafioUsuario_(idDgmb) {
       ? aptoBase && !!idDesafio && metaKm > 0
       : aptoBase;
 
-    var periodoLista = (idDesafio && periodos.byId[idDesafio]) || (!ehNormal && periodos.byAba[abaDesafio]) || { inicio: '', fim: '', nome_desafio: '' };
+    var periodoLista = (idDesafio && periodos.byId[idDesafio]) || (!ehNormal && periodos.byAba[abaDesafio]) || { inicio: '', fim: '', nome_desafio: '', tipo_meta: '' };
     periodoLista.nome_desafio = obterNomeDesafioListaPorId_(periodos, idDesafio, periodoLista.nome_desafio);
+    var tipoMeta = normalizeText_(periodoLista.tipo_meta || (idDesafio && contextoLista.tipoMeta.byId[idDesafio]) || '').toUpperCase();
+    var prazoDias = idxPrazoDias > -1 ? parseInt(row[idxPrazoDias], 10) || 0 : 0;
+    var dataConsolidacao = idxDataConsolidacao > -1 ? normalizarDataISO_(row[idxDataConsolidacao]) : '';
     var periodo = montarPeriodoHistoricoVinculo_(row, {
       periodo: idxPeriodoHistorico,
       inicio: idxInicioHistorico,
@@ -1137,7 +1160,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
       id_inscricao: idInscricao || '',
       id_item_estoque: idItem || '',
       linha: numeroLinha
-    });
+    }, tipoMeta);
 
     var chave = [id, idInscricao, idDesafio, idItem || ('META_' + Math.round((metaKm + Number.EPSILON) * 10) / 10)].join('|');
     if (chaves[chave]) continue;
@@ -1167,6 +1190,11 @@ function obterVinculosDesafioUsuario_(idDgmb) {
       status_lista_desafios: statusLista,
       status_validacao_certificado: statusValidacaoCertificado,
       apto: apto,
+      tipo_meta: tipoMeta,
+      prazo_dias: prazoDias,
+      data_consolidacao: dataConsolidacao,
+      data_inicio_desafio: idxInicioHistorico > -1 ? normalizarDataISO_(row[idxInicioHistorico]) : '',
+      data_fim_desafio: idxFimHistorico > -1 ? normalizarDataISO_(row[idxFimHistorico]) : '',
       periodo_inicio: periodo.inicio || '',
       periodo_fim: periodo.fim || '',
       periodo_desafio: vinculoPeriodoDesafio,
@@ -1408,6 +1436,11 @@ function obterMeuGiroResumoAtualizado_(idDgmb) {
       status_usuario_desafio: normalizeText_(vinculoAtual.status_usuario_desafio),
       status_pagamento: normalizeText_(vinculoAtual.status_pagamento),
       status_lista_desafios: normalizeText_(vinculoAtual.status_lista_desafios),
+      tipo_meta: normalizeText_(vinculoAtual.tipo_meta).toUpperCase(),
+      prazo_dias: Number(vinculoAtual.prazo_dias || 0),
+      data_consolidacao: normalizarDataISO_(vinculoAtual.data_consolidacao) || '',
+      data_inicio_desafio: normalizarDataISO_(vinculoAtual.data_inicio_desafio) || '',
+      data_fim_desafio: normalizarDataISO_(vinculoAtual.data_fim_desafio) || '',
       periodo_inicio: normalizarDataISO_(vinculoAtual.periodo_inicio) || '',
       periodo_fim: normalizarDataISO_(vinculoAtual.periodo_fim) || '',
       periodo_desafio: resumoPeriodoDesafio
@@ -1506,14 +1539,35 @@ function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb, periodosLista
     };
     var periodoTextoNormalizado = extrairPeriodoDesafioTexto_(periodoTexto);
     var idDesafio = obterIdDesafioRegistro_(row, idxIdDesafio, idxObs);
-    var periodoLista = (idDesafio && periodosLista.byId[idDesafio]) || { inicio: '', fim: '', periodo_desafio: '' };
-    var periodoDetalhe = periodoCompletoValido_(periodoTextoNormalizado)
-      ? { inicio: periodoTextoNormalizado.inicio, fim: periodoTextoNormalizado.fim, periodo_desafio: periodoTexto }
-      : periodoCompletoValido_(periodoLista)
-        ? { inicio: periodoLista.inicio, fim: periodoLista.fim, periodo_desafio: periodoTexto || normalizeText_(periodoLista.periodo_desafio) }
-        : periodoCompletoValido_(periodoDatas)
-          ? { inicio: periodoDatas.inicio, fim: periodoDatas.fim, periodo_desafio: periodoTexto }
-          : { inicio: '', fim: '', periodo_desafio: periodoTexto };
+    var periodoLista = (idDesafio && periodosLista.byId[idDesafio]) || { inicio: '', fim: '', periodo_desafio: '', tipo_meta: '' };
+    var tipoMeta = normalizeText_(periodoLista.tipo_meta).toUpperCase();
+    var prazoDias = idxPrazoDias > -1 ? parseInt(row[idxPrazoDias], 10) || 0 : 0;
+    var dataConsolidacao = idxDataConsolidacao > -1 ? normalizarDataISO_(row[idxDataConsolidacao]) : '';
+    var periodoDetalhe = ehTipoMetaPrazoDias_(tipoMeta)
+      ? (periodoCompletoValido_(periodoDatas)
+          ? {
+              inicio: periodoDatas.inicio,
+              fim: periodoDatas.fim,
+              periodo_desafio: periodoTexto,
+              tipo_meta: tipoMeta,
+              prazo_dias: prazoDias,
+              data_consolidacao: dataConsolidacao
+            }
+          : {
+              inicio: '',
+              fim: '',
+              periodo_desafio: periodoTexto,
+              tipo_meta: tipoMeta,
+              prazo_dias: prazoDias,
+              data_consolidacao: dataConsolidacao
+            })
+      : periodoCompletoValido_(periodoTextoNormalizado)
+        ? { inicio: periodoTextoNormalizado.inicio, fim: periodoTextoNormalizado.fim, periodo_desafio: periodoTexto, tipo_meta: tipoMeta, prazo_dias: prazoDias, data_consolidacao: dataConsolidacao }
+        : periodoCompletoValido_(periodoLista)
+          ? { inicio: periodoLista.inicio, fim: periodoLista.fim, periodo_desafio: periodoTexto || normalizeText_(periodoLista.periodo_desafio), tipo_meta: tipoMeta, prazo_dias: prazoDias, data_consolidacao: dataConsolidacao }
+          : periodoCompletoValido_(periodoDatas)
+            ? { inicio: periodoDatas.inicio, fim: periodoDatas.fim, periodo_desafio: periodoTexto, tipo_meta: tipoMeta, prazo_dias: prazoDias, data_consolidacao: dataConsolidacao }
+            : { inicio: '', fim: '', periodo_desafio: periodoTexto, tipo_meta: tipoMeta, prazo_dias: prazoDias, data_consolidacao: dataConsolidacao };
 
 
     var idItem = idxItem > -1 ? normalizeText_(row[idxItem]) : '';
@@ -1680,6 +1734,11 @@ function obterMeuGiroResumoAtualizadoLeve_(idDgmb, opcoes) {
       status_usuario_desafio: normalizeText_(statusDgmbResumo.status_usuario_desafio),
       status_pagamento: normalizeText_(statusDgmbResumo.status_pagamento),
       status_lista_desafios: '',
+      tipo_meta: normalizeText_(detalhePeriodoDgmb && detalhePeriodoDgmb.tipo_meta).toUpperCase(),
+      prazo_dias: Number(detalhePeriodoDgmb && detalhePeriodoDgmb.prazo_dias || 0),
+      data_consolidacao: normalizarDataISO_(detalhePeriodoDgmb && detalhePeriodoDgmb.data_consolidacao) || '',
+      data_inicio_desafio: periodoCompletoValido_(detalhePeriodoDgmb) ? detalhePeriodoDgmb.inicio : '',
+      data_fim_desafio: periodoCompletoValido_(detalhePeriodoDgmb) ? detalhePeriodoDgmb.fim : '',
       periodo_inicio: periodoInicioLeve,
       periodo_fim: periodoFimLeve,
       periodo_desafio: periodoLeveEnviado
@@ -1965,6 +2024,11 @@ function atualizarMeuGiroResumoComLockAdquirido_(idDgmb, opcoes) {
       status_usuario_desafio: normalizeText_(vinculo.status_usuario_desafio),
       status_pagamento: normalizeText_(vinculo.status_pagamento),
       status_lista_desafios: normalizeText_(vinculo.status_lista_desafios),
+      tipo_meta: normalizeText_(vinculo.tipo_meta).toUpperCase(),
+      prazo_dias: Number(vinculo.prazo_dias || 0),
+      data_consolidacao: normalizarDataISO_(vinculo.data_consolidacao) || '',
+      data_inicio_desafio: normalizarDataISO_(vinculo.data_inicio_desafio) || '',
+      data_fim_desafio: normalizarDataISO_(vinculo.data_fim_desafio) || '',
       periodo_inicio: inicio || '',
       periodo_fim: fim || '',
       periodo_desafio: resumoAtualizadoPeriodoDesafio
