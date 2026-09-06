@@ -2870,6 +2870,10 @@ function parseIsoDateLocal(value) {
   return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
 }
 
+function ordemDiaCivilLocal_(data) {
+  return Math.floor(Date.UTC(data.getFullYear(), data.getMonth(), data.getDate()) / 86400000);
+}
+
 function calcularRitmoDesafio(meta, realizado, periodoInicio, periodoFim) {
   var now = new Date();
   var inicio = parseIsoDateLocal(periodoInicio) || new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -2881,9 +2885,11 @@ function calcularRitmoDesafio(meta, realizado, periodoInicio, periodoFim) {
     fim = swap;
   }
 
-  var msDia = 24 * 60 * 60 * 1000;
-  var diasTotal = Math.max(Math.floor((fim.getTime() - inicio.getTime()) / msDia) + 1, 1);
-  var diaAtual = Math.floor((now.getTime() - inicio.getTime()) / msDia) + 1;
+  var inicioDia = ordemDiaCivilLocal_(inicio);
+  var fimDia = ordemDiaCivilLocal_(fim);
+  var hojeDia = ordemDiaCivilLocal_(now);
+  var diasTotal = Math.max((fimDia - inicioDia) + 1, 1);
+  var diaAtual = (hojeDia - inicioDia) + 1;
 
   if (diaAtual < 1) diaAtual = 1;
   if (diaAtual > diasTotal) diaAtual = diasTotal;
@@ -3200,6 +3206,53 @@ function atualizarDonutProgressoPainel_(percentual) {
   donut.setAttribute('aria-label', formatNumber(percentualNormalizado) + '% concluído');
 }
 
+function isPrazoDiasDesafio_(desafio) {
+  return String(desafio && desafio.tipo_meta || '').trim().toUpperCase() === 'PRAZO_DIAS';
+}
+
+function getSituacaoPrazoDias_(desafio) {
+  if (!isPrazoDiasDesafio_(desafio)) return null;
+  var inicio = parseIsoDateLocal(desafio.data_inicio_desafio || desafio.periodo_inicio);
+  var fim = parseIsoDateLocal(desafio.data_fim_desafio || desafio.periodo_fim);
+  var prazo = Math.max(0, parseInt(desafio.prazo_dias, 10) || 0);
+  if (!inicio || !fim) {
+    return { texto: 'Aguardando consolidação', prazo: prazo, inicio: '', fim: '' };
+  }
+  var hoje = new Date();
+  var hojeDia = ordemDiaCivilLocal_(hoje);
+  var inicioDia = ordemDiaCivilLocal_(inicio);
+  var fimDia = ordemDiaCivilLocal_(fim);
+  var texto = '';
+  if (hojeDia < inicioDia) texto = 'Inicia em: ' + formatDateBR(desafio.data_inicio_desafio || desafio.periodo_inicio);
+  else if (hojeDia > fimDia) texto = 'Prazo encerrado';
+  else if (hojeDia === fimDia) texto = 'Último dia do desafio';
+  else texto = 'Restam: ' + ((fimDia - hojeDia) + 1) + ' dias';
+  return {
+    texto: texto,
+    prazo: prazo,
+    inicio: formatDateBR(desafio.data_inicio_desafio || desafio.periodo_inicio),
+    fim: formatDateBR(desafio.data_fim_desafio || desafio.periodo_fim)
+  };
+}
+
+function renderPrazoDiasPainel_(desafio) {
+  var box = document.getElementById('painel-desafio-prazo');
+  if (!box) return;
+  var info = getSituacaoPrazoDias_(desafio);
+  if (!info) {
+    box.hidden = true;
+    box.innerHTML = '';
+    return;
+  }
+  var partes = [];
+  if (info.prazo) partes.push('<span><strong>Prazo:</strong> ' + escapeHtml(String(info.prazo)) + ' dias</span>');
+  if (info.inicio) partes.push('<span><strong>Início:</strong> ' + escapeHtml(info.inicio) + '</span>');
+  if (info.fim) partes.push('<span><strong>Fim:</strong> ' + escapeHtml(info.fim) + '</span>');
+  partes.push('<span><strong>' + escapeHtml(info.texto) + '</strong></span>');
+  box.innerHTML = partes.join(' · ');
+  box.hidden = false;
+}
+
 function sincronizarPainelComDesafioEmFoco() {
   var painel = currentPainel || {};
   var desafioAtual = getDesafioEmFocoAtual();
@@ -3215,6 +3268,7 @@ function sincronizarPainelComDesafioEmFoco() {
   setTextById('frase-box', contexto.frase);
   setTextById('desafio-foco-operacional', contexto.mensagem_operacional);
   setTextById('painel-desafio-periodo', getDesafioMesAnoLabel(desafioAtual, contexto));
+  renderPrazoDiasPainel_(desafioAtual);
   setTextById('meta-km', formatNumber(contexto.meta));
   setTextById('realizado-km', formatNumber(contexto.realizado));
   setTextById('restante-km', formatNumber(contexto.restante));
@@ -3714,6 +3768,7 @@ function buildDesafioCard(item, options) {
       '<p><span>Conclusão</span><strong' + (options.isPrincipal ? ' id="progress-percent"' : '') + '>' + percentual + '%</strong></p>' +
     '</div>' +
     '<p class="desafio-periodo"><span>Período</span> <strong>' + escapeHtml(periodoLabel) + '</strong></p>' +
+    (isPrazoDiasDesafio_(desafio) ? '<p class="desafio-periodo"><span>Prazo individual</span> <strong>' + escapeHtml((getSituacaoPrazoDias_(desafio).prazo || 0) + ' dias · ' + (getSituacaoPrazoDias_(desafio).inicio || 'aguardando início') + ' → ' + (getSituacaoPrazoDias_(desafio).fim || 'aguardando fim')) + '</strong></p>' : '') +
     '<div class="desafio-progress-track" aria-hidden="true"><span' + (options.isPrincipal ? ' id="progress-bar"' : '') + ' class="desafio-progress-fill" style="width:' + percentualNormalizado + '%"></span></div>' +
     (options.isPrincipal ? '<p id="progress-text" class="desafio-progress-text">' + realizado + ' km de ' + meta + ' km</p>' : '') +
     (options.allowSelect
