@@ -68,3 +68,9 @@ function testarPrazoDiasAceitacao_() {
     periodo_fim: periodo.fim
   };
 }
+
+
+// Função pública para execução manual pelo editor do Apps Script.
+function testarPrazoDiasAceitacao() {
+  return testarPrazoDiasAceitacao_();
+}
