@@ -126,7 +126,9 @@ function getPainelUsuario(idDgmb) {
         }
       : painelMG_montarMensagemOperacional_('', '');
     var progresso = painelMG_calcularProgresso_(meta, realizadoPainel);
-    var ritmo = painelMG_calcularRitmo_(meta, realizadoPainel, desafioData.periodo_inicio, desafioData.periodo_fim);
+    var periodoRitmoInicio = desafioPrincipalPainel ? desafioPrincipalPainel.periodo_inicio : desafioData.periodo_inicio;
+    var periodoRitmoFim = desafioPrincipalPainel ? desafioPrincipalPainel.periodo_fim : desafioData.periodo_fim;
+    var ritmo = painelMG_calcularRitmo_(meta, realizadoPainel, periodoRitmoInicio, periodoRitmoFim);
     perfEtapaInicio = painelMG_perfNow_();
     var atividades = buscarAtividadesUsuario_(id);
     painelMG_perfLog_('painel-inicial', 'buscarAtividadesUsuario_', perfEtapaInicio, {
@@ -866,6 +868,10 @@ function percentualMetaConcluida_(meta, realizado, restante) {
   return percentual >= 100 || restanteNumero <= 0;
 }
 
+function painelMG_ordemDiaCivil_(data) {
+  return Math.floor(Date.UTC(data.getFullYear(), data.getMonth(), data.getDate()) / 86400000);
+}
+
 function painelMG_calcularRitmo_(meta, realizado, periodoInicio, periodoFim) {
   var now = new Date();
   var inicio = painelMG_parseDataISO_(periodoInicio) || new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -877,9 +883,11 @@ function painelMG_calcularRitmo_(meta, realizado, periodoInicio, periodoFim) {
     fim = swap;
   }
 
-  var msDia = 24 * 60 * 60 * 1000;
-  var diasTotal = Math.max(Math.floor((fim.getTime() - inicio.getTime()) / msDia) + 1, 1);
-  var diaAtual = Math.floor((now.getTime() - inicio.getTime()) / msDia) + 1;
+  var inicioDia = painelMG_ordemDiaCivil_(inicio);
+  var fimDia = painelMG_ordemDiaCivil_(fim);
+  var hojeDia = painelMG_ordemDiaCivil_(now);
+  var diasTotal = Math.max((fimDia - inicioDia) + 1, 1);
+  var diaAtual = (hojeDia - inicioDia) + 1;
   if (diaAtual < 1) diaAtual = 1;
   if (diaAtual > diasTotal) diaAtual = diasTotal;
 
