@@ -81,8 +81,11 @@ function diagnosticoMeuGiroLerDgmbDesafios_(id) {
     item.linha_planilha = i + 1;
     item.meta_km = idx.meta > -1 ? parseLocalizedNumber_(row[idx.meta]) : 0;
     item.status_lista_desafios = idx.statusLista > -1 ? normalizeText_(row[idx.statusLista]) : '';
-    var periodoLista = (item.id_desafio && periodosLista.byId[item.id_desafio]) || { inicio: '', fim: '', periodo_desafio: '', nome_desafio: '', tipo_meta: '' };
-    var tipoMeta = normalizeText_(periodoLista.tipo_meta || (item.id_desafio && contextoLista.tipoMeta.byId[item.id_desafio]) || '').toUpperCase();
+    var periodoTextoLinha = idx.periodo > -1 ? normalizeText_(row[idx.periodo]) : '';
+    var inicioLinha = idx.inicio > -1 ? row[idx.inicio] : '';
+    var periodoLista = resolverPeriodoListaDesafio_(periodosLista, item.id_desafio, periodoTextoLinha, inicioLinha);
+    var tipoMeta = resolverTipoMetaListaDesafio_(contextoLista.tipoMeta, item.id_desafio, periodoTextoLinha, inicioLinha) ||
+      normalizeText_(periodoLista.tipo_meta).toUpperCase();
     var periodoSelecionado = montarPeriodoHistoricoVinculo_(row, {
       periodo: idx.periodo,
       inicio: idx.inicio,
