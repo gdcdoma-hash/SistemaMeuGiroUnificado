@@ -1,3 +1,25 @@
+function obterHojeISORegistro_() {
+  return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+}
+
+function validarDataAtividadeNaoFutura_(dataAtividade) {
+  var dataIso = normalizarDataISO_(dataAtividade);
+  if (!dataIso) {
+    return { valida: false, code: 'DATA_OBRIGATORIA', msg: 'Informe o dia da atividade.' };
+  }
+
+  var hojeIso = obterHojeISORegistro_();
+  if (dataIso > hojeIso) {
+    return {
+      valida: false,
+      code: 'DATA_FUTURA_NAO_PERMITIDA',
+      msg: 'Não é possível registrar uma atividade com data futura. Informe a data real da pedalada.'
+    };
+  }
+
+  return { valida: true, data_iso: dataIso, hoje_iso: hojeIso };
+}
+
 function registrarAtividade(idDgmb, dataAtividade, km, force) {
   var perfTotalInicio = meuGiroPerfNow_();
   var perfOperacaoAnterior = MEU_GIRO_PERF_OPERACAO_ATUAL_;
@@ -9,15 +31,16 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
     meuGiroPerfLog_('registrar-atividade', 'LockService', perfEtapaInicio);
 
     idDgmb = String(idDgmb || '').trim();
-    dataAtividade = normalizarDataISO_(dataAtividade);
+    var validacaoData = validarDataAtividadeNaoFutura_(dataAtividade);
+    dataAtividade = validacaoData.data_iso || normalizarDataISO_(dataAtividade);
     km = parseKmInputSeguro_(km);
 
     if (!idDgmb) {
       return { ok:false, code:'ID_OBRIGATORIO', msg:'ID do atleta é obrigatório.' };
     }
 
-    if (!dataAtividade) {
-      return { ok:false, code:'DATA_OBRIGATORIA', msg:'Informe o dia da atividade.' };
+    if (!validacaoData.valida) {
+      return { ok:false, code: validacaoData.code, msg: validacaoData.msg };
     }
 
     if (!km || km <= 0) {
@@ -317,7 +340,8 @@ function editarAtividade(payload) {
     var idDgmb = String(payload.id_dgmb || '').trim();
     var activityId = String(payload.activity_id || '').trim();
     var chaveEdicao = String(payload.chave_edicao || '').trim();
-    var novaDataAtividade = normalizarDataISO_(payload.data_atividade);
+    var validacaoData = validarDataAtividadeNaoFutura_(payload.data_atividade);
+    var novaDataAtividade = validacaoData.data_iso || normalizarDataISO_(payload.data_atividade);
     var novoKm = parseKmInputSeguro_(payload.km);
 
     if (!idDgmb) {
@@ -326,8 +350,8 @@ function editarAtividade(payload) {
     if (!activityId && !chaveEdicao) {
       return { ok: false, code: 'IDENTIFICADOR_ATIVIDADE_OBRIGATORIO', msg: 'activity_id ou chave_edicao é obrigatório para edição.' };
     }
-    if (!novaDataAtividade) {
-      return { ok: false, code: 'DATA_OBRIGATORIA', msg: 'Informe o dia da atividade.' };
+    if (!validacaoData.valida) {
+      return { ok: false, code: validacaoData.code, msg: validacaoData.msg };
     }
     if (!novoKm || novoKm <= 0) {
       return { ok: false, code: 'KM_INVALIDO', msg: 'Informe um valor de KM maior que zero.' };

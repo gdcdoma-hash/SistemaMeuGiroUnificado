@@ -8,13 +8,14 @@ const source = fs.readFileSync(
   'utf8'
 );
 
-test('ranking usa texto, catálogo e só então datas individuais', () => {
+test('ranking usa janela individual para PRAZO_DIAS e mantém precedência mensal nos demais', () => {
   const start = source.indexOf('function rankingMG_resolverPeriodoCompetitivo_');
   const end = source.indexOf('\nfunction rankingMG_resolverAtributosCompetitivos_', start);
   assert.ok(start >= 0 && end > start, 'rankingMG_resolverPeriodoCompetitivo_ deve existir');
   const trecho = source.slice(start, end);
+  assert.match(trecho, /ehTipoMetaPrazoDias_\(tipoMeta\)/);
+  assert.match(trecho, /return periodoCompletoValido_\(periodoDatas\) \? periodoDatas/);
   const texto = trecho.indexOf('if (periodoCompletoValido_(periodoHistorico)) return periodoHistorico;');
   const catalogo = trecho.indexOf('if (periodoCompletoValido_(periodoLista))');
-  const datas = trecho.indexOf('if (periodoCompletoValido_(periodoDatas)) return periodoDatas;');
-  assert.ok(texto >= 0 && catalogo > texto && datas > catalogo);
+  assert.ok(texto >= 0 && catalogo > texto);
 });

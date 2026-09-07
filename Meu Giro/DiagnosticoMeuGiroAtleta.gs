@@ -67,16 +67,12 @@ function diagnosticoMeuGiroLerDgmbDesafios_(id) {
   idx.fim = getOptionalColumnIndex_(map, ['data_fim_desafio', 'data fim desafio', 'periodo_fim']);
   if (idx.id === -1) return saida;
 
-  var periodosLista = buildListaDesafiosContexto_(getSpreadsheet_()).periodos;
+  var contextoLista = buildListaDesafiosContexto_(getSpreadsheet_());
+  var periodosLista = contextoLista.periodos;
 
   for (var i = 1; i < values.length; i++) {
     var row = values[i] || [];
     if (normalizeText_(row[idx.id]) !== id) continue;
-    var periodoTexto = idx.periodo > -1 ? extrairPeriodoDesafioTexto_(row[idx.periodo]) : { inicio: '', fim: '' };
-    var periodoDatas = {
-      inicio: normalizarDataISO_(idx.inicio > -1 ? row[idx.inicio] : ''),
-      fim: normalizarDataISO_(idx.fim > -1 ? row[idx.fim] : '')
-    };
     var statusUsuario = idx.statusUsuario > -1 ? normalizeText_(row[idx.statusUsuario]) : '';
     var statusPagamento = idx.statusPagamento > -1 ? normalizeText_(row[idx.statusPagamento]) : '';
     var statusConfirmacao = idx.statusConfirmacao > -1 ? normalizeText_(row[idx.statusConfirmacao]) : '';
@@ -85,14 +81,25 @@ function diagnosticoMeuGiroLerDgmbDesafios_(id) {
     item.linha_planilha = i + 1;
     item.meta_km = idx.meta > -1 ? parseLocalizedNumber_(row[idx.meta]) : 0;
     item.status_lista_desafios = idx.statusLista > -1 ? normalizeText_(row[idx.statusLista]) : '';
-    var periodoLista = (item.id_desafio && periodosLista.byId[item.id_desafio]) || { inicio: '', fim: '' };
-    var periodoSelecionado = periodoCompletoValido_(periodoTexto)
-      ? periodoTexto
-      : periodoCompletoValido_(periodoLista)
-        ? periodoLista
-        : periodoDatas;
-    item.periodo_inicio = periodoCompletoValido_(periodoSelecionado) ? periodoSelecionado.inicio : '';
-    item.periodo_fim = periodoCompletoValido_(periodoSelecionado) ? periodoSelecionado.fim : '';
+    var periodoTextoLinha = idx.periodo > -1 ? normalizeText_(row[idx.periodo]) : '';
+    var inicioLinha = idx.inicio > -1 ? row[idx.inicio] : '';
+    var periodoLista = resolverPeriodoListaDesafio_(periodosLista, item.id_desafio, periodoTextoLinha, inicioLinha);
+    var tipoMeta = resolverTipoMetaListaDesafio_(contextoLista.tipoMeta, item.id_desafio, periodoTextoLinha, inicioLinha) ||
+      normalizeText_(periodoLista.tipo_meta).toUpperCase();
+    var periodoSelecionado = montarPeriodoHistoricoVinculo_(row, {
+      periodo: idx.periodo,
+      inicio: idx.inicio,
+      fim: idx.fim
+    }, periodoLista, {
+      id_dgmb: id,
+      id_desafio: item.id_desafio || '',
+      id_inscricao: item.id_inscricao || '',
+      id_item_estoque: item.id_item_estoque || '',
+      origem: 'diagnosticoMeuGiroLerDgmbDesafios_'
+    }, tipoMeta);
+    item.tipo_meta = tipoMeta;
+    item.periodo_inicio = periodoSelecionado.inicio || '';
+    item.periodo_fim = periodoSelecionado.fim || '';
     item.apto_elegivel = validacao.valida;
     item.criterio_elegibilidade = validacao.criterio;
     saida.linhas.push(item);
@@ -280,4 +287,303 @@ function diagnosticoMeuGiroDiff_(origem, destino) {
     if (!destino[k]) ausentes.push(k);
   });
   return { origem_total: Object.keys(origem || {}).length, destino_total: Object.keys(destino || {}).length, ausentes_no_destino: ausentes };
+}
+
+
+/**
+ * Wrapper temporário para o atleta de homologação já conhecido (ID_DGMB 1380).
+ * Executável diretamente pelo seletor do editor do Apps Script.
+ */
+function diagnosticarMeuGiroAtleta1380() {
+  return diagnosticarMeuGiroAtleta('1380');
+}
+
+
+/**
+ * Diagnóstico da fonte de dados usada pelo Meu Giro.
+ * Somente leitura.
+ */
+function diagnosticarFonteDadosMeuGiro() {
+  var ss = getSpreadsheet_();
+  var sh = ss.getSheetByName(SHEETS.DESAFIO || 'dgmbDesafios');
+  var relatorio = {
+    spreadsheet_id_config: typeof SPREADSHEET_ID !== 'undefined' ? String(SPREADSHEET_ID || '') : '',
+    spreadsheet_id_aberto: ss ? ss.getId() : '',
+    spreadsheet_nome: ss ? ss.getName() : '',
+    spreadsheet_url: ss ? ss.getUrl() : '',
+    aba_desafio: sh ? sh.getName() : '',
+    aba_gid: sh ? sh.getSheetId() : '',
+    total_linhas_dgmbDesafios: sh ? sh.getLastRow() : 0,
+    total_colunas_dgmbDesafios: sh ? sh.getLastColumn() : 0
+  };
+  Logger.log(JSON.stringify(relatorio, null, 2));
+  return relatorio;
+}
+
+
+/**
+ * Diagnóstico bruto da aba dgmbDesafios para o atleta 1380.
+ * Não usa buildHeaderMap_ para localizar o atleta; varre todas as colunas
+ * e também informa cabeçalhos duplicados que poderiam alterar o índice efetivo.
+ * Somente leitura.
+ */
+function diagnosticarLinhasBrutasAtleta1380() {
+  var alvo = '1380';
+  var ss = getSpreadsheet_();
+  var sh = ss.getSheetByName(SHEETS.DESAFIO || 'dgmbDesafios');
+  if (!sh) throw new Error('Aba dgmbDesafios não encontrada.');
+
+  var values = sh.getDataRange().getValues();
+  var header = values && values.length ? values[0] : [];
+  var cabecalhosPorChave = {};
+  var duplicados = [];
+
+  for (var c = 0; c < header.length; c++) {
+    var chave = normalizeHeaderKey_(header[c]);
+    if (!chave) continue;
+    if (!cabecalhosPorChave[chave]) cabecalhosPorChave[chave] = [];
+    cabecalhosPorChave[chave].push(c + 1);
+  }
+
+  Object.keys(cabecalhosPorChave).forEach(function(chave) {
+    if (cabecalhosPorChave[chave].length > 1) {
+      duplicados.push({ cabecalho: chave, colunas: cabecalhosPorChave[chave] });
+    }
+  });
+
+  var mapaEfetivo = buildHeaderMap_(header);
+  var idxIdEfetivo = getOptionalColumnIndex_(mapaEfetivo, ['id_dgmb']);
+  var ocorrencias = [];
+  var linhasIdEfetivo = [];
+
+  for (var i = 1; i < values.length; i++) {
+    var row = values[i] || [];
+    var colunasComAlvo = [];
+    for (var j = 0; j < row.length; j++) {
+      if (normalizeText_(row[j]) === alvo) colunasComAlvo.push(j + 1);
+    }
+
+    if (colunasComAlvo.length) {
+      ocorrencias.push({
+        linha: i + 1,
+        colunas_com_1380: colunasComAlvo,
+        id_dgmb_coluna_efetiva: idxIdEfetivo > -1 ? idxIdEfetivo + 1 : 0,
+        valor_id_dgmb_efetivo: idxIdEfetivo > -1 ? normalizeText_(row[idxIdEfetivo]) : '',
+        primeiros_campos: row.slice(0, Math.min(row.length, 20)).map(function(v) { return normalizeText_(v); })
+      });
+    }
+
+    if (idxIdEfetivo > -1 && normalizeText_(row[idxIdEfetivo]) === alvo) {
+      linhasIdEfetivo.push(i + 1);
+    }
+  }
+
+  var relatorio = {
+    spreadsheet_id: ss.getId(),
+    aba: sh.getName(),
+    total_linhas: values.length,
+    total_colunas: header.length,
+    colunas_id_dgmb_encontradas: cabecalhosPorChave['id_dgmb'] || [],
+    coluna_id_dgmb_usada_pelo_buildHeaderMap: idxIdEfetivo > -1 ? idxIdEfetivo + 1 : 0,
+    cabecalhos_duplicados: duplicados,
+    linhas_com_1380_em_qualquer_coluna: ocorrencias,
+    linhas_com_1380_na_coluna_id_dgmb_efetiva: linhasIdEfetivo
+  };
+
+  Logger.log(JSON.stringify(relatorio, null, 2));
+  return relatorio;
+}
+
+
+/**
+ * Lista candidatos reais de setembro/2026 em diante para teste do Meu Giro.
+ * Somente leitura. Não depende de um ID_DGMB previamente escolhido.
+ */
+function diagnosticarCandidatosDesafioAtual() {
+  var ss = getSpreadsheet_();
+  var sh = ss.getSheetByName(SHEETS.DESAFIO || 'dgmbDesafios');
+  if (!sh) throw new Error('Aba dgmbDesafios não encontrada.');
+
+  var values = sh.getDataRange().getValues();
+  if (!values || values.length < 2) return [];
+
+  var map = buildHeaderMap_(values[0]);
+  var idxId = getOptionalColumnIndex_(map, ['id_dgmb']);
+  var idxNome = getOptionalColumnIndex_(map, ['nome', 'nome_completo', 'participante']);
+  var idxMeta = getOptionalColumnIndex_(map, ['distancia_km', 'distancia km', 'meta_km', 'meta km']);
+  var idxInscricao = getOptionalColumnIndex_(map, ['id_inscricao', 'id inscrição', 'id inscricao']);
+  var idxIdDesafio = getIdDesafioColumnIndex_(map);
+  var idxObs = getOptionalColumnIndex_(map, ['observacao', 'observação']);
+  var idxStatusUsuario = getOptionalColumnIndex_(map, ['status_usuario_desafio', 'status usuário desafio', 'status usuario desafio']);
+  var idxStatusDesafio = getOptionalColumnIndex_(map, ['status_desafio', 'status desafio']);
+  var idxPagamento = getOptionalColumnIndex_(map, ['status_pagamento', 'pagamento_status', 'pagamento', 'pix_status']);
+  var idxPeriodo = getOptionalColumnIndex_(map, MEU_GIRO_PERIODO_DESAFIO_ALIASES_);
+  var idxInicio = getOptionalColumnIndex_(map, ['data_inicio_desafio', 'data inicio desafio', 'data início desafio']);
+  var idxFim = getOptionalColumnIndex_(map, ['data_fim_desafio', 'data fim desafio']);
+  var idxPrazo = getOptionalColumnIndex_(map, ['prazo_dias', 'prazo dias']);
+  var idxConsolidacao = getOptionalColumnIndex_(map, ['data_consolidacao', 'data consolidação', 'data consolidacao']);
+
+  var out = [];
+  for (var i = 1; i < values.length; i++) {
+    var row = values[i] || [];
+    var id = idxId > -1 ? normalizeText_(row[idxId]) : '';
+    if (!id) continue;
+
+    var inicio = idxInicio > -1 ? normalizarDataISO_(row[idxInicio]) : '';
+    var fim = idxFim > -1 ? normalizarDataISO_(row[idxFim]) : '';
+    var periodo = idxPeriodo > -1 ? normalizeText_(row[idxPeriodo]) : '';
+    var periodoMensal = extrairPeriodoDesafioTexto_(periodo);
+    var inicioReferencia = inicio || (periodoMensal && periodoMensal.inicio) || '';
+
+    // Só setembro/2026 em diante.
+    if (!inicioReferencia || inicioReferencia < '2026-09-01') continue;
+
+    var statusUsuario = idxStatusUsuario > -1 ? normalizeText_(row[idxStatusUsuario]) : '';
+    var statusDesafio = idxStatusDesafio > -1 ? normalizeText_(row[idxStatusDesafio]) : '';
+    var statusPagamento = idxPagamento > -1 ? normalizeText_(row[idxPagamento]) : '';
+    var validacao = validarInscricaoMinima_({
+      status_inscricao: statusUsuario,
+      status_confirmacao: '',
+      status_pagamento: statusPagamento
+    });
+    if (!validacao.valida || inscricaoTemBloqueioMinimo_(statusUsuario)) continue;
+
+    out.push({
+      linha: i + 1,
+      id_dgmb: id,
+      nome: idxNome > -1 ? normalizeText_(row[idxNome]) : '',
+      id_inscricao: idxInscricao > -1 ? normalizeText_(row[idxInscricao]) : '',
+      id_desafio: obterIdDesafioRegistro_(row, idxIdDesafio, idxObs),
+      meta_km: idxMeta > -1 ? parseLocalizedNumber_(row[idxMeta]) : 0,
+      status_usuario_desafio: statusUsuario,
+      status_desafio: statusDesafio,
+      status_pagamento: statusPagamento,
+      periodo_desafio: periodo,
+      data_inicio_desafio: inicio,
+      data_fim_desafio: fim,
+      prazo_dias: idxPrazo > -1 ? parseInt(row[idxPrazo], 10) || 0 : 0,
+      data_consolidacao: idxConsolidacao > -1 ? normalizarDataISO_(row[idxConsolidacao]) : ''
+    });
+
+    if (out.length >= 30) break;
+  }
+
+  Logger.log(JSON.stringify({ total_amostra: out.length, candidatos: out }, null, 2));
+  return out;
+}
+
+
+/**
+ * Diagnóstico bruto das linhas mais recentes de dgmbDesafios.
+ * Mostra cabeçalhos efetivos e os últimos registros sem filtrar por período.
+ * Somente leitura.
+ */
+function diagnosticarUltimasLinhasDgmbDesafios() {
+  var ss = getSpreadsheet_();
+  var sh = ss.getSheetByName(SHEETS.DESAFIO || 'dgmbDesafios');
+  if (!sh) throw new Error('Aba dgmbDesafios não encontrada.');
+
+  var values = sh.getDataRange().getValues();
+  if (!values || !values.length) return {};
+
+  var header = values[0] || [];
+  var map = buildHeaderMap_(header);
+  var idxId = getOptionalColumnIndex_(map, ['id_dgmb']);
+  var idxMeta = getOptionalColumnIndex_(map, ['distancia_km', 'distancia km', 'meta_km', 'meta km', 'distancia']);
+  var idxObs = getOptionalColumnIndex_(map, ['observacao', 'observação']);
+  var idxIdDesafio = getIdDesafioColumnIndex_(map);
+  var idxInscricao = getOptionalColumnIndex_(map, ['id_inscricao', 'id inscrição', 'id inscricao']);
+  var idxStatusUsuario = getOptionalColumnIndex_(map, ['status_usuario_desafio', 'status usuário desafio', 'status usuario desafio']);
+  var idxStatusDesafio = getOptionalColumnIndex_(map, ['status_desafio', 'status desafio']);
+  var idxPagamento = getOptionalColumnIndex_(map, ['status_pagamento', 'pagamento_status', 'pagamento', 'pix_status']);
+  var idxPeriodo = getOptionalColumnIndex_(map, MEU_GIRO_PERIODO_DESAFIO_ALIASES_);
+  var idxInicio = getOptionalColumnIndex_(map, ['data_inicio_desafio', 'data inicio desafio', 'data início desafio']);
+  var idxFim = getOptionalColumnIndex_(map, ['data_fim_desafio', 'data fim desafio']);
+  var idxPrazo = getOptionalColumnIndex_(map, ['prazo_dias', 'prazo dias']);
+  var idxConsolidacao = getOptionalColumnIndex_(map, ['data_consolidacao', 'data consolidação', 'data consolidacao']);
+
+  var linhas = [];
+  var inicio = Math.max(1, values.length - 25);
+  for (var i = inicio; i < values.length; i++) {
+    var row = values[i] || [];
+    linhas.push({
+      linha: i + 1,
+      id_dgmb: idxId > -1 ? normalizeText_(row[idxId]) : '',
+      id_inscricao: idxInscricao > -1 ? normalizeText_(row[idxInscricao]) : '',
+      id_desafio: obterIdDesafioRegistro_(row, idxIdDesafio, idxObs),
+      meta: idxMeta > -1 ? normalizeText_(row[idxMeta]) : '',
+      status_usuario_desafio: idxStatusUsuario > -1 ? normalizeText_(row[idxStatusUsuario]) : '',
+      status_desafio: idxStatusDesafio > -1 ? normalizeText_(row[idxStatusDesafio]) : '',
+      status_pagamento: idxPagamento > -1 ? normalizeText_(row[idxPagamento]) : '',
+      periodo_desafio: idxPeriodo > -1 ? normalizeText_(row[idxPeriodo]) : '',
+      data_inicio_desafio: idxInicio > -1 ? normalizarDataISO_(row[idxInicio]) : '',
+      data_fim_desafio: idxFim > -1 ? normalizarDataISO_(row[idxFim]) : '',
+      prazo_dias: idxPrazo > -1 ? normalizeText_(row[idxPrazo]) : '',
+      data_consolidacao: idxConsolidacao > -1 ? normalizarDataISO_(row[idxConsolidacao]) : ''
+    });
+  }
+
+  var relatorio = {
+    spreadsheet_id: ss.getId(),
+    aba: sh.getName(),
+    total_linhas: values.length,
+    total_colunas: header.length,
+    indices: {
+      id_dgmb: idxId + 1,
+      id_inscricao: idxInscricao + 1,
+      id_desafio: idxIdDesafio + 1,
+      meta: idxMeta + 1,
+      status_usuario_desafio: idxStatusUsuario + 1,
+      status_desafio: idxStatusDesafio + 1,
+      status_pagamento: idxPagamento + 1,
+      periodo_desafio: idxPeriodo + 1,
+      data_inicio_desafio: idxInicio + 1,
+      data_fim_desafio: idxFim + 1,
+      prazo_dias: idxPrazo + 1,
+      data_consolidacao: idxConsolidacao + 1
+    },
+    cabecalhos: header.map(function(v, idx) { return { coluna: idx + 1, nome: normalizeText_(v) }; }),
+    ultimas_linhas: linhas
+  };
+
+  Logger.log(JSON.stringify(relatorio, null, 2));
+  return relatorio;
+}
+
+
+/**
+ * Executa o fluxo REAL do painel para o atleta 1380, permitindo a reconciliação
+ * normal de MEU_GIRO_RESUMO. Use apenas em homologação.
+ * Retorna um relatório compacto para evitar truncamento do Logger.
+ */
+function diagnosticarPainelRealAtleta1380() {
+  var id = '1380';
+  var antes = diagnosticoMeuGiroLerResumo_(id);
+  var payload = getPainelUsuario(id);
+  var data = payload && payload.data ? payload.data : {};
+  var depois = diagnosticoMeuGiroLerResumo_(id);
+
+  function resumirLinhaAtual(lista) {
+    var alvo = 'c1963e77-5631-4fe0-b888-91e941edcb1c';
+    var encontrados = (lista || []).filter(function(item) {
+      return normalizeText_(item.id_inscricao) === alvo ||
+        normalizeText_(item.id_desafio) === '153';
+    });
+    return encontrados;
+  }
+
+  var relatorio = {
+    id_dgmb: id,
+    ok: !!(payload && payload.ok),
+    resumo_antes_atual: resumirLinhaAtual(antes.linhas),
+    resumo_depois_atual: resumirLinhaAtual(depois.linhas),
+    desafio_em_foco: diagnosticoMeuGiroProjetarDesafios_(
+      data.desafio_em_foco ? [data.desafio_em_foco] : []
+    ),
+    desafios_ativos: diagnosticoMeuGiroProjetarDesafios_(data.desafios_ativos || []),
+    total_desafios_payload: (data.desafios || []).length
+  };
+
+  Logger.log(JSON.stringify(relatorio, null, 2));
+  return relatorio;
 }

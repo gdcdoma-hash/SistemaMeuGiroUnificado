@@ -26,21 +26,17 @@ test('diagnóstico usa resumo leve sem reconciliação e painel em modo somente-
   assert.match(painel, /var opcoes = arguments.length > 1 \? arguments\[1\] : null/);
   assert.match(painel, /var somenteLeitura = !!\(opcoes && opcoes\.somenteLeitura\)/);
   assert.match(painel, /obterMeuGiroResumoAtualizadoLeve_\(id, \{ reconciliar: !somenteLeitura \}\)/);
-  assert.match(painel, /if \(!resumoDesafios\.length && !somenteLeitura\)/);
+  assert.match(painel, /if \(!somenteLeitura && \(possuiPrazoDias \|\| !resumoDesafios\.length\)\)/);
 });
 
-test('diagnóstico aplica precedência período mensal, datas individuais e catálogo', () => {
+test('diagnóstico usa o mesmo resolvedor central de período e Tipo_Meta', () => {
   const inicio = diagnostico.indexOf('function diagnosticoMeuGiroLerDgmbDesafios_');
   const fim = diagnostico.indexOf('\nfunction diagnosticoMeuGiroLerResumo_', inicio);
   const fonte = diagnostico.slice(inicio, fim);
 
-  const texto = fonte.indexOf('var periodoSelecionado = periodoCompletoValido_(periodoTexto)');
-  const catalogo = fonte.indexOf('? periodoTexto');
-  const datas = fonte.indexOf(': periodoDatas;');
-
-  assert.ok(texto >= 0);
-  assert.ok(catalogo > texto);
-  assert.ok(datas > catalogo);
-  assert.match(fonte, /buildListaDesafiosContexto_\(getSpreadsheet_\(\)\)\.periodos/);
-  assert.match(fonte, /periodosLista\.byId\[item\.id_desafio\]/);
+  assert.match(fonte, /var contextoLista = buildListaDesafiosContexto_\(getSpreadsheet_\(\)\)/);
+  assert.match(fonte, /resolverPeriodoListaDesafio_/);
+  assert.match(fonte, /resolverTipoMetaListaDesafio_/);
+  assert.match(fonte, /montarPeriodoHistoricoVinculo_\(row,/);
+  assert.match(fonte, /}, tipoMeta\)/);
 });

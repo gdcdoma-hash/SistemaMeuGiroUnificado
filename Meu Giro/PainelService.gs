@@ -52,12 +52,20 @@ function getPainelUsuario(idDgmb) {
       fallback: false
     });
 
-    if (!resumoDesafios.length && !somenteLeitura) {
+    var possuiPrazoDias = resumoDesafios.some(function(item) {
+      return painelMG_normalizarStatus_(item && item.tipo_meta) === 'PRAZO_DIAS';
+    });
+
+    // Mudanças na janela individual alteram a elegibilidade de atividades já registradas.
+    // Para PRAZO_DIAS, uma linha existente no MEU_GIRO_RESUMO pode estar materializada
+    // com a regra antiga; reconciliar antes de selecionar foco evita servir resumo obsoleto.
+    if (!somenteLeitura && (possuiPrazoDias || !resumoDesafios.length)) {
       perfEtapaInicio = painelMG_perfNow_();
       resumoDesafios = atualizarMeuGiroResumo_(id) || [];
-      painelMG_perfLog_('painel-inicial', 'atualizarMeuGiroResumo_fallback_login_', perfEtapaInicio, {
+      painelMG_perfLog_('painel-inicial', possuiPrazoDias ? 'atualizarMeuGiroResumo_prazo_dias_' : 'atualizarMeuGiroResumo_fallback_login_', perfEtapaInicio, {
         total_desafios_resumo: resumoDesafios.length,
-        fallback: true
+        fallback: !possuiPrazoDias,
+        motivo: possuiPrazoDias ? 'reconciliar_janela_individual' : 'resumo_vazio'
       });
     }
 
@@ -126,7 +134,9 @@ function getPainelUsuario(idDgmb) {
         }
       : painelMG_montarMensagemOperacional_('', '');
     var progresso = painelMG_calcularProgresso_(meta, realizadoPainel);
-    var ritmo = painelMG_calcularRitmo_(meta, realizadoPainel, desafioData.periodo_inicio, desafioData.periodo_fim);
+    var periodoRitmoInicio = desafioPrincipalPainel ? desafioPrincipalPainel.periodo_inicio : desafioData.periodo_inicio;
+    var periodoRitmoFim = desafioPrincipalPainel ? desafioPrincipalPainel.periodo_fim : desafioData.periodo_fim;
+    var ritmo = painelMG_calcularRitmo_(meta, realizadoPainel, periodoRitmoInicio, periodoRitmoFim);
     perfEtapaInicio = painelMG_perfNow_();
     var atividades = buscarAtividadesUsuario_(id);
     painelMG_perfLog_('painel-inicial', 'buscarAtividadesUsuario_', perfEtapaInicio, {
@@ -712,7 +722,8 @@ function painelMG_obterInscricaoLevePorDesafio_(idDgmb, desafioPrincipal) {
   var idxPeriodo = getOptionalColumnIndex_(map, ['periodo_desafio', 'periodo desafio', 'período_desafio', 'período desafio']);
   var idxInicio = getOptionalColumnIndex_(map, ['data_inicio_desafio', 'data inicio desafio', 'data início desafio']);
   var idxFim = getOptionalColumnIndex_(map, ['data_fim_desafio', 'data fim desafio']);
-  var periodosLista = buildListaDesafiosContexto_(getSpreadsheet_()).periodos;
+  var contextoLista = buildListaDesafiosContexto_(getSpreadsheet_());
+  var periodosLista = contextoLista.periodos;
 
   var alvoInscricao = painelMG_norm_(desafioPrincipal && desafioPrincipal.id_inscricao);
   var alvoDesafio = painelMG_norm_(desafioPrincipal && desafioPrincipal.id_desafio);
@@ -739,19 +750,24 @@ function painelMG_obterInscricaoLevePorDesafio_(idDgmb, desafioPrincipal) {
       status_confirmacao: statusConfirmacao,
       status_pagamento: statusPagamento
     });
-    var periodoDatas = {
-      inicio: normalizarDataISO_(idxInicio > -1 ? row[idxInicio] : ''),
-      fim: normalizarDataISO_(idxFim > -1 ? row[idxFim] : '')
-    };
-    var periodoTexto = idxPeriodo > -1 ? extrairPeriodoDesafioTexto_(row[idxPeriodo]) : { inicio: '', fim: '' };
-    var periodoLista = (idDesafio && periodosLista.byId[idDesafio]) || { inicio: '', fim: '' };
-    var periodoSelecionado = periodoCompletoValido_(periodoTexto)
-      ? periodoTexto
-      : periodoCompletoValido_(periodoLista)
-        ? periodoLista
-        : periodoDatas;
-    var inicio = periodoCompletoValido_(periodoSelecionado) ? periodoSelecionado.inicio : '';
-    var fim = periodoCompletoValido_(periodoSelecionado) ? periodoSelecionado.fim : '';
+    var periodoTextoLinha = idxPeriodo > -1 ? painelMG_norm_(row[idxPeriodo]) : '';
+    var inicioLinha = idxInicio > -1 ? row[idxInicio] : '';
+    var periodoLista = resolverPeriodoListaDesafio_(periodosLista, idDesafio, periodoTextoLinha, inicioLinha);
+    var tipoMeta = resolverTipoMetaListaDesafio_(contextoLista.tipoMeta, idDesafio, periodoTextoLinha, inicioLinha) ||
+      painelMG_norm_(periodoLista.tipo_meta).toUpperCase();
+    var periodoSelecionado = montarPeriodoHistoricoVinculo_(row, {
+      periodo: idxPeriodo,
+      inicio: idxInicio,
+      fim: idxFim
+    }, periodoLista, {
+      id_dgmb: id,
+      id_desafio: idDesafio || '',
+      id_inscricao: idInscricao || '',
+      id_item_estoque: idItem || '',
+      origem: 'painelMG_obterInscricaoLevePorDesafio_'
+    }, tipoMeta);
+    var inicio = periodoSelecionado.inicio || '';
+    var fim = periodoSelecionado.fim || '';
 
     var inscricao = {
       id_dgmb: id,
@@ -866,6 +882,10 @@ function percentualMetaConcluida_(meta, realizado, restante) {
   return percentual >= 100 || restanteNumero <= 0;
 }
 
+function painelMG_ordemDiaCivil_(data) {
+  return Math.floor(Date.UTC(data.getFullYear(), data.getMonth(), data.getDate()) / 86400000);
+}
+
 function painelMG_calcularRitmo_(meta, realizado, periodoInicio, periodoFim) {
   var now = new Date();
   var inicio = painelMG_parseDataISO_(periodoInicio) || new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -877,9 +897,11 @@ function painelMG_calcularRitmo_(meta, realizado, periodoInicio, periodoFim) {
     fim = swap;
   }
 
-  var msDia = 24 * 60 * 60 * 1000;
-  var diasTotal = Math.max(Math.floor((fim.getTime() - inicio.getTime()) / msDia) + 1, 1);
-  var diaAtual = Math.floor((now.getTime() - inicio.getTime()) / msDia) + 1;
+  var inicioDia = painelMG_ordemDiaCivil_(inicio);
+  var fimDia = painelMG_ordemDiaCivil_(fim);
+  var hojeDia = painelMG_ordemDiaCivil_(now);
+  var diasTotal = Math.max((fimDia - inicioDia) + 1, 1);
+  var diaAtual = (hojeDia - inicioDia) + 1;
   if (diaAtual < 1) diaAtual = 1;
   if (diaAtual > diasTotal) diaAtual = diasTotal;
 

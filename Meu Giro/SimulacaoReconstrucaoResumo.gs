@@ -221,7 +221,7 @@ function simularResumoCalcularEsperado_(dadosDesafios, dadosRegistros, dadosList
 }
 
 function simularResumoBuildPeriodos_(dadosLista) {
-  var out = { byAba: {}, byId: {} };
+  var out = { byAba: {}, byId: {}, byIdPeriodo: {} };
   if (!dadosLista || dadosLista.length < 2) return out;
 
   var map = buildHeaderMap_(dadosLista[0]);
@@ -235,6 +235,7 @@ function simularResumoBuildPeriodos_(dadosLista) {
     'nome_desafio', 'nome desafio', 'nome_desafio_lista', 'nome desafio lista',
     'desafio', 'nome'
   ]);
+  var idxTipoMeta = getOptionalColumnIndex_(map, ['tipo_meta', 'tipo meta', 'tipometa']);
   if (idxAba === -1) idxAba = 1;
 
   for (var i = 1; i < dadosLista.length; i++) {
@@ -249,13 +250,18 @@ function simularResumoBuildPeriodos_(dadosLista) {
       inicio: periodoMensal.inicio,
       fim: periodoMensal.fim,
       periodo_desafio: idxPeriodo > -1 ? normalizeText_(row[idxPeriodo]) : '',
-      nome_desafio: (idxNome > -1 ? normalizeText_(row[idxNome]) : '') || aba
+      nome_desafio: (idxNome > -1 ? normalizeText_(row[idxNome]) : '') || aba,
+      tipo_meta: idxTipoMeta > -1 ? normalizeText_(row[idxTipoMeta]).toUpperCase() : ''
     };
     out.byAba[aba] = periodo;
 
     if (idxId > -1) {
       var idDesafio = normalizeText_(row[idxId]);
-      if (idDesafio) out.byId[idDesafio] = periodo;
+      if (idDesafio) {
+        out.byId[idDesafio] = periodo;
+        var chaveIdPeriodo = chaveListaDesafioIdPeriodo_(idDesafio, periodo.periodo_desafio, periodo.inicio);
+        if (chaveIdPeriodo) out.byIdPeriodo[chaveIdPeriodo] = periodo;
+      }
     }
   }
 
@@ -363,9 +369,12 @@ function simularResumoBuildVinculos_(dadosDesafios, periodos, statusLista) {
     });
     var aptoBase = validacao.valida && !inscricaoTemBloqueioMinimo_(statusUsuario);
     var apto = ehNormal ? aptoBase && !!idDesafio && metaKm > 0 : aptoBase;
-    var periodoLista = (idDesafio && periodos.byId[idDesafio]) ||
-      (!ehNormal && periodos.byAba[abaDesafio]) ||
-      { inicio: '', fim: '', periodo_desafio: '', nome_desafio: '' };
+    var periodoTextoLinha = idxPeriodo > -1 ? normalizeText_(row[idxPeriodo]) : '';
+    var inicioLinha = idxInicio > -1 ? row[idxInicio] : '';
+    var periodoLista = resolverPeriodoListaDesafio_(periodos, idDesafio, periodoTextoLinha, inicioLinha);
+    if (!periodoCompletoValido_(periodoLista) && !ehNormal && periodos.byAba[abaDesafio]) {
+      periodoLista = periodos.byAba[abaDesafio];
+    }
     var periodo = simularResumoMontarPeriodo_(row, {
       periodo: idxPeriodo,
       inicio: idxInicio,
@@ -404,8 +413,11 @@ function simularResumoMontarPeriodo_(row, indices, periodoLista) {
     fim: indices.fim > -1 ? normalizarDataISO_(row[indices.fim]) : ''
   };
   var periodo = { inicio: '', fim: '' };
+  var tipoMeta = normalizeText_(periodoLista && periodoLista.tipo_meta).toUpperCase();
 
-  if (periodoCompletoValido_(periodoTextoEspecifico)) {
+  if (ehTipoMetaPrazoDias_(tipoMeta)) {
+    if (periodoCompletoValido_(periodoDatasEspecificas)) periodo = periodoDatasEspecificas;
+  } else if (periodoCompletoValido_(periodoTextoEspecifico)) {
     periodo = periodoTextoEspecifico;
   } else if (periodoCompletoValido_(periodoLista)) {
     periodo = periodoLista;

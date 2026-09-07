@@ -37,8 +37,8 @@ const atualizarDistancia = sliceFunction(registro, 'atualizarDistanciaRealizada_
 const atualizarStatus = sliceFunction(adminCert, 'atualizarStatusValidacaoCertificadoAdmin', 'adminCertificadoBuildMapaNomesPessoas_');
 const atualizarResumo = sliceFunction(utils, 'atualizarMeuGiroResumoComLockAdquirido_', 'atualizarMeuGiroResumoEmLote_');
 
-const arquivosOperacionais = listRepoFiles(repoRoot)
-  .filter(file => !file.startsWith('docs/') && !file.startsWith('tests/') && file !== 'README.md');
+const arquivosOperacionais = listRepoFiles(path.join(repoRoot, 'Meu Giro'))
+  .filter(file => /\.(gs|html)$/i.test(file));
 const codigoOperacional = arquivosOperacionais
   .map(file => fs.readFileSync(path.join(repoRoot, file), 'utf8'))
   .join('\n');
