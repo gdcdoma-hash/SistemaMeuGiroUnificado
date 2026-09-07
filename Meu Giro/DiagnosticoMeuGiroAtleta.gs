@@ -393,3 +393,81 @@ function diagnosticarLinhasBrutasAtleta1380() {
   Logger.log(JSON.stringify(relatorio, null, 2));
   return relatorio;
 }
+
+
+/**
+ * Lista candidatos reais de setembro/2026 em diante para teste do Meu Giro.
+ * Somente leitura. Não depende de um ID_DGMB previamente escolhido.
+ */
+function diagnosticarCandidatosDesafioAtual() {
+  var ss = getSpreadsheet_();
+  var sh = ss.getSheetByName(SHEETS.DESAFIO || 'dgmbDesafios');
+  if (!sh) throw new Error('Aba dgmbDesafios não encontrada.');
+
+  var values = sh.getDataRange().getValues();
+  if (!values || values.length < 2) return [];
+
+  var map = buildHeaderMap_(values[0]);
+  var idxId = getOptionalColumnIndex_(map, ['id_dgmb']);
+  var idxNome = getOptionalColumnIndex_(map, ['nome', 'nome_completo', 'participante']);
+  var idxMeta = getOptionalColumnIndex_(map, ['distancia_km', 'distancia km', 'meta_km', 'meta km']);
+  var idxInscricao = getOptionalColumnIndex_(map, ['id_inscricao', 'id inscrição', 'id inscricao']);
+  var idxIdDesafio = getIdDesafioColumnIndex_(map);
+  var idxObs = getOptionalColumnIndex_(map, ['observacao', 'observação']);
+  var idxStatusUsuario = getOptionalColumnIndex_(map, ['status_usuario_desafio', 'status usuário desafio', 'status usuario desafio']);
+  var idxStatusDesafio = getOptionalColumnIndex_(map, ['status_desafio', 'status desafio']);
+  var idxPagamento = getOptionalColumnIndex_(map, ['status_pagamento', 'pagamento_status', 'pagamento', 'pix_status']);
+  var idxPeriodo = getOptionalColumnIndex_(map, MEU_GIRO_PERIODO_DESAFIO_ALIASES_);
+  var idxInicio = getOptionalColumnIndex_(map, ['data_inicio_desafio', 'data inicio desafio', 'data início desafio']);
+  var idxFim = getOptionalColumnIndex_(map, ['data_fim_desafio', 'data fim desafio']);
+  var idxPrazo = getOptionalColumnIndex_(map, ['prazo_dias', 'prazo dias']);
+  var idxConsolidacao = getOptionalColumnIndex_(map, ['data_consolidacao', 'data consolidação', 'data consolidacao']);
+
+  var out = [];
+  for (var i = 1; i < values.length; i++) {
+    var row = values[i] || [];
+    var id = idxId > -1 ? normalizeText_(row[idxId]) : '';
+    if (!id) continue;
+
+    var inicio = idxInicio > -1 ? normalizarDataISO_(row[idxInicio]) : '';
+    var fim = idxFim > -1 ? normalizarDataISO_(row[idxFim]) : '';
+    var periodo = idxPeriodo > -1 ? normalizeText_(row[idxPeriodo]) : '';
+    var periodoMensal = extrairPeriodoDesafioTexto_(periodo);
+    var inicioReferencia = inicio || (periodoMensal && periodoMensal.inicio) || '';
+
+    // Só setembro/2026 em diante.
+    if (!inicioReferencia || inicioReferencia < '2026-09-01') continue;
+
+    var statusUsuario = idxStatusUsuario > -1 ? normalizeText_(row[idxStatusUsuario]) : '';
+    var statusDesafio = idxStatusDesafio > -1 ? normalizeText_(row[idxStatusDesafio]) : '';
+    var statusPagamento = idxPagamento > -1 ? normalizeText_(row[idxPagamento]) : '';
+    var validacao = validarInscricaoMinima_({
+      status_inscricao: statusUsuario,
+      status_confirmacao: '',
+      status_pagamento: statusPagamento
+    });
+    if (!validacao.valida || inscricaoTemBloqueioMinimo_(statusUsuario)) continue;
+
+    out.push({
+      linha: i + 1,
+      id_dgmb: id,
+      nome: idxNome > -1 ? normalizeText_(row[idxNome]) : '',
+      id_inscricao: idxInscricao > -1 ? normalizeText_(row[idxInscricao]) : '',
+      id_desafio: obterIdDesafioRegistro_(row, idxIdDesafio, idxObs),
+      meta_km: idxMeta > -1 ? parseLocalizedNumber_(row[idxMeta]) : 0,
+      status_usuario_desafio: statusUsuario,
+      status_desafio: statusDesafio,
+      status_pagamento: statusPagamento,
+      periodo_desafio: periodo,
+      data_inicio_desafio: inicio,
+      data_fim_desafio: fim,
+      prazo_dias: idxPrazo > -1 ? parseInt(row[idxPrazo], 10) || 0 : 0,
+      data_consolidacao: idxConsolidacao > -1 ? normalizarDataISO_(row[idxConsolidacao]) : ''
+    });
+
+    if (out.length >= 30) break;
+  }
+
+  Logger.log(JSON.stringify({ total_amostra: out.length, candidatos: out }, null, 2));
+  return out;
+}
