@@ -9,7 +9,8 @@ const registro = fs.readFileSync(path.join(root, 'Meu Giro', 'RegistroService.gs
 
 function trecho(source, name, nextName) {
   const start = source.indexOf('function ' + name);
-  const end = nextName ? source.indexOf('\nfunction ' + nextName, start) : source.length;
+  const nextNeedle = nextName ? ('function ' + nextName) : '';
+  const end = nextName ? source.indexOf(nextNeedle, start + 1) : source.length;
   assert.ok(start >= 0, name + ' deve existir');
   assert.ok(end > start, 'fim de ' + name + ' deve existir');
   return source.slice(start, end);
