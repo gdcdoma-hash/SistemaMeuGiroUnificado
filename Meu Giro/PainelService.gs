@@ -53,8 +53,7 @@ function getPainelUsuario(idDgmb) {
     });
 
     var possuiPrazoDias = resumoDesafios.some(function(item) {
-      return painelMG_normalizarStatus_(item && item.tipo_meta) === 'PRAZO_DIAS' ||
-        painelMG_toNumber_(item && item.prazo_dias) > 0;
+      return painelMG_normalizarStatus_(item && item.tipo_meta) === 'PRAZO_DIAS';
     });
 
     // Mudanças na janela individual alteram a elegibilidade de atividades já registradas.
