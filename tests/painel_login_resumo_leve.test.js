@@ -25,8 +25,8 @@ assert.doesNotMatch(
 );
 assert.match(
   getPainelUsuario,
-  /if \(!resumoDesafios\.length && !somenteLeitura\) \{[\s\S]*?resumoDesafios = atualizarMeuGiroResumo_\(id\) \|\| \[\];[\s\S]*?atualizarMeuGiroResumo_fallback_login_/,
-  'login deve recalcular somente no fallback vazio fora do modo somente-leitura'
+  /if \(!somenteLeitura && \(possuiPrazoDias \|\| !resumoDesafios\.length\)\) \{[\s\S]*?resumoDesafios = atualizarMeuGiroResumo_\(id\) \|\| \[\];/,
+  'login deve reconciliar PRAZO_DIAS e manter fallback quando o resumo estiver vazio'
 );
 assert.match(
   getPainelUsuario,
