@@ -1631,7 +1631,15 @@ function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb, periodosLista
 }
 
 function meuGiroResumoPossuiInscricaoAusente_(valoresResumo, idxId, idxInscricaoResumo, idDgmb, inscricoesAptas) {
-  if (idxInscricaoResumo < 0 || !inscricoesAptas) return false;
+  if (!inscricoesAptas) return false;
+
+  var idsAptos = Object.keys(inscricoesAptas);
+  if (!idsAptos.length) return false;
+
+  // Resumo legado sem ID_INSCRICAO não consegue provar que inscrições modernas
+  // já estão materializadas. Tratar como reconciliação necessária para que
+  // ensureMeuGiroResumoSheet_ migre o schema e o rebuild por inscrição ocorra.
+  if (idxInscricaoResumo < 0) return true;
 
   var existentes = {};
   for (var i = 1; i < (valoresResumo || []).length; i++) {
@@ -1641,9 +1649,8 @@ function meuGiroResumoPossuiInscricaoAusente_(valoresResumo, idxId, idxInscricao
     if (idInscricao) existentes[idInscricao] = true;
   }
 
-  var ids = Object.keys(inscricoesAptas);
-  for (var j = 0; j < ids.length; j++) {
-    if (!existentes[ids[j]]) return true;
+  for (var j = 0; j < idsAptos.length; j++) {
+    if (!existentes[idsAptos[j]]) return true;
   }
   return false;
 }
