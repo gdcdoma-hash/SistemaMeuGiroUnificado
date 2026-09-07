@@ -549,3 +549,41 @@ function diagnosticarUltimasLinhasDgmbDesafios() {
   Logger.log(JSON.stringify(relatorio, null, 2));
   return relatorio;
 }
+
+
+/**
+ * Executa o fluxo REAL do painel para o atleta 1380, permitindo a reconciliação
+ * normal de MEU_GIRO_RESUMO. Use apenas em homologação.
+ * Retorna um relatório compacto para evitar truncamento do Logger.
+ */
+function diagnosticarPainelRealAtleta1380() {
+  var id = '1380';
+  var antes = diagnosticoMeuGiroLerResumo_(id);
+  var payload = getPainelUsuario(id);
+  var data = payload && payload.data ? payload.data : {};
+  var depois = diagnosticoMeuGiroLerResumo_(id);
+
+  function resumirLinhaAtual(lista) {
+    var alvo = 'c1963e77-5631-4fe0-b888-91e941edcb1c';
+    var encontrados = (lista || []).filter(function(item) {
+      return normalizeText_(item.id_inscricao) === alvo ||
+        normalizeText_(item.id_desafio) === '153';
+    });
+    return encontrados;
+  }
+
+  var relatorio = {
+    id_dgmb: id,
+    ok: !!(payload && payload.ok),
+    resumo_antes_atual: resumirLinhaAtual(antes.linhas),
+    resumo_depois_atual: resumirLinhaAtual(depois.linhas),
+    desafio_em_foco: diagnosticoMeuGiroProjetarDesafios_(
+      data.desafio_em_foco ? [data.desafio_em_foco] : []
+    ),
+    desafios_ativos: diagnosticoMeuGiroProjetarDesafios_(data.desafios_ativos || []),
+    total_desafios_payload: (data.desafios || []).length
+  };
+
+  Logger.log(JSON.stringify(relatorio, null, 2));
+  return relatorio;
+}
