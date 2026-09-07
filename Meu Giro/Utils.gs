@@ -1156,6 +1156,9 @@ function obterVinculosDesafioUsuario_(idDgmb) {
 
     var idDesafio = obterIdDesafioRegistro_(row, idxIdDesafio, idxObs);
     var idInscricao = idxInscricao > -1 ? normalizeText_(row[idxInscricao]) : '';
+    periodoDetalhe.nome_desafio = normalizeText_(periodoLista.nome_desafio);
+    periodoDetalhe.tipo_meta = tipoMeta;
+
     var idItem = idxItem > -1 ? normalizeText_(row[idxItem]) : '';
     var tipoDesafio = idxTipoDesafio > -1 ? normalizeText_(row[idxTipoDesafio]) : '';
     var tipoSemAcento = tipoDesafio.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -1789,7 +1792,8 @@ function obterMeuGiroResumoAtualizadoLeve_(idDgmb, opcoes) {
       id_desafio: idDesafioResumo,
       id_inscricao: idInscricaoResumo,
       id_item_estoque: normalizeText_(row[idxItem]),
-      nome: obterNomeDesafioListaPorId_(periodosListaDesafios, idDesafioResumo, ''),
+      nome: normalizeText_(detalhePeriodoDgmb && detalhePeriodoDgmb.nome_desafio) ||
+        obterNomeDesafioListaPorId_(periodosListaDesafios, idDesafioResumo, ''),
       periodo_inicio: periodoInicioLeve,
       periodo_fim: periodoFimLeve,
       origem: 'MEU_GIRO_RESUMO.periodo_desafio=' + periodoResumoPlanilha + '; possui_coluna_MEU_GIRO_RESUMO=' + (idxPeriodoResumo > -1) + '; dgmbDesafios.periodo_desafio=' + periodoDgmbResumo + '; ListaDesafios.Periodo=' + normalizeText_(periodoListaResumo.periodo_desafio)
@@ -1800,7 +1804,8 @@ function obterMeuGiroResumoAtualizadoLeve_(idDgmb, opcoes) {
       id_dgmb: id,
       id_desafio: idDesafioResumo,
       id_item_estoque: normalizeText_(row[idxItem]),
-      nome_desafio: obterNomeDesafioListaPorId_(periodosListaDesafios, idDesafioResumo, ''),
+      nome_desafio: normalizeText_(detalhePeriodoDgmb && detalhePeriodoDgmb.nome_desafio) ||
+        obterNomeDesafioListaPorId_(periodosListaDesafios, idDesafioResumo, ''),
       meta_km: Math.round((meta + Number.EPSILON) * 10) / 10,
       distancia_realizada: Math.round((parseLocalizedNumber_(row[idxDistanciaResumo]) + Number.EPSILON) * 10) / 10,
       percentual_concluido: Math.round((parseLocalizedNumber_(row[idxPercentualResumo]) + Number.EPSILON) * 10) / 10,
