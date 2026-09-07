@@ -120,7 +120,8 @@ test('leitor leve do painel delega período ao resolvedor central com Tipo_Meta'
   const fim = painel.indexOf('\nfunction buscarInscricaoPainelMG_', inicio);
   const fonte = painel.slice(inicio, fim);
   assert.match(fonte, /var contextoLista = buildListaDesafiosContexto_\(getSpreadsheet_\(\)\)/);
-  assert.match(fonte, /var tipoMeta = .*tipo_meta/);
+  assert.match(fonte, /var tipoMeta = resolverTipoMetaListaDesafio_/);
+  assert.match(fonte, /periodoLista\.tipo_meta/);
   assert.match(fonte, /montarPeriodoHistoricoVinculo_\(row,/);
   assert.match(fonte, /}, tipoMeta\)/);
 });
