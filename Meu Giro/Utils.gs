@@ -1608,7 +1608,7 @@ function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb, periodosLista
     };
     var periodoTextoNormalizado = extrairPeriodoDesafioTexto_(periodoTexto);
     var idDesafio = obterIdDesafioRegistro_(row, idxIdDesafio, idxObs);
-    var periodoLista = (idDesafio && periodosLista.byId[idDesafio]) || { inicio: '', fim: '', periodo_desafio: '', tipo_meta: '' };
+    var periodoLista = resolverPeriodoListaDesafio_(periodosLista, idDesafio, periodoTexto, periodoDatas.inicio);
     var tipoMeta = normalizeText_(periodoLista.tipo_meta).toUpperCase();
     var prazoDias = idxPrazoDias > -1 ? parseInt(row[idxPrazoDias], 10) || 0 : 0;
     var dataConsolidacao = idxDataConsolidacao > -1 ? normalizarDataISO_(row[idxDataConsolidacao]) : '';
