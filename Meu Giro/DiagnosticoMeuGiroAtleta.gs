@@ -319,3 +319,77 @@ function diagnosticarFonteDadosMeuGiro() {
   Logger.log(JSON.stringify(relatorio, null, 2));
   return relatorio;
 }
+
+
+/**
+ * Diagnóstico bruto da aba dgmbDesafios para o atleta 1380.
+ * Não usa buildHeaderMap_ para localizar o atleta; varre todas as colunas
+ * e também informa cabeçalhos duplicados que poderiam alterar o índice efetivo.
+ * Somente leitura.
+ */
+function diagnosticarLinhasBrutasAtleta1380() {
+  var alvo = '1380';
+  var ss = getSpreadsheet_();
+  var sh = ss.getSheetByName(SHEETS.DESAFIO || 'dgmbDesafios');
+  if (!sh) throw new Error('Aba dgmbDesafios não encontrada.');
+
+  var values = sh.getDataRange().getValues();
+  var header = values && values.length ? values[0] : [];
+  var cabecalhosPorChave = {};
+  var duplicados = [];
+
+  for (var c = 0; c < header.length; c++) {
+    var chave = normalizeHeaderKey_(header[c]);
+    if (!chave) continue;
+    if (!cabecalhosPorChave[chave]) cabecalhosPorChave[chave] = [];
+    cabecalhosPorChave[chave].push(c + 1);
+  }
+
+  Object.keys(cabecalhosPorChave).forEach(function(chave) {
+    if (cabecalhosPorChave[chave].length > 1) {
+      duplicados.push({ cabecalho: chave, colunas: cabecalhosPorChave[chave] });
+    }
+  });
+
+  var mapaEfetivo = buildHeaderMap_(header);
+  var idxIdEfetivo = getOptionalColumnIndex_(mapaEfetivo, ['id_dgmb']);
+  var ocorrencias = [];
+  var linhasIdEfetivo = [];
+
+  for (var i = 1; i < values.length; i++) {
+    var row = values[i] || [];
+    var colunasComAlvo = [];
+    for (var j = 0; j < row.length; j++) {
+      if (normalizeText_(row[j]) === alvo) colunasComAlvo.push(j + 1);
+    }
+
+    if (colunasComAlvo.length) {
+      ocorrencias.push({
+        linha: i + 1,
+        colunas_com_1380: colunasComAlvo,
+        id_dgmb_coluna_efetiva: idxIdEfetivo > -1 ? idxIdEfetivo + 1 : 0,
+        valor_id_dgmb_efetivo: idxIdEfetivo > -1 ? normalizeText_(row[idxIdEfetivo]) : '',
+        primeiros_campos: row.slice(0, Math.min(row.length, 20)).map(function(v) { return normalizeText_(v); })
+      });
+    }
+
+    if (idxIdEfetivo > -1 && normalizeText_(row[idxIdEfetivo]) === alvo) {
+      linhasIdEfetivo.push(i + 1);
+    }
+  }
+
+  var relatorio = {
+    spreadsheet_id: ss.getId(),
+    aba: sh.getName(),
+    total_linhas: values.length,
+    total_colunas: header.length,
+    colunas_id_dgmb_encontradas: cabecalhosPorChave['id_dgmb'] || [],
+    coluna_id_dgmb_usada_pelo_buildHeaderMap: idxIdEfetivo > -1 ? idxIdEfetivo + 1 : 0,
+    cabecalhos_duplicados: duplicados,
+    linhas_com_1380_em_qualquer_coluna: ocorrencias,
+    linhas_com_1380_na_coluna_id_dgmb_efetiva: linhasIdEfetivo
+  };
+
+  Logger.log(JSON.stringify(relatorio, null, 2));
+  return relatorio;
+}
