@@ -8,13 +8,14 @@ const source = fs.readFileSync(
   'utf8'
 );
 
-test('rebuild usa a mesma precedência de período da operação normal', () => {
+test('rebuild usa janela individual para PRAZO_DIAS e preserva regra mensal nos demais', () => {
   const start = source.indexOf('function simularResumoMontarPeriodo_');
   const end = source.indexOf('\nfunction simularResumoComparar_', start);
   assert.ok(start >= 0 && end > start, 'simularResumoMontarPeriodo_ deve existir');
   const trecho = source.slice(start, end);
-  const texto = trecho.indexOf('if (periodoCompletoValido_(periodoTextoEspecifico))');
+  assert.match(trecho, /ehTipoMetaPrazoDias_\(tipoMeta\)/);
+  assert.match(trecho, /periodo = periodoDatasEspecificas/);
+  const texto = trecho.indexOf('else if (periodoCompletoValido_(periodoTextoEspecifico))');
   const catalogo = trecho.indexOf('else if (periodoCompletoValido_(periodoLista))');
-  const datas = trecho.indexOf('else if (periodoCompletoValido_(periodoDatasEspecificas))');
-  assert.ok(texto >= 0 && catalogo > texto && datas > catalogo);
+  assert.ok(texto >= 0 && catalogo > texto);
 });
