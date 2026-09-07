@@ -235,6 +235,7 @@ function simularResumoBuildPeriodos_(dadosLista) {
     'nome_desafio', 'nome desafio', 'nome_desafio_lista', 'nome desafio lista',
     'desafio', 'nome'
   ]);
+  var idxTipoMeta = getOptionalColumnIndex_(map, ['tipo_meta', 'tipo meta', 'tipometa']);
   if (idxAba === -1) idxAba = 1;
 
   for (var i = 1; i < dadosLista.length; i++) {
@@ -249,7 +250,8 @@ function simularResumoBuildPeriodos_(dadosLista) {
       inicio: periodoMensal.inicio,
       fim: periodoMensal.fim,
       periodo_desafio: idxPeriodo > -1 ? normalizeText_(row[idxPeriodo]) : '',
-      nome_desafio: (idxNome > -1 ? normalizeText_(row[idxNome]) : '') || aba
+      nome_desafio: (idxNome > -1 ? normalizeText_(row[idxNome]) : '') || aba,
+      tipo_meta: idxTipoMeta > -1 ? normalizeText_(row[idxTipoMeta]).toUpperCase() : ''
     };
     out.byAba[aba] = periodo;
 
@@ -404,8 +406,11 @@ function simularResumoMontarPeriodo_(row, indices, periodoLista) {
     fim: indices.fim > -1 ? normalizarDataISO_(row[indices.fim]) : ''
   };
   var periodo = { inicio: '', fim: '' };
+  var tipoMeta = normalizeText_(periodoLista && periodoLista.tipo_meta).toUpperCase();
 
-  if (periodoCompletoValido_(periodoTextoEspecifico)) {
+  if (ehTipoMetaPrazoDias_(tipoMeta)) {
+    if (periodoCompletoValido_(periodoDatasEspecificas)) periodo = periodoDatasEspecificas;
+  } else if (periodoCompletoValido_(periodoTextoEspecifico)) {
     periodo = periodoTextoEspecifico;
   } else if (periodoCompletoValido_(periodoLista)) {
     periodo = periodoLista;
