@@ -221,7 +221,7 @@ function simularResumoCalcularEsperado_(dadosDesafios, dadosRegistros, dadosList
 }
 
 function simularResumoBuildPeriodos_(dadosLista) {
-  var out = { byAba: {}, byId: {} };
+  var out = { byAba: {}, byId: {}, byIdPeriodo: {} };
   if (!dadosLista || dadosLista.length < 2) return out;
 
   var map = buildHeaderMap_(dadosLista[0]);
@@ -257,7 +257,11 @@ function simularResumoBuildPeriodos_(dadosLista) {
 
     if (idxId > -1) {
       var idDesafio = normalizeText_(row[idxId]);
-      if (idDesafio) out.byId[idDesafio] = periodo;
+      if (idDesafio) {
+        out.byId[idDesafio] = periodo;
+        var chaveIdPeriodo = chaveListaDesafioIdPeriodo_(idDesafio, periodo.periodo_desafio, periodo.inicio);
+        if (chaveIdPeriodo) out.byIdPeriodo[chaveIdPeriodo] = periodo;
+      }
     }
   }
 
@@ -365,9 +369,12 @@ function simularResumoBuildVinculos_(dadosDesafios, periodos, statusLista) {
     });
     var aptoBase = validacao.valida && !inscricaoTemBloqueioMinimo_(statusUsuario);
     var apto = ehNormal ? aptoBase && !!idDesafio && metaKm > 0 : aptoBase;
-    var periodoLista = (idDesafio && periodos.byId[idDesafio]) ||
-      (!ehNormal && periodos.byAba[abaDesafio]) ||
-      { inicio: '', fim: '', periodo_desafio: '', nome_desafio: '' };
+    var periodoTextoLinha = idxPeriodo > -1 ? normalizeText_(row[idxPeriodo]) : '';
+    var inicioLinha = idxInicio > -1 ? row[idxInicio] : '';
+    var periodoLista = resolverPeriodoListaDesafio_(periodos, idDesafio, periodoTextoLinha, inicioLinha);
+    if (!periodoCompletoValido_(periodoLista) && !ehNormal && periodos.byAba[abaDesafio]) {
+      periodoLista = periodos.byAba[abaDesafio];
+    }
     var periodo = simularResumoMontarPeriodo_(row, {
       periodo: idxPeriodo,
       inicio: idxInicio,
