@@ -38,7 +38,6 @@ const atualizarStatus = sliceFunction(adminCert, 'atualizarStatusValidacaoCertif
 const atualizarResumo = sliceFunction(utils, 'atualizarMeuGiroResumoComLockAdquirido_', 'atualizarMeuGiroResumoEmLote_');
 
 const arquivosOperacionais = listRepoFiles(path.join(repoRoot, 'Meu Giro'))
-  .map(file => path.join('Meu Giro', file))
   .filter(file => /\.(gs|html)$/i.test(file));
 const codigoOperacional = arquivosOperacionais
   .map(file => fs.readFileSync(path.join(repoRoot, file), 'utf8'))
