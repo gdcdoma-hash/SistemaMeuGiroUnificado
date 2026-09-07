@@ -52,12 +52,21 @@ function getPainelUsuario(idDgmb) {
       fallback: false
     });
 
-    if (!resumoDesafios.length && !somenteLeitura) {
+    var possuiPrazoDias = resumoDesafios.some(function(item) {
+      return painelMG_normalizarStatus_(item && item.tipo_meta) === 'PRAZO_DIAS' ||
+        painelMG_toNumber_(item && item.prazo_dias) > 0;
+    });
+
+    // Mudanças na janela individual alteram a elegibilidade de atividades já registradas.
+    // Para PRAZO_DIAS, uma linha existente no MEU_GIRO_RESUMO pode estar materializada
+    // com a regra antiga; reconciliar antes de selecionar foco evita servir resumo obsoleto.
+    if (!somenteLeitura && (possuiPrazoDias || !resumoDesafios.length)) {
       perfEtapaInicio = painelMG_perfNow_();
       resumoDesafios = atualizarMeuGiroResumo_(id) || [];
-      painelMG_perfLog_('painel-inicial', 'atualizarMeuGiroResumo_fallback_login_', perfEtapaInicio, {
+      painelMG_perfLog_('painel-inicial', possuiPrazoDias ? 'atualizarMeuGiroResumo_prazo_dias_' : 'atualizarMeuGiroResumo_fallback_login_', perfEtapaInicio, {
         total_desafios_resumo: resumoDesafios.length,
-        fallback: true
+        fallback: !possuiPrazoDias,
+        motivo: possuiPrazoDias ? 'reconciliar_janela_individual' : 'resumo_vazio'
       });
     }
 
