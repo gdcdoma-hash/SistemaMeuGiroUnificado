@@ -1332,7 +1332,17 @@ function ensureMeuGiroResumoSheet_() {
     return sh;
   }
 
-  meuGiroResumoObterLayout_(atual, sheetName);
+  var layoutAtual = meuGiroResumoObterLayout_(atual, sheetName);
+
+  // Migração compatível: versões antigas de MEU_GIRO_RESUMO não possuíam
+  // ID_INSCRICAO. Sem essa coluna, inscrições simultâneas modernas não podem
+  // ser reconciliadas de forma segura e uma inscrição nova pode ficar invisível
+  // enquanto uma linha histórica antiga continua sendo escolhida como foco.
+  if (!layoutAtual.possuiIdInscricao) {
+    var novaColuna = Math.max(sh.getLastColumn(), 1) + 1;
+    sh.getRange(1, novaColuna).setValue('ID_INSCRICAO');
+  }
+
   return sh;
 }
 
