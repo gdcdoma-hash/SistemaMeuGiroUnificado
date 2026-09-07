@@ -52,8 +52,19 @@ function buildContext(rows) {
       return { getDataRange: () => ({ getValues: () => rows }) };
     }
   };
+  ctx.periodoCompletoValido_ = function(periodo) {
+    return !!(periodo && periodo.inicio && periodo.fim && periodo.inicio <= periodo.fim);
+  };
   vm.createContext(ctx);
-  vm.runInContext('var LISTA_DESAFIOS_CACHE_EXECUCAO_ = null;\n' + getFunctionSlice('buildListaDesafiosContexto_', 'buildPeriodoOficialPorAbaEId_'), ctx);
+  vm.runInContext(
+    'var LISTA_DESAFIOS_CACHE_EXECUCAO_ = null;\n' +
+    getFunctionSlice('chaveListaDesafioIdPeriodo_', 'resolverPeriodoListaDesafio_') +
+    getFunctionSlice('resolverPeriodoListaDesafio_', 'resolverStatusListaDesafio_') +
+    getFunctionSlice('resolverStatusListaDesafio_', 'resolverTipoMetaListaDesafio_') +
+    getFunctionSlice('resolverTipoMetaListaDesafio_', 'buildListaDesafiosContexto_') +
+    getFunctionSlice('buildListaDesafiosContexto_', 'buildPeriodoOficialPorAbaEId_'),
+    ctx
+  );
   return ctx;
 }
 
@@ -138,7 +149,7 @@ test('obterMeuGiroResumoAtualizadoLeve consulta cache de ListaDesafios e injeta 
   assert.match(light, /var periodosListaDesafios = buildListaDesafiosContexto_\(ss\)\.periodos;/);
   assert.match(light, /buildPeriodosDgmbDesafiosPorChave_\([\s\S]*obterDgmbDesafiosCacheExecucao_\('obterMeuGiroResumoAtualizadoLeve_'\),[\s\S]*id,[\s\S]*periodosListaDesafios[\s\S]*\)/);
   assert.match(light, /var periodoListaResumo = \(idDesafioResumo && periodosListaDesafios\.byId\[idDesafioResumo\]\)/);
-  assert.match(light, /nome_desafio: obterNomeDesafioListaPorId_\(periodosListaDesafios, idDesafioResumo, ''\)/);
+  assert.match(light, /nome_desafio: normalizeText_\(detalhePeriodoDgmb && detalhePeriodoDgmb\.nome_desafio\) \|\|[\s\S]*obterNomeDesafioListaPorId_\(periodosListaDesafios, idDesafioResumo, ''\)/);
   assert.match(light, /var periodoLeveEnviado = periodoDgmbResumo \|\| periodoListaResumo\.periodo_desafio \|\| ''/);
   assert.match(light, /var usarFallbackDesafio = !idInscricaoResumo/);
   assert.match(light, /var statusDgmbResumo = periodosDgmbDesafios\.statusPorResumoKey\[chaveResumo\] \|\| \(usarFallbackDesafio \? periodosDgmbDesafios\.statusPorDesafio\[idDesafioResumo\] : null\) \|\| \{\}/);
@@ -172,7 +183,9 @@ test('buildPeriodosDgmbDesafiosPorChave indexa status_usuario_desafio por id_ins
     periodoCompletoValido_(periodo) { return !!(periodo && periodo.inicio && periodo.fim); },
     normalizarDataISO_() { return ''; },
     validarInscricaoMinima_() { return { valida: true }; },
-    inscricaoTemBloqueioMinimo_() { return false; }
+    inscricaoTemBloqueioMinimo_() { return false; },
+    resolverPeriodoListaDesafio_() { return { inicio: '', fim: '', periodo_desafio: '', tipo_meta: '' }; },
+    ehTipoMetaPrazoDias_() { return false; }
   };
   ctx.meuGiroResumoBuildChave_ = function(idDgmb, idDesafio, idItemEstoque, metaKm, idInscricao) {
     const inscricao = ctx.normalizeText_(idInscricao);
