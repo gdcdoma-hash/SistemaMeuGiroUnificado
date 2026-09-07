@@ -471,3 +471,81 @@ function diagnosticarCandidatosDesafioAtual() {
   Logger.log(JSON.stringify({ total_amostra: out.length, candidatos: out }, null, 2));
   return out;
 }
+
+
+/**
+ * Diagnóstico bruto das linhas mais recentes de dgmbDesafios.
+ * Mostra cabeçalhos efetivos e os últimos registros sem filtrar por período.
+ * Somente leitura.
+ */
+function diagnosticarUltimasLinhasDgmbDesafios() {
+  var ss = getSpreadsheet_();
+  var sh = ss.getSheetByName(SHEETS.DESAFIO || 'dgmbDesafios');
+  if (!sh) throw new Error('Aba dgmbDesafios não encontrada.');
+
+  var values = sh.getDataRange().getValues();
+  if (!values || !values.length) return {};
+
+  var header = values[0] || [];
+  var map = buildHeaderMap_(header);
+  var idxId = getOptionalColumnIndex_(map, ['id_dgmb']);
+  var idxMeta = getOptionalColumnIndex_(map, ['distancia_km', 'distancia km', 'meta_km', 'meta km', 'distancia']);
+  var idxObs = getOptionalColumnIndex_(map, ['observacao', 'observação']);
+  var idxIdDesafio = getIdDesafioColumnIndex_(map);
+  var idxInscricao = getOptionalColumnIndex_(map, ['id_inscricao', 'id inscrição', 'id inscricao']);
+  var idxStatusUsuario = getOptionalColumnIndex_(map, ['status_usuario_desafio', 'status usuário desafio', 'status usuario desafio']);
+  var idxStatusDesafio = getOptionalColumnIndex_(map, ['status_desafio', 'status desafio']);
+  var idxPagamento = getOptionalColumnIndex_(map, ['status_pagamento', 'pagamento_status', 'pagamento', 'pix_status']);
+  var idxPeriodo = getOptionalColumnIndex_(map, MEU_GIRO_PERIODO_DESAFIO_ALIASES_);
+  var idxInicio = getOptionalColumnIndex_(map, ['data_inicio_desafio', 'data inicio desafio', 'data início desafio']);
+  var idxFim = getOptionalColumnIndex_(map, ['data_fim_desafio', 'data fim desafio']);
+  var idxPrazo = getOptionalColumnIndex_(map, ['prazo_dias', 'prazo dias']);
+  var idxConsolidacao = getOptionalColumnIndex_(map, ['data_consolidacao', 'data consolidação', 'data consolidacao']);
+
+  var linhas = [];
+  var inicio = Math.max(1, values.length - 25);
+  for (var i = inicio; i < values.length; i++) {
+    var row = values[i] || [];
+    linhas.push({
+      linha: i + 1,
+      id_dgmb: idxId > -1 ? normalizeText_(row[idxId]) : '',
+      id_inscricao: idxInscricao > -1 ? normalizeText_(row[idxInscricao]) : '',
+      id_desafio: obterIdDesafioRegistro_(row, idxIdDesafio, idxObs),
+      meta: idxMeta > -1 ? normalizeText_(row[idxMeta]) : '',
+      status_usuario_desafio: idxStatusUsuario > -1 ? normalizeText_(row[idxStatusUsuario]) : '',
+      status_desafio: idxStatusDesafio > -1 ? normalizeText_(row[idxStatusDesafio]) : '',
+      status_pagamento: idxPagamento > -1 ? normalizeText_(row[idxPagamento]) : '',
+      periodo_desafio: idxPeriodo > -1 ? normalizeText_(row[idxPeriodo]) : '',
+      data_inicio_desafio: idxInicio > -1 ? normalizarDataISO_(row[idxInicio]) : '',
+      data_fim_desafio: idxFim > -1 ? normalizarDataISO_(row[idxFim]) : '',
+      prazo_dias: idxPrazo > -1 ? normalizeText_(row[idxPrazo]) : '',
+      data_consolidacao: idxConsolidacao > -1 ? normalizarDataISO_(row[idxConsolidacao]) : ''
+    });
+  }
+
+  var relatorio = {
+    spreadsheet_id: ss.getId(),
+    aba: sh.getName(),
+    total_linhas: values.length,
+    total_colunas: header.length,
+    indices: {
+      id_dgmb: idxId + 1,
+      id_inscricao: idxInscricao + 1,
+      id_desafio: idxIdDesafio + 1,
+      meta: idxMeta + 1,
+      status_usuario_desafio: idxStatusUsuario + 1,
+      status_desafio: idxStatusDesafio + 1,
+      status_pagamento: idxPagamento + 1,
+      periodo_desafio: idxPeriodo + 1,
+      data_inicio_desafio: idxInicio + 1,
+      data_fim_desafio: idxFim + 1,
+      prazo_dias: idxPrazo + 1,
+      data_consolidacao: idxConsolidacao + 1
+    },
+    cabecalhos: header.map(function(v, idx) { return { coluna: idx + 1, nome: normalizeText_(v) }; }),
+    ultimas_linhas: linhas
+  };
+
+  Logger.log(JSON.stringify(relatorio, null, 2));
+  return relatorio;
+}
