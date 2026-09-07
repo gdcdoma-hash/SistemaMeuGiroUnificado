@@ -1156,9 +1156,6 @@ function obterVinculosDesafioUsuario_(idDgmb) {
 
     var idDesafio = obterIdDesafioRegistro_(row, idxIdDesafio, idxObs);
     var idInscricao = idxInscricao > -1 ? normalizeText_(row[idxInscricao]) : '';
-    periodoDetalhe.nome_desafio = normalizeText_(periodoLista.nome_desafio);
-    periodoDetalhe.tipo_meta = tipoMeta;
-
     var idItem = idxItem > -1 ? normalizeText_(row[idxItem]) : '';
     var tipoDesafio = idxTipoDesafio > -1 ? normalizeText_(row[idxTipoDesafio]) : '';
     var tipoSemAcento = tipoDesafio.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -1641,6 +1638,8 @@ function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb, periodosLista
             ? { inicio: periodoDatas.inicio, fim: periodoDatas.fim, periodo_desafio: periodoTexto, tipo_meta: tipoMeta, prazo_dias: prazoDias, data_consolidacao: dataConsolidacao }
             : { inicio: '', fim: '', periodo_desafio: periodoTexto, tipo_meta: tipoMeta, prazo_dias: prazoDias, data_consolidacao: dataConsolidacao };
 
+    periodoDetalhe.nome_desafio = normalizeText_(periodoLista.nome_desafio);
+    periodoDetalhe.tipo_meta = tipoMeta;
 
     var idItem = idxItem > -1 ? normalizeText_(row[idxItem]) : '';
     var meta = idxMeta > -1 ? parseLocalizedNumber_(row[idxMeta]) : 0;
