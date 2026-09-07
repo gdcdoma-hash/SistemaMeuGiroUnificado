@@ -16,16 +16,16 @@ function trecho(nome, proximo) {
   return utils.slice(inicio, fim);
 }
 
-test('período mensal usa texto, depois catálogo, e só então datas herdadas', () => {
+test('PRAZO_DIAS usa datas individuais; mensal preserva texto, catálogo e datas herdadas', () => {
   const fonte = trecho('montarPeriodoHistoricoVinculo_', 'obterLinhasDgmbDesafiosUsuario_');
-  const texto = fonte.indexOf('if (periodoCompletoValido_(periodoTextoEspecifico))');
+  assert.match(fonte, /var prazoDias = ehTipoMetaPrazoDias_\(tipoMeta\)/);
+  assert.match(fonte, /if \(prazoDias\)[\s\S]*periodo = periodoDatasEspecificas/);
+  const texto = fonte.indexOf('else if (periodoCompletoValido_(periodoTextoEspecifico))');
   const catalogo = fonte.indexOf('else if (periodoCompletoValido_(periodoLista))');
   const datas = fonte.indexOf('else if (periodoCompletoValido_(periodoDatasEspecificas))');
-
   assert.ok(texto >= 0 && catalogo > texto && datas > catalogo);
   assert.match(fonte, /origemPeriodo = 'dgmbDesafios\.periodo_desafio'/);
   assert.match(fonte, /origemPeriodo = 'ListaDesafios\.Periodo'/);
-  assert.match(fonte, /origemPeriodo = 'dgmbDesafios\.data_inicio_desafio\/data_fim_desafio'/);
 });
 
 test('índice leve preserva janela por ID_INSCRICAO e restringe fallback por ID_DESAFIO ao legado', () => {
@@ -38,16 +38,13 @@ test('índice leve preserva janela por ID_INSCRICAO e restringe fallback por ID_
   assert.match(fonte, /if \(idDesafio && !idInscricao\)/);
 });
 
-test('índice leve usa catálogo mensal antes das datas herdadas', () => {
+test('índice leve separa PRAZO_DIAS da precedência mensal', () => {
   const fonte = trecho('buildPeriodosDgmbDesafiosPorChave_', 'meuGiroResumoPossuiInscricaoAusente_');
-
-  assert.match(fonte, /function buildPeriodosDgmbDesafiosPorChave_\(cacheDesafios, idDgmb, periodosLista\)/);
-  assert.match(fonte, /periodosLista = periodosLista \|\| \{ byId: \{\} \}/);
-  assert.match(fonte, /var periodoLista = \(idDesafio && periodosLista\.byId\[idDesafio\]\)/);
-  const texto = fonte.indexOf('var periodoDetalhe = periodoCompletoValido_(periodoTextoNormalizado)');
-  const catalogo = fonte.indexOf(': periodoCompletoValido_(periodoLista)');
-  const datas = fonte.indexOf(': periodoCompletoValido_(periodoDatas)');
-  assert.ok(texto >= 0 && catalogo > texto && datas > catalogo);
+  assert.match(fonte, /var tipoMeta = normalizeText_\(periodoLista\.tipo_meta\)\.toUpperCase\(\)/);
+  assert.match(fonte, /var periodoDetalhe = ehTipoMetaPrazoDias_\(tipoMeta\)/);
+  assert.match(fonte, /periodoCompletoValido_\(periodoDatas\)/);
+  assert.match(fonte, /periodoCompletoValido_\(periodoTextoNormalizado\)/);
+  assert.match(fonte, /periodoCompletoValido_\(periodoLista\)/);
 });
 
 test('índice leve cria alias composto apenas quando a chave identifica um único vínculo distinto', () => {
@@ -117,18 +114,15 @@ test('caminho pesado seleciona inscrição exata e só usa desafio mais item par
   assert.match(fonte, /idInscricaoPrincipal\s*\? painelMG_norm_\(v\.id_inscricao\) === idInscricaoPrincipal\s*: painelMG_norm_\(v\.id_desafio\) === idDesafioPrincipal/);
 });
 
-test('leitor leve do painel usa texto, catálogo e só então datas individuais', () => {
+test('leitor leve do painel delega período ao resolvedor central com Tipo_Meta', () => {
   const painel = fs.readFileSync(path.resolve(__dirname, '..', 'Meu Giro', 'PainelService.gs'), 'utf8');
   const inicio = painel.indexOf('function painelMG_obterInscricaoLevePorDesafio_');
   const fim = painel.indexOf('\nfunction buscarInscricaoPainelMG_', inicio);
   const fonte = painel.slice(inicio, fim);
-
-  assert.match(fonte, /var periodosLista = buildListaDesafiosContexto_\(getSpreadsheet_\(\)\)\.periodos/);
-  assert.match(fonte, /var periodoLista = \(idDesafio && periodosLista\.byId\[idDesafio\]\) \|\| \{ inicio: '', fim: '' \}/);
-  const texto = fonte.indexOf('var periodoSelecionado = periodoCompletoValido_(periodoTexto)');
-  const catalogo = fonte.indexOf('? periodoTexto');
-  const datas = fonte.indexOf(': periodoDatas;');
-  assert.ok(texto >= 0 && catalogo > texto && datas > catalogo);
+  assert.match(fonte, /var contextoLista = buildListaDesafiosContexto_\(getSpreadsheet_\(\)\)/);
+  assert.match(fonte, /var tipoMeta = .*tipo_meta/);
+  assert.match(fonte, /montarPeriodoHistoricoVinculo_\(row,/);
+  assert.match(fonte, /}, tipoMeta\)/);
 });
 
 test('atualizador migra linha legada única para ID_INSCRICAO em vez de anexar duplicata', () => {
