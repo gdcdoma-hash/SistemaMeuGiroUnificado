@@ -297,3 +297,25 @@ function diagnosticoMeuGiroDiff_(origem, destino) {
 function diagnosticarMeuGiroAtleta1380() {
   return diagnosticarMeuGiroAtleta('1380');
 }
+
+
+/**
+ * Diagnóstico da fonte de dados usada pelo Meu Giro.
+ * Somente leitura.
+ */
+function diagnosticarFonteDadosMeuGiro() {
+  var ss = getSpreadsheet_();
+  var sh = ss.getSheetByName(SHEETS.DESAFIO || 'dgmbDesafios');
+  var relatorio = {
+    spreadsheet_id_config: typeof SPREADSHEET_ID !== 'undefined' ? String(SPREADSHEET_ID || '') : '',
+    spreadsheet_id_aberto: ss ? ss.getId() : '',
+    spreadsheet_nome: ss ? ss.getName() : '',
+    spreadsheet_url: ss ? ss.getUrl() : '',
+    aba_desafio: sh ? sh.getName() : '',
+    aba_gid: sh ? sh.getSheetId() : '',
+    total_linhas_dgmbDesafios: sh ? sh.getLastRow() : 0,
+    total_colunas_dgmbDesafios: sh ? sh.getLastColumn() : 0
+  };
+  Logger.log(JSON.stringify(relatorio, null, 2));
+  return relatorio;
+}
