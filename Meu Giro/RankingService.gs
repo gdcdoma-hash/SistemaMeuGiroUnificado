@@ -283,9 +283,16 @@ function rankingMG_criarIndiceCompetitivo_() {
     var tipoNormalizado = rankingMG_normalizarTipo_(tipo).toLowerCase();
     var ehNormal = tipoNormalizado === 'normal';
     var abaDesafio = SHEETS.DESAFIO || 'dgmbDesafios';
-    var periodoLista = (idDesafio && periodos.byId[idDesafio]) ||
-      (!ehNormal && periodos.byAba[abaDesafio]) ||
-      { inicio: '', fim: '', nome_desafio: '' };
+    var periodoTextoLinha = rankingMG_firstFilled_(row, [
+      'periodo_desafio', 'Periodo_Desafio', 'período_desafio', 'periodo desafio', 'período desafio'
+    ]);
+    var inicioLinha = rankingMG_firstFilled_(row, [
+      'data_inicio_desafio', 'Data_Inicio_Desafio', 'data inicio desafio', 'data início desafio'
+    ]);
+    var periodoLista = resolverPeriodoListaDesafio_(periodos, idDesafio, periodoTextoLinha, inicioLinha);
+    if (!periodoCompletoValido_(periodoLista) && !ehNormal && periodos.byAba[abaDesafio]) {
+      periodoLista = periodos.byAba[abaDesafio];
+    }
     var periodo = rankingMG_resolverPeriodoCompetitivo_(row, periodoLista);
 
     porInscricao[rankingMG_chaveInscricao_(idDgmb, idInscricao)] = {
