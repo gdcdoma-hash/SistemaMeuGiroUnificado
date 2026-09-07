@@ -33,14 +33,19 @@ test('backend também bloqueia edição para data futura', () => {
   assert.match(editar, /DATA_FUTURA_NAO_PERMITIDA|validacaoData\.code/);
 });
 
-test('frontend bloqueia data futura em cadastro e edição', () => {
+test('frontend bloqueia data futura em cadastro e edição com modal dedicado', () => {
   const helper = trecho(script, 'isFutureActivityDate', 'isValidActivityDate');
   assert.match(helper, /getTodayIsoLocal_/);
+
+  const modal = trecho(script, 'mostrarBloqueioDataFuturaAtividade', 'mostrarErroAcaoAtividade');
+  assert.match(modal, /Data não permitida/);
+  assert.match(modal, /Não é possível registrar uma atividade com data futura/);
+  assert.match(modal, /botoes:\s*\[\{ texto: 'OK'/);
 
   const salvar = trecho(script, 'salvarAtividade', 'salvarEdicaoAtividade');
   const editar = trecho(script, 'salvarEdicaoAtividade', 'iniciarEdicaoAtividadeUI');
   assert.match(salvar, /isFutureActivityDate\(data\)/);
   assert.match(editar, /isFutureActivityDate\(data\)/);
-  assert.match(salvar, /Não é possível registrar uma atividade com data futura/);
-  assert.match(editar, /Não é possível registrar uma atividade com data futura/);
+  assert.match(salvar, /await mostrarBloqueioDataFuturaAtividade\(\)/);
+  assert.match(editar, /await mostrarBloqueioDataFuturaAtividade\(\)/);
 });
