@@ -288,3 +288,12 @@ function diagnosticoMeuGiroDiff_(origem, destino) {
   });
   return { origem_total: Object.keys(origem || {}).length, destino_total: Object.keys(destino || {}).length, ausentes_no_destino: ausentes };
 }
+
+
+/**
+ * Wrapper temporário para o atleta de homologação já conhecido (ID_DGMB 1380).
+ * Executável diretamente pelo seletor do editor do Apps Script.
+ */
+function diagnosticarMeuGiroAtleta1380() {
+  return diagnosticarMeuGiroAtleta('1380');
+}
