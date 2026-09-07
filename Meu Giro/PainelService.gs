@@ -750,8 +750,11 @@ function painelMG_obterInscricaoLevePorDesafio_(idDgmb, desafioPrincipal) {
       status_confirmacao: statusConfirmacao,
       status_pagamento: statusPagamento
     });
-    var periodoLista = (idDesafio && periodosLista.byId[idDesafio]) || { inicio: '', fim: '', periodo_desafio: '', nome_desafio: '', tipo_meta: '' };
-    var tipoMeta = painelMG_norm_(periodoLista.tipo_meta || (idDesafio && contextoLista.tipoMeta.byId[idDesafio]) || '').toUpperCase();
+    var periodoTextoLinha = idxPeriodo > -1 ? painelMG_norm_(row[idxPeriodo]) : '';
+    var inicioLinha = idxInicio > -1 ? row[idxInicio] : '';
+    var periodoLista = resolverPeriodoListaDesafio_(periodosLista, idDesafio, periodoTextoLinha, inicioLinha);
+    var tipoMeta = resolverTipoMetaListaDesafio_(contextoLista.tipoMeta, idDesafio, periodoTextoLinha, inicioLinha) ||
+      painelMG_norm_(periodoLista.tipo_meta).toUpperCase();
     var periodoSelecionado = montarPeriodoHistoricoVinculo_(row, {
       periodo: idxPeriodo,
       inicio: idxInicio,
