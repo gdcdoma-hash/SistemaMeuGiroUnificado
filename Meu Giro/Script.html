@@ -4440,6 +4440,18 @@ function toFiniteNumber(value, fallback) {
   return Number.isFinite(n) ? n : Number(fallback || 0);
 }
 
+function getTodayIsoLocal_() {
+  var now = new Date();
+  var y = now.getFullYear();
+  var m = String(now.getMonth() + 1).padStart(2, '0');
+  var d = String(now.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + d;
+}
+
+function isFutureActivityDate(value) {
+  return isValidActivityDate(value) && String(value).trim() > getTodayIsoLocal_();
+}
+
 function isValidActivityDate(value) {
   const parsed = parseIsoDateLocal(value);
   if (!parsed) return false;
@@ -4534,6 +4546,12 @@ async function salvarAtividade(forcarDuplicidade) {
   if (!isValidActivityDate(data)) {
     releaseRegistroSubmitGuard();
     setRegistroMsg('Informe uma data válida.', 'error');
+    return;
+  }
+
+  if (isFutureActivityDate(data)) {
+    releaseRegistroSubmitGuard();
+    setRegistroMsg('Não é possível registrar uma atividade com data futura. Informe a data real da pedalada.', 'error');
     return;
   }
 
@@ -4688,6 +4706,12 @@ async function salvarEdicaoAtividade(forcarDuplicidade) {
   if (!isValidActivityDate(data)) {
     releaseRegistroSubmitGuard();
     setRegistroMsg('Informe uma data válida.', 'error');
+    return;
+  }
+
+  if (isFutureActivityDate(data)) {
+    releaseRegistroSubmitGuard();
+    setRegistroMsg('Não é possível registrar uma atividade com data futura. Informe a data real da pedalada.', 'error');
     return;
   }
 
