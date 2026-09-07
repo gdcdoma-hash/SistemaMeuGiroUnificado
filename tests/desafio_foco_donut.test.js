@@ -25,7 +25,7 @@ test('donut usa conic-gradient e percentual normalizado do contexto', () => {
 
 test('layout do donut é responsivo sem sobrepor números', () => {
   assert.match(styles, /\.painel-progresso-donut-grid[\s\S]*grid-template-columns: minmax\(148px, 0\.95fr\) minmax\(148px, 1fr\)/);
-  assert.match(styles, /@media \(max-width: 420px\)[\s\S]*\.painel-progresso-donut-grid[\s\S]*grid-template-columns: 1fr/);
+  assert.match(styles, /@media \(max-width: 420px\)[\s\S]*\.painel-progresso-donut-grid[\s\S]*grid-template-columns: minmax\(112px, 128px\) minmax\(0, 1fr\)/);
   assert.match(styles, /\.painel-progress-donut[\s\S]*width: min\(100%, 190px\)[\s\S]*aspect-ratio: 1/);
   assert.match(styles, /\.painel-metricas-emocionais strong[\s\S]*white-space: nowrap/);
   assert.match(styles, /\.painel-metricas-emocionais small[\s\S]*font-size: 0\.58em/);
