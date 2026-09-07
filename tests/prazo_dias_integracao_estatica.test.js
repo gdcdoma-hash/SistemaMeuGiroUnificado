@@ -52,3 +52,13 @@ test('rebuild propaga Tipo_Meta e usa datas individuais para PRAZO_DIAS', () => 
   assert.match(periodo, /ehTipoMetaPrazoDias_\(tipoMeta\)/);
   assert.match(periodo, /periodo = periodoDatasEspecificas/);
 });
+
+
+test('obterVinculosDesafioUsuario não usa periodoDetalhe/tipoMeta antes da declaração', () => {
+  const fonte = trecho(utils, 'obterVinculosDesafioUsuario_', 'obterActivityIdRegistroKm_');
+  const idxPeriodoLista = fonte.indexOf('var periodoLista = resolverPeriodoListaDesafio_');
+  const idxTipoMeta = fonte.indexOf('var tipoMeta = resolverTipoMetaListaDesafio_');
+  const idxPeriodoDetalheUso = fonte.indexOf('periodoDetalhe.nome_desafio');
+  assert.ok(idxPeriodoLista >= 0 && idxTipoMeta > idxPeriodoLista);
+  assert.equal(idxPeriodoDetalheUso, -1, 'obterVinculosDesafioUsuario_ não deve tocar periodoDetalhe inexistente');
+});
