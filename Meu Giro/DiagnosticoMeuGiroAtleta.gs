@@ -67,16 +67,12 @@ function diagnosticoMeuGiroLerDgmbDesafios_(id) {
   idx.fim = getOptionalColumnIndex_(map, ['data_fim_desafio', 'data fim desafio', 'periodo_fim']);
   if (idx.id === -1) return saida;
 
-  var periodosLista = buildListaDesafiosContexto_(getSpreadsheet_()).periodos;
+  var contextoLista = buildListaDesafiosContexto_(getSpreadsheet_());
+  var periodosLista = contextoLista.periodos;
 
   for (var i = 1; i < values.length; i++) {
     var row = values[i] || [];
     if (normalizeText_(row[idx.id]) !== id) continue;
-    var periodoTexto = idx.periodo > -1 ? extrairPeriodoDesafioTexto_(row[idx.periodo]) : { inicio: '', fim: '' };
-    var periodoDatas = {
-      inicio: normalizarDataISO_(idx.inicio > -1 ? row[idx.inicio] : ''),
-      fim: normalizarDataISO_(idx.fim > -1 ? row[idx.fim] : '')
-    };
     var statusUsuario = idx.statusUsuario > -1 ? normalizeText_(row[idx.statusUsuario]) : '';
     var statusPagamento = idx.statusPagamento > -1 ? normalizeText_(row[idx.statusPagamento]) : '';
     var statusConfirmacao = idx.statusConfirmacao > -1 ? normalizeText_(row[idx.statusConfirmacao]) : '';
@@ -85,14 +81,22 @@ function diagnosticoMeuGiroLerDgmbDesafios_(id) {
     item.linha_planilha = i + 1;
     item.meta_km = idx.meta > -1 ? parseLocalizedNumber_(row[idx.meta]) : 0;
     item.status_lista_desafios = idx.statusLista > -1 ? normalizeText_(row[idx.statusLista]) : '';
-    var periodoLista = (item.id_desafio && periodosLista.byId[item.id_desafio]) || { inicio: '', fim: '' };
-    var periodoSelecionado = periodoCompletoValido_(periodoTexto)
-      ? periodoTexto
-      : periodoCompletoValido_(periodoLista)
-        ? periodoLista
-        : periodoDatas;
-    item.periodo_inicio = periodoCompletoValido_(periodoSelecionado) ? periodoSelecionado.inicio : '';
-    item.periodo_fim = periodoCompletoValido_(periodoSelecionado) ? periodoSelecionado.fim : '';
+    var periodoLista = (item.id_desafio && periodosLista.byId[item.id_desafio]) || { inicio: '', fim: '', periodo_desafio: '', nome_desafio: '', tipo_meta: '' };
+    var tipoMeta = normalizeText_(periodoLista.tipo_meta || (item.id_desafio && contextoLista.tipoMeta.byId[item.id_desafio]) || '').toUpperCase();
+    var periodoSelecionado = montarPeriodoHistoricoVinculo_(row, {
+      periodo: idx.periodo,
+      inicio: idx.inicio,
+      fim: idx.fim
+    }, periodoLista, {
+      id_dgmb: id,
+      id_desafio: item.id_desafio || '',
+      id_inscricao: item.id_inscricao || '',
+      id_item_estoque: item.id_item_estoque || '',
+      origem: 'diagnosticoMeuGiroLerDgmbDesafios_'
+    }, tipoMeta);
+    item.tipo_meta = tipoMeta;
+    item.periodo_inicio = periodoSelecionado.inicio || '';
+    item.periodo_fim = periodoSelecionado.fim || '';
     item.apto_elegivel = validacao.valida;
     item.criterio_elegibilidade = validacao.criterio;
     saida.linhas.push(item);
