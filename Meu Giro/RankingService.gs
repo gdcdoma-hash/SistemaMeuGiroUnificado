@@ -316,6 +316,14 @@ function rankingMG_resolverPeriodoCompetitivo_(row, periodoLista) {
       'data_fim_desafio', 'Data_Fim_Desafio', 'data fim desafio'
     ]))
   };
+  var tipoMeta = rankingMG_norm_(periodoLista && periodoLista.tipo_meta).toUpperCase();
+
+  // PRAZO_DIAS é individual por inscrição e não pode herdar a janela mensal
+  // do catálogo. O ranking deve usar exatamente a mesma janela da apuração.
+  if (ehTipoMetaPrazoDias_(tipoMeta)) {
+    return periodoCompletoValido_(periodoDatas) ? periodoDatas : { inicio: '', fim: '' };
+  }
+
   var periodoTexto = rankingMG_firstFilled_(row, [
     'periodo_desafio', 'Periodo_Desafio', 'período_desafio', 'periodo desafio', 'período desafio'
   ]);
