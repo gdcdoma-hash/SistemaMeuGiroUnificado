@@ -193,6 +193,17 @@ function fecharModalMeuGiro(resolverPendente) {
   if (document.body) document.body.classList.remove('modal-meu-giro-aberto');
 }
 
+function mostrarBloqueioDataFuturaAtividade() {
+  return mostrarModalMeuGiro({
+    titulo: 'Data não permitida',
+    mensagem: 'Não é possível registrar uma atividade com data futura.\n\nInforme a data real da pedalada.',
+    tipo: 'alerta',
+    processando: false,
+    origem: 'decisao',
+    botoes: [{ texto: 'OK', valor: true, destaque: true }]
+  });
+}
+
 function mostrarErroAcaoAtividade() {
   return mostrarModalMeuGiro({
     titulo: 'Não foi possível concluir a ação',
@@ -4551,7 +4562,8 @@ async function salvarAtividade(forcarDuplicidade) {
 
   if (isFutureActivityDate(data)) {
     releaseRegistroSubmitGuard();
-    setRegistroMsg('Não é possível registrar uma atividade com data futura. Informe a data real da pedalada.', 'error');
+    setRegistroMsg('');
+    await mostrarBloqueioDataFuturaAtividade();
     return;
   }
 
@@ -4711,7 +4723,8 @@ async function salvarEdicaoAtividade(forcarDuplicidade) {
 
   if (isFutureActivityDate(data)) {
     releaseRegistroSubmitGuard();
-    setRegistroMsg('Não é possível registrar uma atividade com data futura. Informe a data real da pedalada.', 'error');
+    setRegistroMsg('');
+    await mostrarBloqueioDataFuturaAtividade();
     return;
   }
 
