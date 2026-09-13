@@ -9,7 +9,8 @@ function doGet(e) {
       return HtmlService
         .createHtmlOutput('<!doctype html><html><body style="margin:0;background:#0f172a;color:#e5e7eb;font-family:Arial,sans-serif;padding:28px"><h2>Acesso administrativo indisponível</h2><p>Abra o Meu Giro — Admin a partir do Portal Administrativo.</p></body></html>')
         .setTitle('MEU GIRO — ADMIN')
-        .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+        .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
     }
 
     var templateAdmin = HtmlService.createTemplateFromFile('AdminMeuGiro');
@@ -17,7 +18,8 @@ function doGet(e) {
     return templateAdmin
       .evaluate()
       .setTitle('MEU GIRO — ADMIN')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
   return HtmlService
