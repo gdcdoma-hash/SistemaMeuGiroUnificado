@@ -1,8 +1,12 @@
 function doGet(e) {
+  var page = e && e.parameter ? String(e.parameter.page || '').trim().toLowerCase() : '';
+  var arquivo = page === 'admin' ? 'AdminMeuGiro' : 'Index';
+  var titulo = page === 'admin' ? 'MEU GIRO — ADMIN' : 'MEU GIRO';
+
   return HtmlService
-    .createTemplateFromFile('Index')
+    .createTemplateFromFile(arquivo)
     .evaluate()
-    .setTitle('MEU GIRO')
+    .setTitle(titulo)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
