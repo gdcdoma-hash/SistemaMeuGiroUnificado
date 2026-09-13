@@ -6,7 +6,18 @@ function portalAdminMeuGiroNormalizarBusca_(valor) {
     .replace(/[\u0300-\u036f]/g, '');
 }
 
-function portalAdminMeuGiroBuscarAtletas(termo) {
+function portalAdminMeuGiroAutorizar_(token) {
+  var acesso = portalHandoffValidarAdmin_(token);
+  if (!acesso || acesso.ok !== true) {
+    return acesso || { ok: false, code: 'HANDOFF_NEGADO', msg: 'Acesso administrativo negado.' };
+  }
+  return acesso;
+}
+
+function portalAdminMeuGiroBuscarAtletas(token, termo) {
+  var acesso = portalAdminMeuGiroAutorizar_(token);
+  if (!acesso.ok) return acesso;
+
   var buscaBruta = String(termo || '').trim();
   if (!buscaBruta) {
     return { ok: false, code: 'TERMO_OBRIGATORIO', msg: 'Informe CPF, ID_DGMB ou nome.' };
@@ -60,7 +71,10 @@ function portalAdminMeuGiroBuscarAtletas(termo) {
   };
 }
 
-function portalAdminMeuGiroConsultarAtleta(idDgmb) {
+function portalAdminMeuGiroConsultarAtleta(token, idDgmb) {
+  var acesso = portalAdminMeuGiroAutorizar_(token);
+  if (!acesso.ok) return acesso;
+
   var id = normalizeText_(idDgmb);
   if (!id) {
     return { ok: false, code: 'ID_DGMB_OBRIGATORIO', msg: 'ID_DGMB obrigatorio.' };
@@ -81,6 +95,7 @@ function portalAdminMeuGiroConsultarAtleta(idDgmb) {
     desafios_historico: painel.desafios_historico || [],
     atividades: painel.atividades || [],
     total_pedalado: painel.total_pedalado || painel.totalPedalado || 0,
-    somente_leitura: true
+    somente_leitura: true,
+    administrador_id_dgmb: acesso.id_dgmb
   };
 }
