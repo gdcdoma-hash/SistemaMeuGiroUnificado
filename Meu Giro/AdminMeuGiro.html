@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#0f172a;color:#e5e7eb;font-family:Arial,sans-serif}.wrap{max-width:1180px;margin:0 auto;padding:24px}.topo{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:18px}.titulo{font-size:28px;font-weight:800;margin:0}.sub{color:#94a3b8;margin-top:6px}.busca{display:grid;grid-template-columns:1fr auto;gap:10px;margin:18px 0}.busca input{width:100%;padding:13px 14px;border-radius:10px;border:1px solid #334155;background:#111827;color:#fff;font-size:15px}.btn{border:0;border-radius:10px;padding:12px 16px;font-weight:700;cursor:pointer;background:#facc15;color:#111827}.btn.sec{background:#1e293b;color:#e5e7eb;border:1px solid #334155}.painel{background:#111827;border:1px solid #263244;border-radius:14px;padding:16px;margin-bottom:16px}.lista{display:grid;gap:10px}.resultado{display:flex;justify-content:space-between;gap:14px;align-items:center;padding:12px;border:1px solid #334155;border-radius:10px;background:#0b1220}.nome{font-weight:800}.meta{color:#94a3b8;font-size:13px;margin-top:3px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.kpi{padding:14px;border-radius:12px;background:#0b1220;border:1px solid #263244}.kpi strong{display:block;font-size:22px;margin-top:6px}.desafio{padding:14px;border-radius:12px;background:#0b1220;border:1px solid #334155}.desafio h3{margin:0 0 8px;font-size:17px}.linha{display:flex;justify-content:space-between;gap:10px;padding:4px 0;color:#cbd5e1}.linha b{color:#fff}.tag{display:inline-block;padding:4px 8px;border-radius:999px;background:#1e293b;border:1px solid #334155;font-size:12px}.oculto{display:none!important}.erro{color:#fecaca}.vazio{color:#94a3b8;padding:8px 0}@media(max-width:680px){.wrap{padding:14px}.busca{grid-template-columns:1fr}.resultado{align-items:flex-start;flex-direction:column}.btn{width:100%}.topo{flex-direction:column}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="topo">
+      <div>
+        <h1 class="titulo">Meu Giro — Admin</h1>
+        <div class="sub">Consulta administrativa em modo somente leitura.</div>
+      </div>
+      <span class="tag">sem alterar dados</span>
+    </div>
+
+    <section class="painel">
+      <div class="busca">
+        <input id="termo" placeholder="Buscar por CPF, ID_DGMB ou nome" autocomplete="off">
+        <button class="btn" onclick="buscar()">Buscar atleta</button>
+      </div>
+      <div id="mensagem" class="meta"></div>
+      <div id="resultados" class="lista"></div>
+    </section>
+
+    <section id="detalhe" class="oculto">
+      <div class="painel">
+        <div class="topo">
+          <div>
+            <div class="nome" id="atletaNome">Atleta</div>
+            <div class="meta" id="atletaMeta"></div>
+          </div>
+          <button class="btn sec" onclick="limparDetalhe()">Trocar atleta</button>
+        </div>
+        <div class="grid">
+          <div class="kpi">Total pedalado<strong id="totalPedalado">0 km</strong></div>
+          <div class="kpi">Desafios ativos<strong id="totalAtivos">0</strong></div>
+          <div class="kpi">Histórico<strong id="totalHistorico">0</strong></div>
+        </div>
+      </div>
+
+      <div class="painel">
+        <div class="nome" style="margin-bottom:12px">Desafios ativos</div>
+        <div id="ativos" class="grid"></div>
+      </div>
+
+      <div class="painel">
+        <div class="nome" style="margin-bottom:12px">Histórico</div>
+        <div id="historico" class="grid"></div>
+      </div>
+    </section>
+  </main>
+
+<script>
+const $=id=>document.getElementById(id);
+function txt(v){return v===null||v===undefined||v===''?'—':String(v)}
+function num(v){const n=Number(String(v??0).replace(',','.'));return Number.isFinite(n)?n:0}
+function km(v){return num(v).toLocaleString('pt-BR',{maximumFractionDigits:1})+' km'}
+function data(v){if(!v)return '—';const s=String(v);const m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);return m?`${m[3]}/${m[2]}/${m[1]}`:s}
+function setMsg(m,erro){$('mensagem').textContent=m||'';$('mensagem').className=erro?'erro':'meta'}
+function buscar(){
+  const termo=$('termo').value.trim(); if(!termo){setMsg('Informe CPF, ID_DGMB ou nome.',true);return}
+  setMsg('Buscando...'); $('resultados').innerHTML='';
+  google.script.run.withSuccessHandler(renderResultados).withFailureHandler(e=>setMsg(e.message||'Erro na busca.',true)).portalAdminMeuGiroBuscarAtletas(termo);
+}
+function renderResultados(r){
+  if(!r||r.ok===false){setMsg((r&&r.msg)||'Não foi possível buscar.',true);return}
+  const itens=r.data||[]; setMsg(itens.length?`${itens.length} resultado(s).`:'Nenhum atleta encontrado.');
+  $('resultados').innerHTML=itens.map((a,i)=>`<div class="resultado"><div><div class="nome">${txt(a.nome)}</div><div class="meta">${txt(a.cidade_uf)} · ${txt(a.id_dgmb)}</div></div><button class="btn" onclick='abrir(${JSON.stringify(a.id_dgmb)})'>Abrir Meu Giro</button></div>`).join('');
+}
+function abrir(id){
+  setMsg('Carregando Meu Giro...');
+  google.script.run.withSuccessHandler(renderPainel).withFailureHandler(e=>setMsg(e.message||'Erro ao carregar.',true)).portalAdminMeuGiroConsultarAtleta(id);
+}
+function renderPainel(r){
+  if(!r||r.ok===false){setMsg((r&&r.msg)||'Meu Giro indisponível.',true);return}
+  const a=r.atleta||{}; const ativos=r.desafios_ativos||[]; const hist=r.desafios_historico||[];
+  $('atletaNome').textContent=a.nome||a.Nome||'Atleta';
+  $('atletaMeta').textContent=[a.cidade_uf||a.cidadeUf||'',r.id_dgmb||''].filter(Boolean).join(' · ');
+  $('totalPedalado').textContent=km(r.total_pedalado||0); $('totalAtivos').textContent=ativos.length; $('totalHistorico').textContent=hist.length;
+  $('ativos').innerHTML=ativos.length?ativos.map(cardDesafio).join(''):'<div class="vazio">Nenhum desafio ativo.</div>';
+  $('historico').innerHTML=hist.length?hist.map(cardDesafio).join(''):'<div class="vazio">Nenhum desafio no histórico.</div>';
+  $('detalhe').classList.remove('oculto'); $('resultados').innerHTML=''; setMsg('');
+}
+function cardDesafio(d){
+  const nome=d.nome_desafio||d.nome||d.desafio||('Desafio '+txt(d.id_desafio));
+  const realizado=d.distancia_realizada??d.realizado_km??d.realizado??0;
+  const meta=d.meta_km??d.meta??d.distancia_km??0;
+  const percentual=d.percentual_concluido??d.percentual??(num(meta)>0?num(realizado)*100/num(meta):0);
+  const status=d.status_usuario_desafio||d.status_apuracao||d.status_desafio||d.status||'';
+  const ini=d.periodo_inicio||d.data_inicio_desafio||d.data_inicio||''; const fim=d.periodo_fim||d.data_fim_desafio||d.data_fim||'';
+  return `<article class="desafio"><h3>${txt(nome)}</h3><div class="linha"><span>Status</span><b>${txt(status)}</b></div><div class="linha"><span>Meta</span><b>${km(meta)}</b></div><div class="linha"><span>Realizado</span><b>${km(realizado)}</b></div><div class="linha"><span>Progresso</span><b>${num(percentual).toLocaleString('pt-BR',{maximumFractionDigits:1})}%</b></div><div class="linha"><span>Início</span><b>${data(ini)}</b></div><div class="linha"><span>Limite</span><b>${data(fim)}</b></div></article>`;
+}
+function limparDetalhe(){$('detalhe').classList.add('oculto');$('termo').focus();}
+$('termo').addEventListener('keydown',e=>{if(e.key==='Enter')buscar()});
+</script>
+</body>
+</html>
