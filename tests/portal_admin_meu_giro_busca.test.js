@@ -7,7 +7,8 @@ const repoRoot = path.resolve(__dirname, '..');
 const service = fs.readFileSync(path.join(repoRoot, 'Meu Giro', 'PortalAdminMeuGiroService.gs'), 'utf8');
 
 test('Meu Giro Admin oferece busca por CPF, ID_DGMB ou nome sem expor CPF no retorno', () => {
-  assert.match(service, /function portalAdminMeuGiroBuscarAtletas\(termo\)/);
+  assert.match(service, /function portalAdminMeuGiroBuscarAtletas\(token, termo\)/);
+  assert.match(service, /portalAdminMeuGiroAutorizar_\(token\)/);
   assert.match(service, /Utilities\.base64Encode\(digitos\)/);
   assert.match(service, /portalAdminMeuGiroNormalizarBusca_\(nome\)\.indexOf\(termoNormalizado\)/);
   assert.match(service, /id_dgmb:\s*id/);
@@ -16,7 +17,9 @@ test('Meu Giro Admin oferece busca por CPF, ID_DGMB ou nome sem expor CPF no ret
   assert.doesNotMatch(service, /resultados\.push\(\{[\s\S]*?cpf\s*:/);
 });
 
-test('consulta administrativa permanece somente leitura e reutiliza o painel oficial', () => {
+test('consulta administrativa exige handoff, permanece somente leitura e reutiliza o painel oficial', () => {
+  assert.match(service, /function portalAdminMeuGiroConsultarAtleta\(token, idDgmb\)/);
+  assert.match(service, /portalAdminMeuGiroAutorizar_\(token\)/);
   assert.match(service, /getPainelUsuario\(id, \{ somenteLeitura: true \}\)/);
   assert.match(service, /somente_leitura:\s*true/);
   assert.match(service, /desafios_ativos:\s*painel\.desafios_ativos \|\| \[\]/);
