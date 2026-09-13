@@ -55,6 +55,7 @@
   </main>
 
 <script>
+const HANDOFF_TOKEN = <?!= JSON.stringify(handoffToken || '') ?>;
 const $=id=>document.getElementById(id);
 function txt(v){return v===null||v===undefined||v===''?'—':String(v)}
 function num(v){const n=Number(String(v??0).replace(',','.'));return Number.isFinite(n)?n:0}
@@ -64,16 +65,16 @@ function setMsg(m,erro){$('mensagem').textContent=m||'';$('mensagem').className=
 function buscar(){
   const termo=$('termo').value.trim(); if(!termo){setMsg('Informe CPF, ID_DGMB ou nome.',true);return}
   setMsg('Buscando...'); $('resultados').innerHTML='';
-  google.script.run.withSuccessHandler(renderResultados).withFailureHandler(e=>setMsg(e.message||'Erro na busca.',true)).portalAdminMeuGiroBuscarAtletas(termo);
+  google.script.run.withSuccessHandler(renderResultados).withFailureHandler(e=>setMsg(e.message||'Erro na busca.',true)).portalAdminMeuGiroBuscarAtletas(HANDOFF_TOKEN,termo);
 }
 function renderResultados(r){
   if(!r||r.ok===false){setMsg((r&&r.msg)||'Não foi possível buscar.',true);return}
   const itens=r.data||[]; setMsg(itens.length?`${itens.length} resultado(s).`:'Nenhum atleta encontrado.');
-  $('resultados').innerHTML=itens.map((a,i)=>`<div class="resultado"><div><div class="nome">${txt(a.nome)}</div><div class="meta">${txt(a.cidade_uf)} · ${txt(a.id_dgmb)}</div></div><button class="btn" onclick='abrir(${JSON.stringify(a.id_dgmb)})'>Abrir Meu Giro</button></div>`).join('');
+  $('resultados').innerHTML=itens.map(a=>`<div class="resultado"><div><div class="nome">${txt(a.nome)}</div><div class="meta">${txt(a.cidade_uf)} · ${txt(a.id_dgmb)}</div></div><button class="btn" onclick='abrir(${JSON.stringify(a.id_dgmb)})'>Abrir Meu Giro</button></div>`).join('');
 }
 function abrir(id){
   setMsg('Carregando Meu Giro...');
-  google.script.run.withSuccessHandler(renderPainel).withFailureHandler(e=>setMsg(e.message||'Erro ao carregar.',true)).portalAdminMeuGiroConsultarAtleta(id);
+  google.script.run.withSuccessHandler(renderPainel).withFailureHandler(e=>setMsg(e.message||'Erro ao carregar.',true)).portalAdminMeuGiroConsultarAtleta(HANDOFF_TOKEN,id);
 }
 function renderPainel(r){
   if(!r||r.ok===false){setMsg((r&&r.msg)||'Meu Giro indisponível.',true);return}
