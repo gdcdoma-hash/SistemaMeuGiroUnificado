@@ -1,0 +1,122 @@
+<script>
+const SESSION_STORAGE_KEY = 'MEU_GIRO_CURRENT_USER';
+
+function saveUserSession(user) {
+  try {
+    if (!user || !user.id_dgmb) return;
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+      id_dgmb: String(user.id_dgmb || '').trim(),
+      nome: String(user.nome || ''),
+      cidade_uf: String(user.cidade_uf || '')
+    }));
+  } catch (err) {
+    console.error('Erro ao salvar sessão:', err);
+  }
+}
+
+function loadUserSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.id_dgmb) return null;
+
+    return {
+      id_dgmb: String(parsed.id_dgmb || '').trim(),
+      nome: String(parsed.nome || ''),
+      cidade_uf: String(parsed.cidade_uf || '')
+    };
+  } catch (err) {
+    console.error('Erro ao carregar sessão:', err);
+    return null;
+  }
+}
+
+function clearUserSession() {
+  try {
+    localStorage.removeItem(SESSION_STORAGE_KEY);
+  } catch (err) {
+    console.error('Erro ao limpar sessão:', err);
+  }
+}
+
+function isUserLogged() {
+  return !!(currentUser && currentUser.id_dgmb);
+}
+
+function updateAuthUI() {
+  const logoutBtn = document.getElementById('btn-logout-top');
+  if (logoutBtn) {
+    logoutBtn.style.display = isUserLogged() ? 'inline-flex' : 'none';
+  }
+}
+
+function openMeuGiro() {
+  if (isUserLogged()) {
+    showScreen('painel');
+    carregarPainel();
+    return;
+  }
+
+  const msg = document.getElementById('login-msg');
+  if (msg) {
+    msg.innerText = 'Entre com seu CPF para acessar seu painel e acompanhar o desafio.';
+  }
+
+  showScreen('login');
+}
+
+function openRankingPrivado() {
+  if (isUserLogged()) {
+    carregarRanking();
+    return;
+  }
+
+  const msg = document.getElementById('login-msg');
+  if (msg) {
+    msg.innerText = 'Entre com seu CPF para acompanhar seu progresso e ver o ranking do desafio.';
+  }
+  showScreen('login');
+}
+
+function logoutUser() {
+  currentUser = null;
+  currentPainel = null;
+  window.__painelAtual = null;
+
+  clearUserSession();
+
+  const cpfInput = document.getElementById('cpf');
+  const loginMsg = document.getElementById('login-msg');
+  const registroMsg = document.getElementById('registro-msg');
+  const rankingBox = document.getElementById('ranking-lista');
+  const kmInput = document.getElementById('km-atividade');
+  const dataInput = document.getElementById('data-atividade');
+  const fraseBox = document.getElementById('frase-box');
+
+  if (cpfInput) cpfInput.value = '';
+  if (loginMsg) loginMsg.innerText = '';
+  if (registroMsg) registroMsg.innerText = '';
+  if (rankingBox) rankingBox.innerHTML = '';
+  if (kmInput) kmInput.value = '';
+  if (dataInput) dataInput.value = '';
+  if (fraseBox) fraseBox.innerText = 'Cada quilômetro conta. Continue no seu ritmo.';
+
+  updateAuthUI();
+  showScreen('inicio');
+}
+
+function restoreUserSessionOnLoad() {
+  const saved = loadUserSession();
+  if (!saved || !saved.id_dgmb) {
+    updateAuthUI();
+    return;
+  }
+
+  currentUser = saved;
+  updateAuthUI();
+  showScreen('painel');
+  carregarPainel();
+}
+</script>
