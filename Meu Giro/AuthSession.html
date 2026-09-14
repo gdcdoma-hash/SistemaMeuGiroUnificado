@@ -2,7 +2,8 @@
 const SESSION_STORAGE_KEY = 'MEU_GIRO_CURRENT_USER';
 const SERVER_SESSION_STORAGE_KEY = 'MEU_GIRO_SERVER_SESSION';
 const PORTAL_GIRO_DEV_URL = 'https://script.google.com/macros/s/AKfycbxqA6LmqyTca8i9af5EWKOzuaibTDQKFa6Mtsht4jm7tR29iVZeohNZYLdc3WjNFFJA5Q/exec';
-const PORTAL_EMBEDDED_MODE = new URLSearchParams(window.location.search || '').get('embedded') === '1';
+let PORTAL_EMBEDDED_MODE = false;
+let PORTAL_LOCATION_PARAMS = {};
 
 function applyEmbeddedMode() {
   if (!PORTAL_EMBEDDED_MODE || !document.body) return;
@@ -185,14 +186,20 @@ function logoutUser() {
   showScreen('inicio');
 }
 
-function trocarHandoffAtletaOnLoad() {
-  const params = new URLSearchParams(window.location.search || '');
-  if (String(params.get('page') || '').toLowerCase() !== 'atleta') return false;
-  const handoff = String(params.get('handoff') || '').trim();
+function iniciarHandoffAtleta_(handoff) {
+  handoff = String(handoff || '').trim();
   if (!handoff) return false;
 
+  // Um handoff vindo do Portal sempre prevalece sobre qualquer sessão antiga
+  // que tenha ficado salva neste navegador para outro atleta.
+  currentUser = null;
+  currentPainel = null;
+  window.__painelAtual = null;
+  clearUserSession();
+  clearServerSession();
   applyEmbeddedMode();
   showScreen('inicio');
+
   google.script.run
     .withSuccessHandler(function(res) {
       if (!res || res.ok !== true || !res.usuario || !res.usuario.id_dgmb) {
@@ -205,10 +212,6 @@ function trocarHandoffAtletaOnLoad() {
       currentUser = { id_dgmb: String(res.usuario.id_dgmb), nome: '', cidade_uf: '' };
       saveUserSession(currentUser);
       saveServerSession(res.session_token, res.expira_em);
-      try {
-        const limpa = window.location.pathname + (PORTAL_EMBEDDED_MODE ? '?embedded=1' : '');
-        window.history.replaceState({}, document.title, limpa);
-      } catch (e) {}
       updateAuthUI();
       showScreen('painel');
       carregarPainel();
@@ -224,15 +227,59 @@ function trocarHandoffAtletaOnLoad() {
   return true;
 }
 
-function restoreUserSessionOnLoad() {
-  ensureUnifiedAppStyles();
+function processarLocalizacaoInicial_(loc) {
+  const p = loc && loc.parameter ? loc.parameter : {};
+  PORTAL_LOCATION_PARAMS = p || {};
+  PORTAL_EMBEDDED_MODE = String(p.embedded || '').trim() === '1';
   applyEmbeddedMode();
-  if (trocarHandoffAtletaOnLoad()) return;
+
+  const page = String(p.page || '').trim().toLowerCase();
+  const handoff = String(p.handoff || '').trim();
+
+  if (page === 'atleta' && handoff) {
+    iniciarHandoffAtleta_(handoff);
+    return;
+  }
+
+  // Dentro do Portal, nunca reutilizar silenciosamente um atleta que tenha
+  // ficado no localStorage do Meu Giro. Sem handoff válido, não há sessão integrada.
+  if (PORTAL_EMBEDDED_MODE) {
+    currentUser = null;
+    currentPainel = null;
+    window.__painelAtual = null;
+    clearUserSession();
+    clearServerSession();
+    updateAuthUI();
+    const msg = document.getElementById('login-msg');
+    if (msg) msg.innerText = 'Acesso integrado não identificado. Volte para Minhas Inscrições e abra o Meu Giro novamente.';
+    showScreen('login');
+    return;
+  }
+
   const saved = loadUserSession();
   if (!saved || !saved.id_dgmb) { updateAuthUI(); return; }
   currentUser = saved;
   updateAuthUI();
   showScreen('painel');
   carregarPainel();
+}
+
+function restoreUserSessionOnLoad() {
+  ensureUnifiedAppStyles();
+
+  // Em Web Apps do Apps Script, window.location pertence ao iframe sandbox e
+  // pode não carregar os parâmetros reais da URL /exec. getLocation devolve
+  // os parâmetros do Web App corretamente tanto no PC quanto no celular.
+  if (window.google && google.script && google.script.url && typeof google.script.url.getLocation === 'function') {
+    google.script.url.getLocation(function(loc) {
+      processarLocalizacaoInicial_(loc || {});
+    });
+    return;
+  }
+
+  const params = new URLSearchParams(window.location.search || '');
+  const fallback = {};
+  params.forEach(function(v, k) { fallback[k] = v; });
+  processarLocalizacaoInicial_({ parameter: fallback });
 }
 </script>
