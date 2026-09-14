@@ -124,6 +124,7 @@ function portalAdminMeuGiroConsultarAtleta(token, idDgmb) {
     desafios_ativos: desafiosAtivos,
     desafios_historico: desafiosHistorico,
     atividades: dados.atividades || [],
+    auditorias: portalAdminMeuGiroListarAuditorias_(dados.id_dgmb || id),
     total_pedalado: dados.total_pedalado || dados.totalPedalado || dados.realizado || 0,
     somente_leitura: true,
     administrador_id_dgmb: acesso.id_dgmb
@@ -208,4 +209,34 @@ function portalAdminMeuGiroEditarAtividade(token, payload) {
   painelAtualizado.auditoria_id = auditoriaId;
   painelAtualizado.msg = 'Atividade corrigida e registrada na auditoria.';
   return painelAtualizado;
+}
+
+
+function portalAdminMeuGiroListarAuditorias_(idDgmb) {
+  var ss = getSpreadsheet_();
+  var sh = ss.getSheetByName('_MEU_GIRO_AUDITORIA_ADMIN');
+  if (!sh || sh.getLastRow() < 2) return [];
+
+  var values = sh.getDataRange().getDisplayValues();
+  var id = normalizeText_(idDgmb);
+  var out = [];
+
+  for (var i = values.length - 1; i >= 1; i--) {
+    var row = values[i] || [];
+    if (normalizeText_(row[3]) !== id) continue;
+    out.push({
+      id_auditoria: row[0] || '',
+      data_hora: row[1] || '',
+      admin_id_dgmb: row[2] || '',
+      acao: row[4] || '',
+      activity_id: row[5] || '',
+      data_anterior: row[7] || '',
+      km_anterior: row[8] || '',
+      data_nova: row[9] || '',
+      km_novo: row[10] || '',
+      motivo: row[11] || ''
+    });
+    if (out.length >= 50) break;
+  }
+  return out;
 }
