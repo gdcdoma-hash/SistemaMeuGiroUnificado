@@ -129,3 +129,83 @@ function portalAdminMeuGiroConsultarAtleta(token, idDgmb) {
     administrador_id_dgmb: acesso.id_dgmb
   };
 }
+
+
+function portalAdminMeuGiroAuditoriaSheet_() {
+  var ss = getSpreadsheet_();
+  var nomeAba = '_MEU_GIRO_AUDITORIA_ADMIN';
+  var sh = ss.getSheetByName(nomeAba);
+  if (!sh) {
+    sh = ss.insertSheet(nomeAba);
+    sh.getRange(1, 1, 1, 12).setValues([[
+      'ID_AUDITORIA', 'DATA_HORA', 'ADMIN_ID_DGMB', 'ATLETA_ID_DGMB',
+      'ACAO', 'ACTIVITY_ID', 'CHAVE_EDICAO', 'DATA_ANTERIOR',
+      'KM_ANTERIOR', 'DATA_NOVA', 'KM_NOVO', 'MOTIVO'
+    ]]);
+    sh.setFrozenRows(1);
+    try { sh.hideSheet(); } catch (e) {}
+  }
+  return sh;
+}
+
+function portalAdminMeuGiroLocalizarAtividade_(idDgmb, activityId, chaveEdicao) {
+  var atividades = buscarAtividadesUsuario_(idDgmb) || [];
+  for (var i = 0; i < atividades.length; i++) {
+    var item = atividades[i] || {};
+    if (activityId && String(item.activity_id || '').trim() === activityId) return item;
+    if (!activityId && chaveEdicao && String(item.chave_edicao || '').trim() === chaveEdicao) return item;
+  }
+  return null;
+}
+
+function portalAdminMeuGiroEditarAtividade(token, payload) {
+  var acesso = portalAdminMeuGiroAutorizar_(token);
+  if (!acesso.ok) return acesso;
+
+  var dados = payload && typeof payload === 'object' ? payload : {};
+  var idDgmb = normalizeText_(dados.id_dgmb);
+  var activityId = normalizeText_(dados.activity_id);
+  var chaveEdicao = normalizeText_(dados.chave_edicao);
+  var motivo = String(dados.motivo || '').trim();
+  var novaData = normalizarDataISO_(dados.data_atividade);
+  var novoKm = painelMG_toNumber_(dados.km);
+
+  if (!idDgmb) return { ok: false, code: 'ID_DGMB_OBRIGATORIO', msg: 'Atleta não informado.' };
+  if (!activityId && !chaveEdicao) return { ok: false, code: 'ATIVIDADE_SEM_IDENTIFICADOR', msg: 'Atividade sem identificador de edição.' };
+  if (!novaData) return { ok: false, code: 'DATA_INVALIDA', msg: 'Informe uma data válida.' };
+  if (!(novoKm > 0)) return { ok: false, code: 'KM_INVALIDO', msg: 'Informe um KM maior que zero.' };
+  if (motivo.length < 5) return { ok: false, code: 'MOTIVO_OBRIGATORIO', msg: 'Informe o motivo da correção com pelo menos 5 caracteres.' };
+
+  var anterior = portalAdminMeuGiroLocalizarAtividade_(idDgmb, activityId, chaveEdicao);
+  if (!anterior) return { ok: false, code: 'ATIVIDADE_NAO_ENCONTRADA', msg: 'Atividade não encontrada para correção.' };
+
+  var resultado = editarAtividade({
+    id_dgmb: idDgmb,
+    activity_id: activityId,
+    chave_edicao: chaveEdicao,
+    data_atividade: novaData,
+    km: novoKm
+  });
+  if (!resultado || resultado.ok !== true) return resultado || { ok: false, code: 'EDICAO_FALHOU', msg: 'Não foi possível corrigir a atividade.' };
+
+  var auditoriaId = Utilities.getUuid();
+  portalAdminMeuGiroAuditoriaSheet_().appendRow([
+    auditoriaId,
+    new Date(),
+    acesso.id_dgmb || '',
+    idDgmb,
+    'CORRECAO_ATIVIDADE',
+    activityId,
+    chaveEdicao,
+    anterior.data || '',
+    anterior.km || 0,
+    novaData,
+    novoKm,
+    motivo
+  ]);
+
+  var painelAtualizado = portalAdminMeuGiroConsultarAtleta(token, idDgmb);
+  painelAtualizado.auditoria_id = auditoriaId;
+  painelAtualizado.msg = 'Atividade corrigida e registrada na auditoria.';
+  return painelAtualizado;
+}
