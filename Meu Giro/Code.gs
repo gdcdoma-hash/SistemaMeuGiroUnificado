@@ -40,3 +40,8 @@ function doGet(e) {
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
+
+
+function doPost(e) {
+  return portalAdminApiDoPost_(e);
+}
