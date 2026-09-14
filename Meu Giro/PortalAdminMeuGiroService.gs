@@ -180,6 +180,16 @@ function portalAdminMeuGiroEditarAtividade(token, payload) {
   var anterior = portalAdminMeuGiroLocalizarAtividade_(idDgmb, activityId, chaveEdicao);
   if (!anterior) return { ok: false, code: 'ATIVIDADE_NAO_ENCONTRADA', msg: 'Atividade não encontrada para correção.' };
 
+  var dataAnterior = normalizarDataISO_(anterior.data);
+  var kmAnterior = painelMG_toNumber_(anterior.km);
+  if (dataAnterior === novaData && Math.abs(kmAnterior - novoKm) < 0.000001) {
+    return {
+      ok: false,
+      code: 'SEM_ALTERACAO',
+      msg: 'Altere a data ou o KM antes de salvar a correção.'
+    };
+  }
+
   var resultado = editarAtividade({
     id_dgmb: idDgmb,
     activity_id: activityId,
