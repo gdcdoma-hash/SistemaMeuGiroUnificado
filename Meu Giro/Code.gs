@@ -27,26 +27,74 @@ function doGet(e) {
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
-  var template = HtmlService.createTemplateFromFile('Index');
   var atletaHandoffToken = page === 'atleta' ? String(parametros.handoff || '').trim() : '';
+  var integrado = page === 'atleta' && !!atletaHandoffToken;
+  var embedded = String(parametros.embedded || '').trim() === '1';
+  var bootSession = null;
+
+  // Fluxo integrado: o handoff é consumido no servidor antes de renderizar a tela.
+  // Assim o navegador nunca decide qual ID_DGMB deve abrir e nenhuma sessão antiga
+  // do localStorage pode prevalecer sobre o atleta vindo do Portal.
+  if (integrado) {
+    try {
+      bootSession = atletaTrocarHandoffPorSessao(atletaHandoffToken);
+    } catch (err) {
+      bootSession = {
+        ok: false,
+        code: 'HANDOFF_ERRO',
+        msg: err && err.message ? err.message : 'Não foi possível validar o acesso integrado.'
+      };
+    }
+  }
+
+  var template = HtmlService.createTemplateFromFile('Index');
   template.atletaHandoffToken = atletaHandoffToken;
-  template.portalGiroUrl = 'https://script.google.com/macros/s/AKfycbxqA6LmqyTca8i9af5EWKOzuaibTDQKFa6Mtsht4jm7tR29iVZeohNZYLdc3WjNFFJA5Q/exec';
+  template.portalGiroUrl = 'https://script.google.com/macros/s/AKfycbxq8mpymCTqbMGwMbRpNFxb2_VnDQenwo1TdY6YhYtQw8njg1GBhX1a3Bvt95xSzh6h/exec';
 
   var avaliado = template.evaluate();
   var html = avaliado.getContent();
-  var tokenJson = JSON.stringify(atletaHandoffToken || '');
-  var integrado = page === 'atleta' && !!atletaHandoffToken;
+
+  var bootJson = JSON.stringify({
+    integrado: integrado,
+    embedded: embedded,
+    sessao: bootSession
+  }).replace(/</g, '\\u003c');
+
+  // Este bloco entra antes de qualquer Script.html/AuthSession.html.
+  // Ele limpa toda identidade persistida antes de qualquer restauração automática.
+  var preBoot = '<script>(function(){' +
+    'window.__MEU_GIRO_BOOT__=' + bootJson + ';' +
+    'var b=window.__MEU_GIRO_BOOT__||{};' +
+    'if(b.integrado){try{["MEU_GIRO_CURRENT_USER","MEU_GIRO_SERVER_SESSION","meuGiro.loginSession","meuGiro.painelState","meuGiro.desafioEmFocoKey"].forEach(function(k){localStorage.removeItem(k);});}catch(e){}}' +
+    '})();<\\/script>';
+
+  if (/<\/head>/i.test(html)) {
+    html = html.replace(/<\/head>/i, preBoot + '\n</head>');
+  } else {
+    html = preBoot + html;
+  }
 
   var guard = '<script>(function(){' +
-    'function limparLegado(){try{["meuGiro.loginSession","meuGiro.painelState","meuGiro.desafioEmFocoKey"].forEach(function(k){localStorage.removeItem(k);});}catch(e){}}' +
-    'if(typeof clearUserSession==="function"){var _clearUserSession=clearUserSession;clearUserSession=function(){try{_clearUserSession();}finally{limparLegado();}};}' +
-    'if(typeof logoutUser==="function"){var _logoutUser=logoutUser;logoutUser=function(){limparLegado();return _logoutUser.apply(this,arguments);};}' +
-    (integrado
-      ? 'window.__MEU_GIRO_HANDOFF_INTEGRADO__=' + tokenJson + ';limparLegado();try{localStorage.removeItem("MEU_GIRO_CURRENT_USER");localStorage.removeItem("MEU_GIRO_SERVER_SESSION");}catch(e){}' +
-        'if(typeof tentarRestaurarSessaoPersistida==="function"){tentarRestaurarSessaoPersistida=function(){return false;};}' +
-        'if(typeof iniciarHandoffAtleta_==="function"){iniciarHandoffAtleta_(window.__MEU_GIRO_HANDOFF_INTEGRADO__);}'
-      : '') +
-    '})();<\/script>';
+    'var boot=window.__MEU_GIRO_BOOT__||{};' +
+    'function limparTudo(){try{["MEU_GIRO_CURRENT_USER","MEU_GIRO_SERVER_SESSION","meuGiro.loginSession","meuGiro.painelState","meuGiro.desafioEmFocoKey"].forEach(function(k){localStorage.removeItem(k);});}catch(e){}}' +
+    'if(typeof clearUserSession==="function"){var _clearUserSession=clearUserSession;clearUserSession=function(){try{_clearUserSession();}finally{limparTudo();}};}' +
+    'if(typeof logoutUser==="function"){var _logoutUser=logoutUser;logoutUser=function(){limparTudo();return _logoutUser.apply(this,arguments);};}' +
+    'if(!boot.integrado){return;}' +
+    'PORTAL_EMBEDDED_MODE=!!boot.embedded;try{applyEmbeddedMode();}catch(e){};' +
+    'if(typeof tentarRestaurarSessaoPersistida==="function"){tentarRestaurarSessaoPersistida=function(){return false;};}' +
+    'limparTudo();currentUser=null;currentPainel=null;try{window.__painelAtual=null;}catch(e){};' +
+    'var s=boot.sessao||{};' +
+    'if(s.ok===true&&s.usuario&&s.usuario.id_dgmb&&s.session_token){' +
+      'currentUser={id_dgmb:String(s.usuario.id_dgmb),nome:"",cidade_uf:""};' +
+      'try{saveUserSession(currentUser);}catch(e){};' +
+      'try{saveServerSession(s.session_token,s.expira_em);}catch(e){};' +
+      'try{updateAuthUI();showScreen("painel");carregarPainel("portal-handoff");}catch(e){console.error("Falha ao abrir painel integrado",e);}' +
+    '}else{' +
+      'try{updateAuthUI();}catch(e){};' +
+      'var m=document.getElementById("login-msg");if(m)m.innerText=(s&&s.msg)||"Acesso integrado inválido ou expirado. Volte ao Portal Giro.";' +
+      'try{showScreen("login");}catch(e){};' +
+    '}' +
+    '})();<\\/script>';
 
   if (/<\/body>/i.test(html)) {
     html = html.replace(/<\/body>/i, guard + '\n</body>');
