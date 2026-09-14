@@ -1182,7 +1182,9 @@ function painelMG_isStatusHistorico_(status) {
     EXPIRADO: true,
     CANCELADO: true,
     DESISTENTE: true,
-    ENCERRADO: true
+    ENCERRADO: true,
+    INAPTO: true,
+    NAO_CONCLUIDO: true
   };
   return !!statusFinais[normalizado];
 }
