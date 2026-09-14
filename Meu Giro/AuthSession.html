@@ -6,128 +6,87 @@ const PORTAL_GIRO_DEV_URL = 'https://script.google.com/macros/s/AKfycbxqA6LmqyTc
 function saveUserSession(user) {
   try {
     if (!user || !user.id_dgmb) return;
-    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
-      id_dgmb: String(user.id_dgmb || '').trim(),
-      nome: String(user.nome || ''),
-      cidade_uf: String(user.cidade_uf || '')
-    }));
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ id_dgmb: String(user.id_dgmb || '').trim(), nome: String(user.nome || ''), cidade_uf: String(user.cidade_uf || '') }));
   } catch (err) { console.error('Erro ao salvar sessão:', err); }
 }
-
 function loadUserSession() {
   try {
-    const raw = localStorage.getItem(SESSION_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed || !parsed.id_dgmb) return null;
+    const raw = localStorage.getItem(SESSION_STORAGE_KEY); if (!raw) return null;
+    const parsed = JSON.parse(raw); if (!parsed || !parsed.id_dgmb) return null;
     return { id_dgmb: String(parsed.id_dgmb || '').trim(), nome: String(parsed.nome || ''), cidade_uf: String(parsed.cidade_uf || '') };
   } catch (err) { console.error('Erro ao carregar sessão:', err); return null; }
 }
-
-function clearUserSession() {
-  try { localStorage.removeItem(SESSION_STORAGE_KEY); } catch (err) { console.error('Erro ao limpar sessão:', err); }
-}
-
-function saveServerSession(token, expiraEm) {
-  try {
-    localStorage.setItem(SERVER_SESSION_STORAGE_KEY, JSON.stringify({ token: String(token || ''), expira_em: Number(expiraEm || 0) }));
-  } catch (err) { console.error('Erro ao salvar sessão segura:', err); }
-}
-
+function clearUserSession() { try { localStorage.removeItem(SESSION_STORAGE_KEY); } catch (err) {} }
+function saveServerSession(token, expiraEm) { try { localStorage.setItem(SERVER_SESSION_STORAGE_KEY, JSON.stringify({ token: String(token || ''), expira_em: Number(expiraEm || 0) })); } catch (err) {} }
 function loadServerSession() {
   try {
-    const raw = localStorage.getItem(SERVER_SESSION_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed || !parsed.token || !parsed.expira_em || Date.now() >= Number(parsed.expira_em)) return null;
+    const raw = localStorage.getItem(SERVER_SESSION_STORAGE_KEY); if (!raw) return null;
+    const parsed = JSON.parse(raw); if (!parsed || !parsed.token || !parsed.expira_em || Date.now() >= Number(parsed.expira_em)) return null;
     return parsed;
   } catch (err) { return null; }
 }
-
-function clearServerSession() {
-  try { localStorage.removeItem(SERVER_SESSION_STORAGE_KEY); } catch (err) {}
-}
-
+function clearServerSession() { try { localStorage.removeItem(SERVER_SESSION_STORAGE_KEY); } catch (err) {} }
 function isUserLogged() { return !!(currentUser && currentUser.id_dgmb); }
+function voltarAoPortalGiro() { window.top.location.href = PORTAL_GIRO_DEV_URL; }
 
 function updateAuthUI() {
   const logoutBtn = document.getElementById('btn-logout-top');
   if (logoutBtn) logoutBtn.style.display = isUserLogged() ? 'inline-flex' : 'none';
+  let portalBtn = document.getElementById('btn-voltar-portal-giro');
+  if (!portalBtn && logoutBtn && logoutBtn.parentNode) {
+    portalBtn = document.createElement('button');
+    portalBtn.id = 'btn-voltar-portal-giro';
+    portalBtn.type = 'button';
+    portalBtn.className = logoutBtn.className || 'btn-secondary';
+    portalBtn.textContent = 'Portal Giro';
+    portalBtn.onclick = voltarAoPortalGiro;
+    logoutBtn.parentNode.insertBefore(portalBtn, logoutBtn);
+  }
+  if (portalBtn) portalBtn.style.display = loadServerSession() ? 'inline-flex' : 'none';
 }
 
 function openMeuGiro() {
   if (isUserLogged()) { showScreen('painel'); carregarPainel(); return; }
-  const msg = document.getElementById('login-msg');
-  if (msg) msg.innerText = 'Entre com seu CPF para acessar seu painel e acompanhar o desafio.';
+  const msg = document.getElementById('login-msg'); if (msg) msg.innerText = 'Entre com seu CPF para acessar seu painel e acompanhar o desafio.';
   showScreen('login');
 }
-
 function openRankingPrivado() {
   if (isUserLogged()) { carregarRanking(); return; }
-  const msg = document.getElementById('login-msg');
-  if (msg) msg.innerText = 'Entre com seu CPF para acompanhar seu progresso e ver o ranking do desafio.';
+  const msg = document.getElementById('login-msg'); if (msg) msg.innerText = 'Entre com seu CPF para acompanhar seu progresso e ver o ranking do desafio.';
   showScreen('login');
 }
-
-function voltarAoPortalGiro() { window.top.location.href = PORTAL_GIRO_DEV_URL; }
-
 function logoutUser() {
   const server = loadServerSession();
-  if (server && server.token) {
-    google.script.run.withFailureHandler(function(){}).atletaEncerrarSessao(server.token);
-  }
-  currentUser = null;
-  currentPainel = null;
-  window.__painelAtual = null;
-  clearUserSession();
-  clearServerSession();
-  const cpfInput = document.getElementById('cpf');
-  const loginMsg = document.getElementById('login-msg');
-  const registroMsg = document.getElementById('registro-msg');
-  const rankingBox = document.getElementById('ranking-lista');
-  const kmInput = document.getElementById('km-atividade');
-  const dataInput = document.getElementById('data-atividade');
-  const fraseBox = document.getElementById('frase-box');
-  if (cpfInput) cpfInput.value = '';
-  if (loginMsg) loginMsg.innerText = '';
-  if (registroMsg) registroMsg.innerText = '';
-  if (rankingBox) rankingBox.innerHTML = '';
-  if (kmInput) kmInput.value = '';
-  if (dataInput) dataInput.value = '';
-  if (fraseBox) fraseBox.innerText = 'Cada quilômetro conta. Continue no seu ritmo.';
-  updateAuthUI();
-  showScreen('inicio');
+  if (server && server.token) google.script.run.withFailureHandler(function(){}).atletaEncerrarSessao(server.token);
+  currentUser = null; currentPainel = null; window.__painelAtual = null;
+  clearUserSession(); clearServerSession();
+  const cpfInput = document.getElementById('cpf'); const loginMsg = document.getElementById('login-msg'); const registroMsg = document.getElementById('registro-msg');
+  const rankingBox = document.getElementById('ranking-lista'); const kmInput = document.getElementById('km-atividade'); const dataInput = document.getElementById('data-atividade'); const fraseBox = document.getElementById('frase-box');
+  if (cpfInput) cpfInput.value = ''; if (loginMsg) loginMsg.innerText = ''; if (registroMsg) registroMsg.innerText = ''; if (rankingBox) rankingBox.innerHTML = '';
+  if (kmInput) kmInput.value = ''; if (dataInput) dataInput.value = ''; if (fraseBox) fraseBox.innerText = 'Cada quilômetro conta. Continue no seu ritmo.';
+  updateAuthUI(); showScreen('inicio');
 }
 
 function trocarHandoffAtletaOnLoad() {
   const params = new URLSearchParams(window.location.search || '');
   if (String(params.get('page') || '').toLowerCase() !== 'atleta') return false;
-  const handoff = String(params.get('handoff') || '').trim();
-  if (!handoff) return false;
-
+  const handoff = String(params.get('handoff') || '').trim(); if (!handoff) return false;
   showScreen('inicio');
   google.script.run
     .withSuccessHandler(function(res) {
       if (!res || res.ok !== true || !res.usuario || !res.usuario.id_dgmb) {
         clearUserSession(); clearServerSession();
-        const msg = document.getElementById('login-msg');
-        if (msg) msg.innerText = (res && res.msg) || 'Acesso integrado inválido ou expirado. Volte ao Portal Giro.';
-        showScreen('login');
-        return;
+        const msg = document.getElementById('login-msg'); if (msg) msg.innerText = (res && res.msg) || 'Acesso integrado inválido ou expirado. Volte ao Portal Giro.';
+        showScreen('login'); return;
       }
       currentUser = { id_dgmb: String(res.usuario.id_dgmb), nome: '', cidade_uf: '' };
-      saveUserSession(currentUser);
-      saveServerSession(res.session_token, res.expira_em);
+      saveUserSession(currentUser); saveServerSession(res.session_token, res.expira_em);
       try { window.history.replaceState({}, document.title, window.location.pathname); } catch (e) {}
-      updateAuthUI();
-      showScreen('painel');
-      carregarPainel();
+      updateAuthUI(); showScreen('painel'); carregarPainel();
     })
     .withFailureHandler(function(err) {
-      clearUserSession(); clearServerSession();
-      console.error('Falha no acesso integrado:', err);
-      const msg = document.getElementById('login-msg');
-      if (msg) msg.innerText = 'Não foi possível validar o acesso integrado. Volte ao Portal Giro.';
+      clearUserSession(); clearServerSession(); console.error('Falha no acesso integrado:', err);
+      const msg = document.getElementById('login-msg'); if (msg) msg.innerText = 'Não foi possível validar o acesso integrado. Volte ao Portal Giro.';
       showScreen('login');
     })
     .atletaTrocarHandoffPorSessao(handoff);
@@ -136,11 +95,20 @@ function trocarHandoffAtletaOnLoad() {
 
 function restoreUserSessionOnLoad() {
   if (trocarHandoffAtletaOnLoad()) return;
+  const server = loadServerSession();
+  if (server && server.token) {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || res.ok !== true || !res.id_dgmb) { clearUserSession(); clearServerSession(); updateAuthUI(); showScreen('inicio'); return; }
+        currentUser = { id_dgmb: String(res.id_dgmb), nome: '', cidade_uf: '' };
+        saveUserSession(currentUser); updateAuthUI(); showScreen('painel'); carregarPainel();
+      })
+      .withFailureHandler(function(){ clearUserSession(); clearServerSession(); updateAuthUI(); showScreen('inicio'); })
+      .atletaValidarSessao(server.token);
+    return;
+  }
   const saved = loadUserSession();
   if (!saved || !saved.id_dgmb) { updateAuthUI(); return; }
-  currentUser = saved;
-  updateAuthUI();
-  showScreen('painel');
-  carregarPainel();
+  currentUser = saved; updateAuthUI(); showScreen('painel'); carregarPainel();
 }
 </script>
