@@ -89,16 +89,21 @@ function portalAdminMeuGiroConsultarAtleta(token, idDgmb) {
     return painel || { ok: false, code: 'PAINEL_NAO_DISPONIVEL', msg: 'Painel não disponível.' };
   }
 
+  var dados = painel.data || painel;
   return {
     ok: true,
-    id_dgmb: id,
-    atleta: painel.atleta || {},
-    desafio_em_foco: painel.desafio_em_foco || null,
-    desafios: painel.desafios || [],
-    desafios_ativos: painel.desafios_ativos || [],
-    desafios_historico: painel.desafios_historico || [],
-    atividades: painel.atividades || [],
-    total_pedalado: painel.total_pedalado || painel.totalPedalado || 0,
+    id_dgmb: dados.id_dgmb || id,
+    atleta: {
+      nome: dados.nome || '',
+      cidade_uf: dados.cidade_uf || '',
+      id_dgmb: dados.id_dgmb || id
+    },
+    desafio_em_foco: dados.desafio_em_foco || null,
+    desafios: dados.desafios || [],
+    desafios_ativos: dados.desafios_ativos || [],
+    desafios_historico: dados.desafios_historico || [],
+    atividades: dados.atividades || [],
+    total_pedalado: dados.total_pedalado || dados.totalPedalado || dados.realizado || 0,
     somente_leitura: true,
     administrador_id_dgmb: acesso.id_dgmb
   };
