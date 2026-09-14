@@ -27,8 +27,11 @@ function doGet(e) {
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
-  return HtmlService
-    .createTemplateFromFile('Index')
+  var template = HtmlService.createTemplateFromFile('Index');
+  template.atletaHandoffToken = page === 'atleta' ? String(parametros.handoff || '').trim() : '';
+  template.portalGiroUrl = 'https://script.google.com/macros/s/AKfycbxqA6LmqyTca8i9af5EWKOzuaibTDQKFa6Mtsht4jm7tR29iVZeohNZYLdc3WjNFFJA5Q/exec';
+
+  return template
     .evaluate()
     .setTitle('MEU GIRO')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
@@ -40,7 +43,6 @@ function doGet(e) {
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
-
 
 function doPost(e) {
   return portalAdminApiDoPost_(e);
