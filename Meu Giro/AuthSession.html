@@ -55,15 +55,16 @@ function ensureUnifiedAppStyles() {
   const style = document.createElement('style');
   style.id = 'meu-giro-unified-app-styles';
   style.textContent = `
-    .topbar{background:#0f172a!important;color:#fff!important;border-bottom:1px solid #334155!important;padding:0 12px 10px!important;position:sticky!important;top:0!important;z-index:8500!important;box-shadow:0 10px 26px rgba(2,6,23,.18)!important}
+    .topbar{background:#0f172a!important;color:#fff!important;border-bottom:1px solid #334155!important;padding:0 8px 8px!important;position:sticky!important;top:0!important;z-index:8500!important;box-shadow:0 10px 24px rgba(2,6,23,.28)!important}
+    body.meu-giro-auth-unificado .topbar .brand-row{display:none!important}
     .brand-row{min-height:50px!important}.brand{color:#60a5fa!important;font-weight:900!important}.topbar-user-name{color:#cbd5e1!important}
     #btn-logout-top{display:none!important}
-    #menu-autenticado-top{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px!important;width:min(900px,100%)!important;margin:0 auto!important}
+    #menu-autenticado-top{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important;width:min(500px,100%)!important;margin:0 auto!important;padding-top:8px!important}
     #menu-autenticado-top[hidden]{display:none!important}
     #menu-publico-top[hidden]{display:none!important}
-    .dgmb-unified-nav-btn{min-height:46px;border:1px solid #334155;border-radius:10px;background:#1e293b;color:#e2e8f0;font-size:13px;font-weight:800;cursor:pointer;padding:8px 7px}
-    .dgmb-unified-nav-btn.ativo{background:#2563eb;border-color:#60a5fa;color:#fff}.dgmb-unified-nav-btn.sair{background:#334155}.dgmb-unified-nav-btn:disabled{opacity:.55;cursor:wait}
-    @media(max-width:620px){#menu-autenticado-top{gap:4px!important}.dgmb-unified-nav-btn{font-size:11px;min-height:44px;padding:6px 3px}}
+    .dgmb-unified-nav-btn{min-height:44px;border:1px solid #334155;border-radius:9px;background:#1e293b;color:#e5e7eb;font:800 12px/1.15 Arial,sans-serif;cursor:pointer;padding:7px 5px}
+    .dgmb-unified-nav-btn:hover{border-color:#60a5fa}.dgmb-unified-nav-btn.ativo{background:#2563eb;border-color:#60a5fa;color:#fff}.dgmb-unified-nav-btn.sair{background:#475569}.dgmb-unified-nav-btn:disabled{opacity:.55;cursor:wait}
+    @media(max-width:520px){.topbar{padding:0 4px 6px!important}#menu-autenticado-top{gap:4px!important;padding-top:6px!important}.dgmb-unified-nav-btn{font-size:10.5px;min-height:42px;padding:5px 2px}}
   `;
   document.head.appendChild(style);
 }
@@ -74,10 +75,12 @@ function renderUnifiedAuthenticatedMenu() {
   const menuAuth = document.getElementById('menu-autenticado-top');
   if (!menuAuth) return;
   if (!isUserLogged()) {
+    document.body.classList.remove('meu-giro-auth-unificado');
     menuAuth.hidden = true;
     if (menuPublico) menuPublico.hidden = false;
     return;
   }
+  document.body.classList.add('meu-giro-auth-unificado');
   if (menuPublico) menuPublico.hidden = true;
   menuAuth.hidden = false;
   if (!menuAuth.dataset.unifiedReady) {
