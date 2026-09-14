@@ -90,6 +90,27 @@ function portalAdminMeuGiroConsultarAtleta(token, idDgmb) {
   }
 
   var dados = painel.data || painel;
+  var todosDesafios = Array.isArray(dados.desafios) ? dados.desafios : [];
+  var desafiosAtivos = Array.isArray(dados.desafios_ativos) ? dados.desafios_ativos : [];
+  var desafiosHistorico = Array.isArray(dados.desafios_historico) ? dados.desafios_historico.slice() : [];
+  var chavesAtivas = {};
+  var chavesHistorico = {};
+
+  desafiosAtivos.forEach(function(item) {
+    chavesAtivas[painelMG_chaveDesafioPainel_(item)] = true;
+  });
+  desafiosHistorico.forEach(function(item) {
+    chavesHistorico[painelMG_chaveDesafioPainel_(item)] = true;
+  });
+  todosDesafios.forEach(function(item) {
+    var chave = painelMG_chaveDesafioPainel_(item);
+    if (!chavesAtivas[chave] && !chavesHistorico[chave]) {
+      desafiosHistorico.push(item);
+      chavesHistorico[chave] = true;
+    }
+  });
+  desafiosHistorico.sort(painelMG_compareHistoricoDesafios_);
+
   return {
     ok: true,
     id_dgmb: dados.id_dgmb || id,
@@ -100,8 +121,8 @@ function portalAdminMeuGiroConsultarAtleta(token, idDgmb) {
     },
     desafio_em_foco: dados.desafio_em_foco || null,
     desafios: dados.desafios || [],
-    desafios_ativos: dados.desafios_ativos || [],
-    desafios_historico: dados.desafios_historico || [],
+    desafios_ativos: desafiosAtivos,
+    desafios_historico: desafiosHistorico,
     atividades: dados.atividades || [],
     total_pedalado: dados.total_pedalado || dados.totalPedalado || dados.realizado || 0,
     somente_leitura: true,
