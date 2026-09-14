@@ -28,11 +28,34 @@ function doGet(e) {
   }
 
   var template = HtmlService.createTemplateFromFile('Index');
-  template.atletaHandoffToken = page === 'atleta' ? String(parametros.handoff || '').trim() : '';
+  var atletaHandoffToken = page === 'atleta' ? String(parametros.handoff || '').trim() : '';
+  template.atletaHandoffToken = atletaHandoffToken;
   template.portalGiroUrl = 'https://script.google.com/macros/s/AKfycbxqA6LmqyTca8i9af5EWKOzuaibTDQKFa6Mtsht4jm7tR29iVZeohNZYLdc3WjNFFJA5Q/exec';
 
-  return template
-    .evaluate()
+  var avaliado = template.evaluate();
+  var html = avaliado.getContent();
+  var tokenJson = JSON.stringify(atletaHandoffToken || '');
+  var integrado = page === 'atleta' && !!atletaHandoffToken;
+
+  var guard = '<script>(function(){' +
+    'function limparLegado(){try{["meuGiro.loginSession","meuGiro.painelState","meuGiro.desafioEmFocoKey"].forEach(function(k){localStorage.removeItem(k);});}catch(e){}}' +
+    'if(typeof clearUserSession==="function"){var _clearUserSession=clearUserSession;clearUserSession=function(){try{_clearUserSession();}finally{limparLegado();}};}' +
+    'if(typeof logoutUser==="function"){var _logoutUser=logoutUser;logoutUser=function(){limparLegado();return _logoutUser.apply(this,arguments);};}' +
+    (integrado
+      ? 'window.__MEU_GIRO_HANDOFF_INTEGRADO__=' + tokenJson + ';limparLegado();try{localStorage.removeItem("MEU_GIRO_CURRENT_USER");localStorage.removeItem("MEU_GIRO_SERVER_SESSION");}catch(e){}' +
+        'if(typeof tentarRestaurarSessaoPersistida==="function"){tentarRestaurarSessaoPersistida=function(){return false;};}' +
+        'if(typeof iniciarHandoffAtleta_==="function"){iniciarHandoffAtleta_(window.__MEU_GIRO_HANDOFF_INTEGRADO__);}'
+      : '') +
+    '})();<\/script>';
+
+  if (/<\/body>/i.test(html)) {
+    html = html.replace(/<\/body>/i, guard + '\n</body>');
+  } else {
+    html += guard;
+  }
+
+  return HtmlService
+    .createHtmlOutput(html)
     .setTitle('MEU GIRO')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
