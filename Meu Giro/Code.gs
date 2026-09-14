@@ -1,5 +1,10 @@
 function doGet(e) {
   var parametros = e && e.parameter ? e.parameter : {};
+
+  if (String(parametros.api || '').trim().toLowerCase() === 'admin') {
+    return portalAdminApiDoGet_(parametros);
+  }
+
   var page = String(parametros.page || '').trim().toLowerCase();
 
   if (page === 'admin') {
