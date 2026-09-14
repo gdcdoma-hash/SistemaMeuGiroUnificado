@@ -20,7 +20,7 @@ function portalAdminMeuGiroBuscarAtletas(token, termo) {
 
   var buscaBruta = String(termo || '').trim();
   if (!buscaBruta) {
-    return { ok: false, code: 'TERMO_OBRIGATORIO', msg: 'Informe CPF, ID_DGMB ou nome.' };
+    return { ok: false, code: 'TERMO_OBRIGATORIO', msg: 'Informe Cód, CPF, ID_DGMB ou nome.' };
   }
 
   var sh = getSheetByName_(SHEETS.PESSOAS);
@@ -34,6 +34,7 @@ function portalAdminMeuGiroBuscarAtletas(token, termo) {
   var idxCpf = getRequiredColumnIndex_(map, ['cpf'], SHEETS.PESSOAS);
   var idxNome = getRequiredColumnIndex_(map, ['nome'], SHEETS.PESSOAS);
   var idxCidade = getOptionalColumnIndex_(map, ['cidade-uf', 'cidade_uf', 'cidade uf']);
+  var idxCod = getOptionalColumnIndex_(map, ['cod', 'cód', 'codigo', 'código', 'cod_atleta', 'codigo_atleta']);
 
   var digitos = onlyDigits_(buscaBruta);
   var cpfBase64 = digitos.length === 11 ? Utilities.base64Encode(digitos) : '';
@@ -46,9 +47,11 @@ function portalAdminMeuGiroBuscarAtletas(token, termo) {
     var nome = normalizeText_(row[idxNome]);
     var cpfSalvo = normalizeText_(row[idxCpf]);
     var cidade = idxCidade > -1 ? normalizeText_(row[idxCidade]) : '';
+    var cod = idxCod > -1 ? normalizeText_(row[idxCod]) : '';
 
     var encontrou = false;
     if (cpfBase64 && cpfSalvo === cpfBase64) encontrou = true;
+    if (!encontrou && cod && portalAdminMeuGiroNormalizarBusca_(cod) === termoNormalizado) encontrou = true;
     if (!encontrou && id && portalAdminMeuGiroNormalizarBusca_(id) === termoNormalizado) encontrou = true;
     if (!encontrou && nome && portalAdminMeuGiroNormalizarBusca_(nome).indexOf(termoNormalizado) !== -1) encontrou = true;
 
@@ -56,6 +59,7 @@ function portalAdminMeuGiroBuscarAtletas(token, termo) {
 
     resultados.push({
       id_dgmb: id,
+      cod: cod,
       nome: nome,
       cidade_uf: cidade
     });
@@ -77,12 +81,12 @@ function portalAdminMeuGiroConsultarAtleta(token, idDgmb) {
 
   var id = normalizeText_(idDgmb);
   if (!id) {
-    return { ok: false, code: 'ID_DGMB_OBRIGATORIO', msg: 'ID_DGMB obrigatorio.' };
+    return { ok: false, code: 'ID_DGMB_OBRIGATORIO', msg: 'ID_DGMB obrigatório.' };
   }
 
   var painel = getPainelUsuario(id, { somenteLeitura: true });
   if (!painel || painel.ok === false) {
-    return painel || { ok: false, code: 'PAINEL_NAO_DISPONIVEL', msg: 'Painel nao disponivel.' };
+    return painel || { ok: false, code: 'PAINEL_NAO_DISPONIVEL', msg: 'Painel não disponível.' };
   }
 
   return {
