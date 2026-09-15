@@ -1,0 +1,49 @@
+<script id="meu-giro-acesso-estado-atleta">
+(function(){
+  function texto(v){return String(v||'').trim();}
+  function normalizar(v){return texto(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
+  function navegarPortal(destino){
+    try{
+      if(window.parent&&window.parent!==window){
+        window.parent.postMessage({type:'DGMB_PORTAL_NAV',destino:destino},'*');
+        return;
+      }
+    }catch(e){}
+    try{if(typeof openPortalFromMeuGiro==='function')openPortalFromMeuGiro(destino,null);}catch(e){}
+  }
+  function classificarMensagem(msg){
+    var m=normalizar(msg);
+    if(!m)return null;
+    if(m.indexOf('aguard')!==-1&&(m.indexOf('consolid')!==-1||m.indexOf('confirm')!==-1||m.indexOf('pagamento')!==-1)){
+      return {titulo:'Sua inscrição está quase pronta!',mensagem:'Localizamos sua inscrição, mas ela ainda está aguardando confirmação. Assim que for consolidada, o Meu Giro ficará disponível para acompanhar seus pedais e sua evolução.',botao:'Ver minha inscrição',destino:'minhas'};
+    }
+    if(m.indexOf('nao conclu')!==-1||m.indexOf('não conclu')!==-1){
+      return {titulo:'Um desafio terminou. O próximo pode começar agora.',mensagem:'Seu último desafio foi encerrado sem conclusão. Escolha uma nova meta e continue pedalando no seu ritmo.',botao:'Ver novos desafios',destino:'inscricao'};
+    }
+    if(m.indexOf('nao ha inscricao valida')!==-1||m.indexOf('não há inscrição válida')!==-1||m.indexOf('inscricao valida registrada')!==-1||m.indexOf('inscrição válida registrada')!==-1||m.indexOf('nenhuma inscricao')!==-1||m.indexOf('nenhuma inscrição')!==-1){
+      return {titulo:'Seu próximo desafio pode começar aqui 🚴',mensagem:'Seu cadastro está localizado, mas não encontramos um desafio ativo e liberado para acompanhar no Meu Giro neste momento. Veja suas inscrições ou escolha uma nova meta para continuar pedalando com a gente.',botao:'Ver minhas inscrições',destino:'minhas',botao2:'Ver desafios',destino2:'inscricao'};
+    }
+    if(m.indexOf('ainda nao iniciou')!==-1||m.indexOf('ainda não iniciou')!==-1||m.indexOf('data de inicio')!==-1||m.indexOf('data de início')!==-1){
+      return {titulo:'Está tudo certo com seu desafio.',mensagem:'Sua inscrição está preparada, mas o período do desafio ainda não começou. Quando chegar a data de início, seu Meu Giro estará pronto para acompanhar sua evolução.',botao:'Ver minha inscrição',destino:'minhas'};
+    }
+    return null;
+  }
+  function mostrarEstado(estado){
+    if(!estado||typeof mostrarModalMeuGiro!=='function')return false;
+    var botoes=[{texto:estado.botao||'Entendi',valor:true,destaque:true,acao:function(){if(estado.destino)navegarPortal(estado.destino);}}];
+    if(estado.botao2){botoes.unshift({texto:estado.botao2,valor:false,acao:function(){if(estado.destino2)navegarPortal(estado.destino2);}});}
+    mostrarModalMeuGiro({titulo:estado.titulo,mensagem:estado.mensagem,tipo:'orientacao',processando:false,origem:'estado-atleta',botoes:botoes});
+    return true;
+  }
+  if(typeof setPainelMsg==='function'){
+    var originalSetPainelMsg=setPainelMsg;
+    setPainelMsg=function(message,variant,timeoutMs){
+      originalSetPainelMsg(message,variant,timeoutMs);
+      if(variant!=='error')return;
+      var estado=classificarMensagem(message);
+      if(estado){window.setTimeout(function(){mostrarEstado(estado);},0);}
+    };
+  }
+  window.MeuGiroEstadoAtleta={classificarMensagem:classificarMensagem,mostrarEstado:mostrarEstado};
+})();
+</script>
