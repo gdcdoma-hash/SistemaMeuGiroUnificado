@@ -1,56 +1,25 @@
 function doGet(e) {
   var parametros = e && e.parameter ? e.parameter : {};
-
-  if (String(parametros.api || '').trim().toLowerCase() === 'admin') {
-    return portalAdminApiDoGet_(parametros);
-  }
-
+  if (String(parametros.api || '').trim().toLowerCase() === 'admin') return portalAdminApiDoGet_(parametros);
   var page = String(parametros.page || '').trim().toLowerCase();
-
   if (page === 'admin') {
-    var token = String(parametros.handoff || '').trim();
-    var acesso = portalHandoffValidarAdmin_(token);
-    if (!acesso || acesso.ok !== true) {
-      return HtmlService
-        .createHtmlOutput('<!doctype html><html><body style="margin:0;background:#0f172a;color:#e5e7eb;font-family:Arial,sans-serif;padding:28px"><h2>Acesso administrativo indisponível</h2><p>Abra o Meu Giro — Admin a partir do Portal Administrativo.</p></body></html>')
-        .setTitle('MEU GIRO — ADMIN')
-        .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-    }
-    var templateAdmin = HtmlService.createTemplateFromFile('AdminMeuGiro');
-    templateAdmin.handoffToken = token;
+    var token = String(parametros.handoff || '').trim(); var acesso = portalHandoffValidarAdmin_(token);
+    if (!acesso || acesso.ok !== true) return HtmlService.createHtmlOutput('<!doctype html><html><body style="margin:0;background:#0f172a;color:#e5e7eb;font-family:Arial,sans-serif;padding:28px"><h2>Acesso administrativo indisponível</h2><p>Abra o Meu Giro — Admin a partir do Portal Administrativo.</p></body></html>').setTitle('MEU GIRO — ADMIN').addMetaTag('viewport', 'width=device-width, initial-scale=1').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    var templateAdmin = HtmlService.createTemplateFromFile('AdminMeuGiro'); templateAdmin.handoffToken = token;
     return templateAdmin.evaluate().setTitle('MEU GIRO — ADMIN').addMetaTag('viewport','width=device-width, initial-scale=1').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
-
   var atletaHandoffToken = page === 'atleta' ? String(parametros.handoff || '').trim() : '';
-  var integrado = page === 'atleta' && !!atletaHandoffToken;
-  var embedded = String(parametros.embedded || '').trim() === '1';
-  var bootSession = null;
-
-  if (integrado) {
-    try { bootSession = atletaTrocarHandoffPorSessao(atletaHandoffToken); }
-    catch (err) { bootSession = {ok:false,code:'HANDOFF_ERRO',msg:err&&err.message?err.message:'Não foi possível validar o acesso integrado.'}; }
-  }
-
-  var template = HtmlService.createTemplateFromFile('Index');
-  template.atletaHandoffToken = atletaHandoffToken;
-  template.portalGiroUrl = 'https://script.google.com/macros/s/AKfycbxq8mpymCTqbMGwMbRpNFxb2_VnDQenwo1TdY6YhYtQw8njg1GBhX1a3Bvt95xSzh6h/exec';
-  var html = template.evaluate().getContent();
-
+  var integrado = page === 'atleta' && !!atletaHandoffToken; var embedded = String(parametros.embedded || '').trim() === '1'; var bootSession = null;
+  if (integrado) { try { bootSession = atletaTrocarHandoffPorSessao(atletaHandoffToken); } catch (err) { bootSession = {ok:false,code:'HANDOFF_ERRO',msg:err&&err.message?err.message:'Não foi possível validar o acesso integrado.'}; } }
+  var template = HtmlService.createTemplateFromFile('Index'); template.atletaHandoffToken = atletaHandoffToken; template.portalGiroUrl = 'https://script.google.com/macros/s/AKfycbxq8mpymCTqbMGwMbRpNFxb2_VnDQenwo1TdY6YhYtQw8njg1GBhX1a3Bvt95xSzh6h/exec'; var html = template.evaluate().getContent();
   var bootJson = JSON.stringify({integrado:integrado,embedded:embedded,sessao:bootSession}).replace(/</g,'\\u003c');
   var preBoot = '<script>(function(){window.__MEU_GIRO_BOOT__='+bootJson+';var b=window.__MEU_GIRO_BOOT__||{};window.__MEU_GIRO_EMBEDDED__=!!b.embedded;if(b.embedded&&document.documentElement)document.documentElement.classList.add("portal-embedded-preboot");if(b.integrado){try{["MEU_GIRO_CURRENT_USER","MEU_GIRO_SERVER_SESSION","meuGiro.loginSession","meuGiro.painelState","meuGiro.desafioEmFocoKey"].forEach(function(k){localStorage.removeItem(k);});}catch(e){}}})();</script>';
   if (/<\/head>/i.test(html)) html=html.replace(/<\/head>/i,preBoot+'\n</head>'); else html=preBoot+html;
-
-  try {
-    var estadoAtletaPatch=HtmlService.createHtmlOutputFromFile('AcessoEstadoAtletaPatch').getContent();
-    if (/<\/body>/i.test(html)) html=html.replace(/<\/body>/i,estadoAtletaPatch+'\n</body>'); else html+=estadoAtletaPatch;
-  } catch(eEstadoAtleta){ Logger.log('[MEU_GIRO_ESTADO_ATLETA] falha ao injetar patch: '+(eEstadoAtleta&&eEstadoAtleta.message?eEstadoAtleta.message:eEstadoAtleta)); }
-
-  var guard='<script>(function(){var boot=window.__MEU_GIRO_BOOT__||{};PORTAL_EMBEDDED_MODE=!!boot.embedded;try{applyEmbeddedMode();ensureUnifiedAppStyles();}catch(e){};function limparTudo(){try{["MEU_GIRO_CURRENT_USER","MEU_GIRO_SERVER_SESSION","meuGiro.loginSession","meuGiro.painelState","meuGiro.desafioEmFocoKey"].forEach(function(k){localStorage.removeItem(k);});}catch(e){}}if(typeof clearUserSession==="function"){var _clearUserSession=clearUserSession;clearUserSession=function(){try{_clearUserSession();}finally{limparTudo();}};}if(typeof logoutUser==="function"){var _logoutUser=logoutUser;logoutUser=function(){limparTudo();return _logoutUser.apply(this,arguments);};}if(!boot.integrado)return;if(typeof tentarRestaurarSessaoPersistida==="function")tentarRestaurarSessaoPersistida=function(){return false;};limparTudo();currentUser=null;currentPainel=null;try{window.__painelAtual=null;}catch(e){}var s=boot.sessao||{};if(s.ok===true&&s.usuario&&s.usuario.id_dgmb&&s.session_token){currentUser={id_dgmb:String(s.usuario.id_dgmb),nome:"",cidade_uf:""};try{saveUserSession(currentUser);saveServerSession(s.session_token,s.expira_em);updateAuthUI();showScreen("painel");carregarPainel("portal-handoff");}catch(e){console.error("Falha ao abrir painel integrado",e);}}else{try{updateAuthUI();showScreen("login");}catch(e){}}})();</script>';
+  try { var estadoAtletaPatch=HtmlService.createHtmlOutputFromFile('AcessoEstadoAtletaPatch').getContent(); if (/<\/body>/i.test(html)) html=html.replace(/<\/body>/i,estadoAtletaPatch+'\n</body>'); else html+=estadoAtletaPatch; } catch(eEstadoAtleta){ Logger.log('[MEU_GIRO_ESTADO_ATLETA] falha ao injetar patch: '+(eEstadoAtleta&&eEstadoAtleta.message?eEstadoAtleta.message:eEstadoAtleta)); }
+  try { var identidadeAtleta=HtmlService.createHtmlOutputFromFile('AtletaIdentidadeGlobal').getContent(); if (/<\/body>/i.test(html)) html=html.replace(/<\/body>/i,identidadeAtleta+'\n</body>'); else html+=identidadeAtleta; } catch(eIdentidade){ Logger.log('[MEU_GIRO_IDENTIDADE] falha ao injetar identidade: '+(eIdentidade&&eIdentidade.message?eIdentidade.message:eIdentidade)); }
+  var guard='<script>(function(){var boot=window.__MEU_GIRO_BOOT__||{};PORTAL_EMBEDDED_MODE=!!boot.embedded;try{applyEmbeddedMode();ensureUnifiedAppStyles();}catch(e){};function limparTudo(){try{["MEU_GIRO_CURRENT_USER","MEU_GIRO_SERVER_SESSION","meuGiro.loginSession","meuGiro.painelState","meuGiro.desafioEmFocoKey"].forEach(function(k){localStorage.removeItem(k);});}catch(e){}}if(typeof clearUserSession==="function"){var _clearUserSession=clearUserSession;clearUserSession=function(){try{_clearUserSession();}finally{limparTudo();}};}if(typeof logoutUser==="function"){var _logoutUser=logoutUser;logoutUser=function(){limparTudo();return _logoutUser.apply(this,arguments);};}if(!boot.integrado)return;if(typeof tentarRestaurarSessaoPersistida==="function")tentarRestaurarSessaoPersistida=function(){return false;};limparTudo();currentUser=null;currentPainel=null;try{window.__painelAtual=null;}catch(e){}var s=boot.sessao||{};if(s.ok===true&&s.usuario&&s.usuario.id_dgmb&&s.session_token){currentUser={id_dgmb:String(s.usuario.id_dgmb),nome:String(s.usuario.nome||""),cidade_uf:String(s.usuario.cidade_uf||"")};try{saveUserSession(currentUser);saveServerSession(s.session_token,s.expira_em);updateAuthUI();if(window.DGMBMeuGiroIdentidade)window.DGMBMeuGiroIdentidade.atualizar();showScreen("painel");carregarPainel("portal-handoff");}catch(e){console.error("Falha ao abrir painel integrado",e);}}else{try{updateAuthUI();showScreen("login");}catch(e){}}})();</script>';
   if (/<\/body>/i.test(html)) html=html.replace(/<\/body>/i,guard+'\n</body>'); else html+=guard;
-
   return HtmlService.createHtmlOutput(html).setTitle('MEU GIRO').addMetaTag('viewport','width=device-width, initial-scale=1').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
-
 function include(filename) { return HtmlService.createHtmlOutputFromFile(filename).getContent(); }
 function doPost(e) { return portalAdminApiDoPost_(e); }
