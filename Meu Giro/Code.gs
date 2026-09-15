@@ -66,7 +66,7 @@ function doGet(e) {
     'window.__MEU_GIRO_BOOT__=' + bootJson + ';' +
     'var b=window.__MEU_GIRO_BOOT__||{};' +
     'if(b.integrado){try{["MEU_GIRO_CURRENT_USER","MEU_GIRO_SERVER_SESSION","meuGiro.loginSession","meuGiro.painelState","meuGiro.desafioEmFocoKey"].forEach(function(k){localStorage.removeItem(k);});}catch(e){}}' +
-    '})();<\\/script>';
+    '})();</script>';
 
   if (/<\/head>/i.test(html)) {
     html = html.replace(/<\/head>/i, preBoot + '\n</head>');
@@ -94,7 +94,7 @@ function doGet(e) {
       'var m=document.getElementById("login-msg");if(m)m.innerText=(s&&s.msg)||"Acesso integrado inválido ou expirado. Volte ao Portal Giro.";' +
       'try{showScreen("login");}catch(e){};' +
     '}' +
-    '})();<\\/script>';
+    '})();</script>';
 
   if (/<\/body>/i.test(html)) {
     html = html.replace(/<\/body>/i, guard + '\n</body>');
