@@ -32,9 +32,6 @@ function doGet(e) {
   var embedded = String(parametros.embedded || '').trim() === '1';
   var bootSession = null;
 
-  // Fluxo integrado: o handoff é consumido no servidor antes de renderizar a tela.
-  // Assim o navegador nunca decide qual ID_DGMB deve abrir e nenhuma sessão antiga
-  // do localStorage pode prevalecer sobre o atleta vindo do Portal.
   if (integrado) {
     try {
       bootSession = atletaTrocarHandoffPorSessao(atletaHandoffToken);
@@ -60,8 +57,6 @@ function doGet(e) {
     sessao: bootSession
   }).replace(/</g, '\\u003c');
 
-  // Este bloco entra antes de qualquer Script.html/AuthSession.html.
-  // Ele limpa toda identidade persistida antes de qualquer restauração automática.
   var preBoot = '<script>(function(){' +
     'window.__MEU_GIRO_BOOT__=' + bootJson + ';' +
     'var b=window.__MEU_GIRO_BOOT__||{};' +
@@ -72,6 +67,16 @@ function doGet(e) {
     html = html.replace(/<\/head>/i, preBoot + '\n</head>');
   } else {
     html = preBoot + html;
+  }
+
+  // Orientações de estado são carregadas depois do Script/AuthSession para poder
+  // reutilizar o modal global já existente sem duplicar componentes visuais.
+  try {
+    var estadoAtletaPatch = HtmlService.createHtmlOutputFromFile('AcessoEstadoAtletaPatch').getContent();
+    if (/<\/body>/i.test(html)) html = html.replace(/<\/body>/i, estadoAtletaPatch + '\n</body>');
+    else html += estadoAtletaPatch;
+  } catch (eEstadoAtleta) {
+    Logger.log('[MEU_GIRO_ESTADO_ATLETA] falha ao injetar patch: ' + (eEstadoAtleta && eEstadoAtleta.message ? eEstadoAtleta.message : eEstadoAtleta));
   }
 
   var guard = '<script>(function(){' +
@@ -109,9 +114,6 @@ function doGet(e) {
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
-/**
- * Permite incluir arquivos HTML dentro do Index.html
- */
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
