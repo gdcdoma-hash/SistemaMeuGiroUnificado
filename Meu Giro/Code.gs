@@ -17,14 +17,9 @@ function doGet(e) {
         .addMetaTag('viewport', 'width=device-width, initial-scale=1')
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
     }
-
     var templateAdmin = HtmlService.createTemplateFromFile('AdminMeuGiro');
     templateAdmin.handoffToken = token;
-    return templateAdmin
-      .evaluate()
-      .setTitle('MEU GIRO — ADMIN')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    return templateAdmin.evaluate().setTitle('MEU GIRO — ADMIN').addMetaTag('viewport','width=device-width, initial-scale=1').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
   var atletaHandoffToken = page === 'atleta' ? String(parametros.handoff || '').trim() : '';
@@ -33,91 +28,29 @@ function doGet(e) {
   var bootSession = null;
 
   if (integrado) {
-    try {
-      bootSession = atletaTrocarHandoffPorSessao(atletaHandoffToken);
-    } catch (err) {
-      bootSession = {
-        ok: false,
-        code: 'HANDOFF_ERRO',
-        msg: err && err.message ? err.message : 'Não foi possível validar o acesso integrado.'
-      };
-    }
+    try { bootSession = atletaTrocarHandoffPorSessao(atletaHandoffToken); }
+    catch (err) { bootSession = {ok:false,code:'HANDOFF_ERRO',msg:err&&err.message?err.message:'Não foi possível validar o acesso integrado.'}; }
   }
 
   var template = HtmlService.createTemplateFromFile('Index');
   template.atletaHandoffToken = atletaHandoffToken;
   template.portalGiroUrl = 'https://script.google.com/macros/s/AKfycbxq8mpymCTqbMGwMbRpNFxb2_VnDQenwo1TdY6YhYtQw8njg1GBhX1a3Bvt95xSzh6h/exec';
+  var html = template.evaluate().getContent();
 
-  var avaliado = template.evaluate();
-  var html = avaliado.getContent();
+  var bootJson = JSON.stringify({integrado:integrado,embedded:embedded,sessao:bootSession}).replace(/</g,'\\u003c');
+  var preBoot = '<script>(function(){window.__MEU_GIRO_BOOT__='+bootJson+';var b=window.__MEU_GIRO_BOOT__||{};window.__MEU_GIRO_EMBEDDED__=!!b.embedded;if(b.embedded&&document.documentElement)document.documentElement.classList.add("portal-embedded-preboot");if(b.integrado){try{["MEU_GIRO_CURRENT_USER","MEU_GIRO_SERVER_SESSION","meuGiro.loginSession","meuGiro.painelState","meuGiro.desafioEmFocoKey"].forEach(function(k){localStorage.removeItem(k);});}catch(e){}}})();</script>';
+  if (/<\/head>/i.test(html)) html=html.replace(/<\/head>/i,preBoot+'\n</head>'); else html=preBoot+html;
 
-  var bootJson = JSON.stringify({
-    integrado: integrado,
-    embedded: embedded,
-    sessao: bootSession
-  }).replace(/</g, '\\u003c');
-
-  var preBoot = '<script>(function(){' +
-    'window.__MEU_GIRO_BOOT__=' + bootJson + ';' +
-    'var b=window.__MEU_GIRO_BOOT__||{};' +
-    'if(b.integrado){try{["MEU_GIRO_CURRENT_USER","MEU_GIRO_SERVER_SESSION","meuGiro.loginSession","meuGiro.painelState","meuGiro.desafioEmFocoKey"].forEach(function(k){localStorage.removeItem(k);});}catch(e){}}' +
-    '})();</script>';
-
-  if (/<\/head>/i.test(html)) {
-    html = html.replace(/<\/head>/i, preBoot + '\n</head>');
-  } else {
-    html = preBoot + html;
-  }
-
-  // Orientações de estado são carregadas depois do Script/AuthSession para poder
-  // reutilizar o modal global já existente sem duplicar componentes visuais.
   try {
-    var estadoAtletaPatch = HtmlService.createHtmlOutputFromFile('AcessoEstadoAtletaPatch').getContent();
-    if (/<\/body>/i.test(html)) html = html.replace(/<\/body>/i, estadoAtletaPatch + '\n</body>');
-    else html += estadoAtletaPatch;
-  } catch (eEstadoAtleta) {
-    Logger.log('[MEU_GIRO_ESTADO_ATLETA] falha ao injetar patch: ' + (eEstadoAtleta && eEstadoAtleta.message ? eEstadoAtleta.message : eEstadoAtleta));
-  }
+    var estadoAtletaPatch=HtmlService.createHtmlOutputFromFile('AcessoEstadoAtletaPatch').getContent();
+    if (/<\/body>/i.test(html)) html=html.replace(/<\/body>/i,estadoAtletaPatch+'\n</body>'); else html+=estadoAtletaPatch;
+  } catch(eEstadoAtleta){ Logger.log('[MEU_GIRO_ESTADO_ATLETA] falha ao injetar patch: '+(eEstadoAtleta&&eEstadoAtleta.message?eEstadoAtleta.message:eEstadoAtleta)); }
 
-  var guard = '<script>(function(){' +
-    'var boot=window.__MEU_GIRO_BOOT__||{};' +
-    'function limparTudo(){try{["MEU_GIRO_CURRENT_USER","MEU_GIRO_SERVER_SESSION","meuGiro.loginSession","meuGiro.painelState","meuGiro.desafioEmFocoKey"].forEach(function(k){localStorage.removeItem(k);});}catch(e){}}' +
-    'if(typeof clearUserSession==="function"){var _clearUserSession=clearUserSession;clearUserSession=function(){try{_clearUserSession();}finally{limparTudo();}};}' +
-    'if(typeof logoutUser==="function"){var _logoutUser=logoutUser;logoutUser=function(){limparTudo();return _logoutUser.apply(this,arguments);};}' +
-    'if(!boot.integrado){return;}' +
-    'PORTAL_EMBEDDED_MODE=!!boot.embedded;try{applyEmbeddedMode();}catch(e){};' +
-    'if(typeof tentarRestaurarSessaoPersistida==="function"){tentarRestaurarSessaoPersistida=function(){return false;};}' +
-    'limparTudo();currentUser=null;currentPainel=null;try{window.__painelAtual=null;}catch(e){};' +
-    'var s=boot.sessao||{};' +
-    'if(s.ok===true&&s.usuario&&s.usuario.id_dgmb&&s.session_token){' +
-      'currentUser={id_dgmb:String(s.usuario.id_dgmb),nome:"",cidade_uf:""};' +
-      'try{saveUserSession(currentUser);}catch(e){};' +
-      'try{saveServerSession(s.session_token,s.expira_em);}catch(e){};' +
-      'try{updateAuthUI();showScreen("painel");carregarPainel("portal-handoff");}catch(e){console.error("Falha ao abrir painel integrado",e);}' +
-    '}else{' +
-      'try{updateAuthUI();}catch(e){};' +
-      'var m=document.getElementById("login-msg");if(m)m.innerText=(s&&s.msg)||"Acesso integrado inválido ou expirado. Volte ao Portal Giro.";' +
-      'try{showScreen("login");}catch(e){};' +
-    '}' +
-    '})();</script>';
+  var guard='<script>(function(){var boot=window.__MEU_GIRO_BOOT__||{};PORTAL_EMBEDDED_MODE=!!boot.embedded;try{applyEmbeddedMode();ensureUnifiedAppStyles();}catch(e){};function limparTudo(){try{["MEU_GIRO_CURRENT_USER","MEU_GIRO_SERVER_SESSION","meuGiro.loginSession","meuGiro.painelState","meuGiro.desafioEmFocoKey"].forEach(function(k){localStorage.removeItem(k);});}catch(e){}}if(typeof clearUserSession==="function"){var _clearUserSession=clearUserSession;clearUserSession=function(){try{_clearUserSession();}finally{limparTudo();}};}if(typeof logoutUser==="function"){var _logoutUser=logoutUser;logoutUser=function(){limparTudo();return _logoutUser.apply(this,arguments);};}if(!boot.integrado)return;if(typeof tentarRestaurarSessaoPersistida==="function")tentarRestaurarSessaoPersistida=function(){return false;};limparTudo();currentUser=null;currentPainel=null;try{window.__painelAtual=null;}catch(e){}var s=boot.sessao||{};if(s.ok===true&&s.usuario&&s.usuario.id_dgmb&&s.session_token){currentUser={id_dgmb:String(s.usuario.id_dgmb),nome:"",cidade_uf:""};try{saveUserSession(currentUser);saveServerSession(s.session_token,s.expira_em);updateAuthUI();showScreen("painel");carregarPainel("portal-handoff");}catch(e){console.error("Falha ao abrir painel integrado",e);}}else{try{updateAuthUI();showScreen("login");}catch(e){}}})();</script>';
+  if (/<\/body>/i.test(html)) html=html.replace(/<\/body>/i,guard+'\n</body>'); else html+=guard;
 
-  if (/<\/body>/i.test(html)) {
-    html = html.replace(/<\/body>/i, guard + '\n</body>');
-  } else {
-    html += guard;
-  }
-
-  return HtmlService
-    .createHtmlOutput(html)
-    .setTitle('MEU GIRO')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  return HtmlService.createHtmlOutput(html).setTitle('MEU GIRO').addMetaTag('viewport','width=device-width, initial-scale=1').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
-function include(filename) {
-  return HtmlService.createHtmlOutputFromFile(filename).getContent();
-}
-
-function doPost(e) {
-  return portalAdminApiDoPost_(e);
-}
+function include(filename) { return HtmlService.createHtmlOutputFromFile(filename).getContent(); }
+function doPost(e) { return portalAdminApiDoPost_(e); }
