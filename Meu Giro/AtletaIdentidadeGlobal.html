@@ -1,0 +1,6 @@
+<style>
+#dgmb-meugiro-identidade{display:none;width:min(680px,calc(100% - 24px));margin:6px auto 0;padding:6px 10px;box-sizing:border-box;text-align:center;color:#64748b;font:700 12px/1.25 Arial,sans-serif}body.portal-embedded-mode #dgmb-meugiro-identidade{display:block}#dgmb-meugiro-identidade strong{color:#0f172a;font-weight:900}
+</style>
+<script>
+(function(){function garantir_(){var nav=document.getElementById('dgmb-meugiro-embedded-nav');if(!nav)return null;var box=document.getElementById('dgmb-meugiro-identidade');if(!box){box=document.createElement('div');box.id='dgmb-meugiro-identidade';box.setAttribute('aria-live','polite');nav.insertAdjacentElement('afterend',box)}return box}function atualizar_(){var box=garantir_();if(!box)return;var nome='';try{nome=String(currentUser&&currentUser.nome||'').trim()}catch(e){}if(!nome){box.textContent='';box.style.visibility='hidden';return}box.innerHTML='Atleta: <strong></strong>';box.querySelector('strong').textContent=nome;box.style.visibility='visible'}window.DGMBMeuGiroIdentidade={atualizar:atualizar_};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){atualizar_();setInterval(atualizar_,700)});else{atualizar_();setInterval(atualizar_,700)}})();
+</script>
