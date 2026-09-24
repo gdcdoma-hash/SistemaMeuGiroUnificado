@@ -8,7 +8,8 @@ function doGet(e) {
   return template
     .evaluate()
     .setTitle('MEU GIRO')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 /**
