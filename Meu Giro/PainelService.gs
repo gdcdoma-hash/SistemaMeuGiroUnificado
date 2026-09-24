@@ -712,7 +712,8 @@ function painelMG_obterInscricaoLevePorDesafio_(idDgmb, desafioPrincipal) {
   var idxPeriodo = getOptionalColumnIndex_(map, ['periodo_desafio', 'periodo desafio', 'período_desafio', 'período desafio']);
   var idxInicio = getOptionalColumnIndex_(map, ['data_inicio_desafio', 'data inicio desafio', 'data início desafio']);
   var idxFim = getOptionalColumnIndex_(map, ['data_fim_desafio', 'data fim desafio']);
-  var periodosLista = buildListaDesafiosContexto_(getSpreadsheet_()).periodos;
+  var contextoLista = buildListaDesafiosContexto_(getSpreadsheet_());
+  var periodosLista = contextoLista.periodos;
 
   var alvoInscricao = painelMG_norm_(desafioPrincipal && desafioPrincipal.id_inscricao);
   var alvoDesafio = painelMG_norm_(desafioPrincipal && desafioPrincipal.id_desafio);
@@ -739,19 +740,24 @@ function painelMG_obterInscricaoLevePorDesafio_(idDgmb, desafioPrincipal) {
       status_confirmacao: statusConfirmacao,
       status_pagamento: statusPagamento
     });
-    var periodoDatas = {
-      inicio: normalizarDataISO_(idxInicio > -1 ? row[idxInicio] : ''),
-      fim: normalizarDataISO_(idxFim > -1 ? row[idxFim] : '')
-    };
-    var periodoTexto = idxPeriodo > -1 ? extrairPeriodoDesafioTexto_(row[idxPeriodo]) : { inicio: '', fim: '' };
-    var periodoLista = (idDesafio && periodosLista.byId[idDesafio]) || { inicio: '', fim: '' };
-    var periodoSelecionado = periodoCompletoValido_(periodoTexto)
-      ? periodoTexto
-      : periodoCompletoValido_(periodoLista)
-        ? periodoLista
-        : periodoDatas;
-    var inicio = periodoCompletoValido_(periodoSelecionado) ? periodoSelecionado.inicio : '';
-    var fim = periodoCompletoValido_(periodoSelecionado) ? periodoSelecionado.fim : '';
+    var periodoTextoLinha = idxPeriodo > -1 ? painelMG_norm_(row[idxPeriodo]) : '';
+    var inicioLinha = idxInicio > -1 ? row[idxInicio] : '';
+    var periodoLista = resolverPeriodoListaDesafio_(periodosLista, idDesafio, periodoTextoLinha, inicioLinha);
+    var tipoMeta = resolverTipoMetaListaDesafio_(contextoLista.tipoMeta, idDesafio, periodoTextoLinha, inicioLinha) ||
+      painelMG_norm_(periodoLista.tipo_meta).toUpperCase();
+    var periodoSelecionado = montarPeriodoHistoricoVinculo_(row, {
+      periodo: idxPeriodo,
+      inicio: idxInicio,
+      fim: idxFim
+    }, periodoLista, {
+      id_dgmb: id,
+      id_desafio: idDesafio || '',
+      id_inscricao: idInscricao || '',
+      id_item_estoque: idItem || '',
+      origem: 'painelMG_obterInscricaoLevePorDesafio_'
+    }, tipoMeta);
+    var inicio = periodoSelecionado.inicio || '';
+    var fim = periodoSelecionado.fim || '';
 
     var inscricao = {
       id_dgmb: id,
