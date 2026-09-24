@@ -62,5 +62,31 @@ window.addEventListener('message',function(ev){
 function logoutUser(){const s=loadServerSession();if(s&&s.token)google.script.run.withFailureHandler(function(){}).atletaEncerrarSessao(s.token);currentUser=null;currentPainel=null;window.__painelAtual=null;clearUserSession();clearServerSession();updateAuthUI();showScreen('inicio')}
 function iniciarHandoffAtleta_(handoff){handoff=String(handoff||'').trim();if(!handoff)return false;currentUser=null;currentPainel=null;clearUserSession();clearServerSession();applyEmbeddedMode();showScreen('inicio');google.script.run.withSuccessHandler(function(res){if(!res||res.ok!==true||!res.usuario||!res.usuario.id_dgmb){showScreen('login');return}currentUser={id_dgmb:String(res.usuario.id_dgmb),nome:'',cidade_uf:''};saveUserSession(currentUser);saveServerSession(res.session_token,res.expira_em);updateAuthUI();showScreen('painel');carregarPainel()}).atletaTrocarHandoffPorSessao(handoff);return true}
 function processarLocalizacaoInicial_(loc){const p=loc&&loc.parameter?loc.parameter:{};PORTAL_LOCATION_PARAMS=p;PORTAL_EMBEDDED_MODE=PORTAL_EMBEDDED_MODE||String(p.embedded||'').trim()==='1';applyEmbeddedMode();const page=String(p.page||'').toLowerCase(),handoff=String(p.handoff||'').trim();if(page==='atleta'&&handoff){iniciarHandoffAtleta_(handoff);return}if(PORTAL_EMBEDDED_MODE){garantirMenuEmbedded();return}const saved=loadUserSession();if(saved&&saved.id_dgmb){currentUser=saved;updateAuthUI();showScreen('painel');carregarPainel()}else updateAuthUI()}
-function restoreUserSessionOnLoad(){ensureUnifiedAppStyles();const boot=window.__MEU_GIRO_BOOT__||{};if(boot.embedded){PORTAL_EMBEDDED_MODE=true;applyEmbeddedMode()}if(window.google&&google.script&&google.script.url)google.script.url.getLocation(function(loc){processarLocalizacaoInicial_(loc||{})})}
+function restoreUserSessionOnLoad(){
+  ensureUnifiedAppStyles();
+  const boot=window.__MEU_GIRO_BOOT__||{};
+  if(boot.embedded){
+    PORTAL_EMBEDDED_MODE=true;
+    applyEmbeddedMode();
+  }
+
+  var pageBoot=String(boot.page||'').trim().toLowerCase();
+  var handoffBoot=String(boot.handoff||'').trim();
+  if(pageBoot==='atleta'&&handoffBoot){
+    processarLocalizacaoInicial_({
+      parameter:{
+        page:'atleta',
+        handoff:handoffBoot,
+        embedded:boot.embedded?'1':''
+      }
+    });
+    return;
+  }
+
+  if(window.google&&google.script&&google.script.url){
+    google.script.url.getLocation(function(loc){processarLocalizacaoInicial_(loc||{})});
+  }else{
+    processarLocalizacaoInicial_({parameter:{}});
+  }
+}
 </script>
