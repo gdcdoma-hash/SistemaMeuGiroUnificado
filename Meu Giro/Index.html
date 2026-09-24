@@ -113,7 +113,11 @@
         </div>
 
         <div class="painel-progresso-donut-grid" aria-label="Progresso do desafio em foco">
-          <div id="progress-donut" class="painel-progress-donut" style="--percent: 0" role="img" aria-label="0% concluído">
+          <div id="progress-donut" class="painel-progress-donut" role="img" aria-label="0% concluído">
+            <svg class="painel-progress-donut-svg" viewBox="0 0 120 120" aria-hidden="true">
+              <circle class="painel-progress-donut-track" cx="60" cy="60" r="48"></circle>
+              <circle id="progress-donut-bar" class="painel-progress-donut-bar" cx="60" cy="60" r="48"></circle>
+            </svg>
             <div class="painel-progress-donut-centro">
               <p id="progress-percent" class="painel-percentual">0%</p>
               <span>concluído</span>
@@ -148,14 +152,13 @@
       </div>
 
       <div class="painel-compartilhar-wrap" data-html2canvas-ignore="true">
-        <button id="btn-compartilhar-card" class="painel-compartilhar-btn" type="button" onclick="compartilharCardPainel()">
+        <button id="btn-compartilhar-card" class="painel-compartilhar-btn" type="button" onclick="compartilharCardPainel()" aria-label="Compartilhar meu progresso" title="Compartilhar meu progresso">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="18" cy="5" r="3"></circle>
             <circle cx="6" cy="12" r="3"></circle>
             <circle cx="18" cy="19" r="3"></circle>
             <path d="M8.6 10.5l6.8-4M8.6 13.5l6.8 4"></path>
           </svg>
-          <span>Compartilhar meu progresso</span>
         </button>
         <p id="painel-compartilhar-feedback" class="painel-compartilhar-feedback" aria-live="polite"></p>
       </div>
