@@ -3196,9 +3196,13 @@ function atualizarContextoVisualRanking(desafioAtual) {
 function atualizarDonutProgressoPainel_(percentual) {
   var percentualNormalizado = Math.max(0, Math.min(100, toFiniteNumber(percentual, 0)));
   var donut = document.getElementById('progress-donut');
+  var barra = document.getElementById('progress-donut-bar');
   if (!donut) return;
 
-  donut.style.setProperty('--percent', percentualNormalizado);
+  var comprimento = 301.593;
+  var offset = comprimento * (1 - percentualNormalizado / 100);
+  if (barra) barra.style.strokeDashoffset = String(offset);
+
   donut.setAttribute('aria-label', formatNumber(percentualNormalizado) + '% concluído');
 }
 
@@ -3342,12 +3346,12 @@ async function compartilharCardPainel() {
     return;
   }
 
-  var textoOriginal = btn ? btn.querySelector('span') : null;
-  var labelOriginal = textoOriginal ? textoOriginal.textContent : '';
-
-  if (btn) btn.disabled = true;
-  if (textoOriginal) textoOriginal.textContent = 'Preparando imagem...';
-  setCompartilharCardFeedback_('');
+  if (btn) {
+    btn.disabled = true;
+    btn.setAttribute('aria-busy', 'true');
+    btn.title = 'Preparando imagem...';
+  }
+  setCompartilharCardFeedback_('Preparando imagem...');
 
   try {
     var html2canvasFn = await carregarHtml2Canvas_();
@@ -3398,8 +3402,11 @@ async function compartilharCardPainel() {
     console.error('Erro ao compartilhar card do Meu Giro:', erro);
     setCompartilharCardFeedback_('Não foi possível gerar o card agora. Tente novamente.');
   } finally {
-    if (btn) btn.disabled = false;
-    if (textoOriginal) textoOriginal.textContent = labelOriginal || 'Compartilhar meu progresso';
+    if (btn) {
+      btn.disabled = false;
+      btn.removeAttribute('aria-busy');
+      btn.title = 'Compartilhar meu progresso';
+    }
   }
 }
 
