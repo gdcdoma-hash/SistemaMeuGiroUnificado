@@ -3694,18 +3694,15 @@
   }
 
   .painel-compartilhar-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 9px;
-    min-height: 44px;
-    padding: 10px 16px;
+    display: inline-grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
     border: 1px solid #fdba74;
-    border-radius: 999px;
+    border-radius: 50%;
     background: #ffffff;
     color: #c2410c;
-    font-size: 13px;
-    font-weight: 900;
     cursor: pointer;
     box-shadow: 0 8px 22px rgba(249, 115, 22, 0.10);
   }
@@ -3747,7 +3744,6 @@
   }
 
   .painel-progress-donut {
-    --percent: 0;
     position: relative;
     display: grid;
     place-items: center;
@@ -3756,18 +3752,35 @@
     justify-self: center;
     align-self: center;
     border-radius: 50%;
-    background: conic-gradient(#22c55e 0deg, #22c55e calc(var(--percent) * 3.6deg), #fde7c8 0deg);
-    box-shadow: inset 0 0 0 1px rgba(249, 115, 22, 0.10), 0 14px 30px rgba(34, 197, 94, 0.14);
-    transition: background 0.35s ease;
+    background: #ffffff;
+    box-shadow: 0 14px 30px rgba(34, 197, 94, 0.14);
   }
 
-  .painel-progress-donut::after {
-    content: '';
+  .painel-progress-donut-svg {
     position: absolute;
-    inset: 18%;
-    border-radius: 50%;
-    background: #ffffff;
-    box-shadow: inset 0 0 0 1px #ffedd5;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .painel-progress-donut-track,
+  .painel-progress-donut-bar {
+    fill: none;
+    stroke-width: 18;
+  }
+
+  .painel-progress-donut-track {
+    stroke: #fde7c8;
+  }
+
+  .painel-progress-donut-bar {
+    stroke: #22c55e;
+    stroke-dasharray: 301.593;
+    stroke-dashoffset: 301.593;
+    transform: rotate(-90deg);
+    transform-origin: 60px 60px;
+    transition: stroke-dashoffset 0.35s ease;
   }
 
   .painel-progress-donut-centro {
@@ -4438,7 +4451,8 @@
     }
 
     .painel-compartilhar-btn {
-      width: min(100%, 330px);
+      width: 44px;
+      height: 44px;
     }
   }
 
