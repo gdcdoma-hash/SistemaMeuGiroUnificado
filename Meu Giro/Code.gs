@@ -2,7 +2,9 @@ function doGet(e) {
   var template = HtmlService.createTemplateFromFile('Index');
   var parametros = e && e.parameter ? e.parameter : {};
   template.meuGiroBootJson = JSON.stringify({
-    embedded: String(parametros.embedded || '').trim() === '1'
+    embedded: String(parametros.embedded || '').trim() === '1',
+    page: String(parametros.page || '').trim().toLowerCase(),
+    handoff: String(parametros.handoff || '').trim()
   });
 
   return template
