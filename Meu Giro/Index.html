@@ -93,18 +93,22 @@
     </section>
 
     <section id="screen-painel" class="screen">
-      <div class="card painel-inicio-card">
+      <div id="painel-share-card" class="card painel-inicio-card">
         <input id="painel-id-dgmb" type="hidden">
         <span id="painel-cidade" hidden></span>
 
         <div class="painel-desafio-topo">
-          <p class="painel-desafio-label">Desafio em foco</p>
+          <div class="painel-card-kicker-row">
+            <p class="painel-desafio-label">Desafio em foco</p>
+            <span class="painel-card-brand">MEU GIRO</span>
+          </div>
           <h2 id="painel-desafio-nome">DESAFIO VOCÊ NA MEDALHA</h2>
+          <p id="painel-card-atleta" class="painel-card-atleta">ATLETA</p>
           <div class="painel-desafio-detalhes" aria-label="Prazo do desafio em foco">
-            <p><span>Início:</span><strong id="painel-desafio-inicio">-</strong></p>
-            <p><span>Término:</span><strong id="painel-desafio-termino">-</strong></p>
-            <p><span>Prazo:</span><strong id="painel-desafio-prazo">-</strong></p>
-            <p class="painel-desafio-restante"><span>Tempo restante:</span><strong id="painel-desafio-restante">-</strong></p>
+            <p><span>Início</span><strong id="painel-desafio-inicio">-</strong></p>
+            <p><span>Término</span><strong id="painel-desafio-termino">-</strong></p>
+            <p><span>Prazo</span><strong id="painel-desafio-prazo">-</strong></p>
+            <p class="painel-desafio-restante"><span>Tempo restante</span><strong id="painel-desafio-restante">-</strong></p>
           </div>
         </div>
 
@@ -136,6 +140,24 @@
           <p class="painel-error-text">Você pode tentar novamente agora. Se a falha continuar, aguarde um instante e repita a atualização.</p>
           <button id="btn-painel-retry" class="btn-secondary painel-error-btn" type="button" onclick="carregarPainel('manual')">Tentar novamente</button>
         </div>
+
+        <div class="painel-card-assinatura" aria-hidden="true">
+          <span>DESAFIO GIRO</span>
+          <small>paixão por pedalar</small>
+        </div>
+      </div>
+
+      <div class="painel-compartilhar-wrap" data-html2canvas-ignore="true">
+        <button id="btn-compartilhar-card" class="painel-compartilhar-btn" type="button" onclick="compartilharCardPainel()">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="18" cy="5" r="3"></circle>
+            <circle cx="6" cy="12" r="3"></circle>
+            <circle cx="18" cy="19" r="3"></circle>
+            <path d="M8.6 10.5l6.8-4M8.6 13.5l6.8 4"></path>
+          </svg>
+          <span>Compartilhar meu progresso</span>
+        </button>
+        <p id="painel-compartilhar-feedback" class="painel-compartilhar-feedback" aria-live="polite"></p>
       </div>
 
       <div id="desafio-selecionado-card" class="desafio-selecionado-container" hidden aria-live="polite"></div>
