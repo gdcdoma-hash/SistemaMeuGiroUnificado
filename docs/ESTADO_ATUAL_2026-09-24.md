@@ -9,7 +9,7 @@ Este documento é a referência principal para retomada do desenvolvimento do Me
 - Código Apps Script ativo: pasta `Meu Giro/`
 - Script ID DEV: `1N-10MQMYaq_91O75W_TFF837vPR6KfSDpJwVQJNS7776IwGo56NuppzG`
 - Deployment DEV: `AKfycbxCV-6fDri2y2ppdPC1JPLqCTxEOwXLuSameujgVkoYokm-sfQgPtDY4oQQ0Z_uVCmRKg`
-- Versão DEV confirmada em 24/09/2026: `@82`
+- Versão DEV confirmada em 24/09/2026: `@84`
 - Workflow: `.github/workflows/sync-gas.yml`
 - O workflow executa `clasp push --force` e atualiza automaticamente este deployment DEV.
 - Produção não deve ser atualizada automaticamente.
@@ -80,6 +80,19 @@ Esta configuração foi restaurada e homologada em 24/09/2026.
 
 ### Quando aberto diretamente
 O Meu Giro preserva acesso/login próprio e não depende obrigatoriamente do Portal para existir.
+
+## 5.1. Bootstrap da navegação integrada
+
+Em 24/09/2026 foi corrigido um estado neutro em que o Meu Giro abria pelo Portal sem a navegação própria e sem o botão de retorno ao Portal.
+
+Regra atual:
+- o servidor injeta no boot `embedded`, `page` e `handoff`;
+- quando existe `page=atleta` + `handoff`, o handoff integrado tem prioridade sobre restauração de sessão local;
+- o modo embedded é aplicado antes de a UI autenticada ser sincronizada;
+- no modo embedded deve aparecer `Portal Giro | Início | Desafios | Registrar | Conquistas`;
+- no modo independente autenticado deve aparecer a navegação autenticada do Meu Giro, e não apenas o botão Sair.
+
+A função `syncTopNavigation` não deve voltar a ocultar incondicionalmente `menu-autenticado-top`.
 
 ## 6. Tela Início / desafio em foco
 
