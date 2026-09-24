@@ -94,6 +94,27 @@ Regra atual:
 
 A função `syncTopNavigation` não deve voltar a ocultar incondicionalmente `menu-autenticado-top`.
 
+## 5.2. Estado estabilizado da integração
+
+**Homologado pelo usuário em 24/09/2026.**
+
+Estado estável:
+- Portal Giro abre o Meu Giro corretamente em iframe.
+- Meu Giro embutido exibe `Portal Giro | Início | Desafios | Registrar | Conquistas`.
+- O retorno por `Portal Giro` funciona sem novo login.
+- O modo independente do Meu Giro preserva sua navegação autenticada.
+- Não há mais estado neutro sem navegação.
+- Não há mais bloqueio `script.google.com recusou estabelecer ligação` no fluxo homologado.
+
+Ponto técnico certificado:
+- deployment Meu Giro DEV: `@84`;
+- `ALLOWALL` é obrigatório no `doGet()`;
+- o boot integrado contém `embedded`, `page` e `handoff`;
+- o handoff integrado tem prioridade sobre restauração local;
+- `syncTopNavigation` não deve ocultar incondicionalmente o menu autenticado.
+
+**Regra de continuidade:** não alterar esta integração por refatoração ampla. Só mexer novamente em iframe, handoff, bootstrap ou navegação se houver regressão reproduzível ou uma nova missão explícita.
+
 ## 6. Tela Início / desafio em foco
 
 O card principal atual mostra:
