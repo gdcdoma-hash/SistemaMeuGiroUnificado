@@ -363,14 +363,38 @@ function syncTopNavigation(autenticado) {
   var btnLogout = document.getElementById('btn-logout-top');
   var nomeTopo = document.getElementById('painel-nome');
   var nomeUsuario = String((currentUser && currentUser.nome) || '').trim();
+  var embedded = false;
 
-  if (menuPublico) menuPublico.hidden = isAuthenticated;
-  if (menuAutenticado) menuAutenticado.hidden = true;
-  if (btnLogout) btnLogout.hidden = !isAuthenticated;
-  if (nomeTopo) {
-    nomeTopo.hidden = !isAuthenticated;
-    nomeTopo.innerText = isAuthenticated ? (nomeUsuario || 'Atleta') : '';
+  try {
+    embedded = typeof PORTAL_EMBEDDED_MODE !== 'undefined' && !!PORTAL_EMBEDDED_MODE;
+  } catch (e) {}
+
+  if (embedded) {
+    if (menuPublico) menuPublico.hidden = true;
+    if (menuAutenticado) menuAutenticado.hidden = true;
+    if (btnLogout) btnLogout.hidden = true;
+    if (nomeTopo) nomeTopo.hidden = true;
+    if (typeof garantirMenuEmbedded === 'function') garantirMenuEmbedded();
+  } else if (isAuthenticated && typeof renderUnifiedAuthenticatedMenu === 'function') {
+    renderUnifiedAuthenticatedMenu();
+    if (btnLogout) {
+      btnLogout.hidden = true;
+      btnLogout.style.display = 'none';
+    }
+    if (nomeTopo) {
+      nomeTopo.hidden = false;
+      nomeTopo.innerText = nomeUsuario || 'Atleta';
+    }
+  } else {
+    if (menuPublico) menuPublico.hidden = isAuthenticated;
+    if (menuAutenticado) menuAutenticado.hidden = true;
+    if (btnLogout) btnLogout.hidden = !isAuthenticated;
+    if (nomeTopo) {
+      nomeTopo.hidden = !isAuthenticated;
+      nomeTopo.innerText = isAuthenticated ? (nomeUsuario || 'Atleta') : '';
+    }
   }
+
   document.body.classList.toggle('topbar-authenticated', isAuthenticated);
 }
 
@@ -843,7 +867,18 @@ document.addEventListener('DOMContentLoaded', function() {
   setupQuickKmClearFeedback();
   syncAdminValidacaoVisibility();
   syncNavegacaoV2('inicio');
-  tentarRestaurarSessaoPersistida();
+
+  var bootInicial = window.__MEU_GIRO_BOOT__ || {};
+  var temHandoffIntegrado = String(bootInicial.page || '').toLowerCase() === 'atleta' &&
+    String(bootInicial.handoff || '').trim();
+
+  if (typeof restoreUserSessionOnLoad === 'function') {
+    restoreUserSessionOnLoad();
+  }
+
+  if (!temHandoffIntegrado) {
+    tentarRestaurarSessaoPersistida();
+  }
 });
 
 function login() {
