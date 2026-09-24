@@ -712,6 +712,8 @@ function painelMG_obterInscricaoLevePorDesafio_(idDgmb, desafioPrincipal) {
   var idxPeriodo = getOptionalColumnIndex_(map, ['periodo_desafio', 'periodo desafio', 'período_desafio', 'período desafio']);
   var idxInicio = getOptionalColumnIndex_(map, ['data_inicio_desafio', 'data inicio desafio', 'data início desafio']);
   var idxFim = getOptionalColumnIndex_(map, ['data_fim_desafio', 'data fim desafio']);
+  var idxConsolidacao = getOptionalColumnIndex_(map, ['data_consolidacao', 'data consolidação', 'data consolidacao']);
+  var idxPrazoDias = getOptionalColumnIndex_(map, ['prazo_dias', 'prazo dias']);
   var contextoLista = buildListaDesafiosContexto_(getSpreadsheet_());
   var periodosLista = contextoLista.periodos;
 
@@ -745,27 +747,34 @@ function painelMG_obterInscricaoLevePorDesafio_(idDgmb, desafioPrincipal) {
     var periodoLista = resolverPeriodoListaDesafio_(periodosLista, idDesafio, periodoTextoLinha, inicioLinha);
     var tipoMeta = resolverTipoMetaListaDesafio_(contextoLista.tipoMeta, idDesafio, periodoTextoLinha, inicioLinha) ||
       painelMG_norm_(periodoLista.tipo_meta).toUpperCase();
-    var idxPrazoDias = getOptionalColumnIndex_(map, ['prazo_dias', 'prazo dias']);
     var prazoDias = idxPrazoDias > -1 ? parseInt(row[idxPrazoDias], 10) || 0 : 0;
-    // A própria inscrição é a fonte mais forte: PRAZO_DIAS > 0 caracteriza janela individual.
-    // Isso evita depender exclusivamente do casamento de ID/período com ListaDesafios.
     if (prazoDias > 0) tipoMeta = 'PRAZO_DIAS';
-    var fimIndividual = normalizarDataISO_(idxFim > -1 ? row[idxFim] : '');
-    if (prazoDias > 0 && !fimIndividual) {
-      // Não permitir que um desafio individual incompleto caia silenciosamente no fim do mês.
-      periodoLista = { inicio: '', fim: '', periodo_desafio: periodoTextoLinha, nome_desafio: periodoLista.nome_desafio || '', tipo_meta: 'PRAZO_DIAS' };
+
+    var ehPrazoIndividual = ehTipoMetaPrazoDias_(tipoMeta);
+    var dataConsolidacao = idxConsolidacao > -1 ? normalizarDataISO_(row[idxConsolidacao]) : '';
+    var inicioIndividual = idxInicio > -1 ? normalizarDataISO_(row[idxInicio]) : '';
+    var fimIndividual = idxFim > -1 ? normalizarDataISO_(row[idxFim]) : '';
+    var periodoSelecionado;
+
+    if (ehPrazoIndividual) {
+      // Mesma semântica do Portal Giro: PRAZO_DIAS só expõe a janela individual
+      // depois da consolidação. Nunca herda Data_Fim mensal da ListaDesafios.
+      periodoSelecionado = dataConsolidacao
+        ? { inicio: inicioIndividual || '', fim: fimIndividual || '' }
+        : { inicio: '', fim: '' };
+    } else {
+      periodoSelecionado = montarPeriodoHistoricoVinculo_(row, {
+        periodo: idxPeriodo,
+        inicio: idxInicio,
+        fim: idxFim
+      }, periodoLista, {
+        id_dgmb: id,
+        id_desafio: idDesafio || '',
+        id_inscricao: idInscricao || '',
+        id_item_estoque: idItem || '',
+        origem: 'painelMG_obterInscricaoLevePorDesafio_'
+      }, tipoMeta);
     }
-    var periodoSelecionado = montarPeriodoHistoricoVinculo_(row, {
-      periodo: idxPeriodo,
-      inicio: idxInicio,
-      fim: idxFim
-    }, periodoLista, {
-      id_dgmb: id,
-      id_desafio: idDesafio || '',
-      id_inscricao: idInscricao || '',
-      id_item_estoque: idItem || '',
-      origem: 'painelMG_obterInscricaoLevePorDesafio_'
-    }, tipoMeta);
     var inicio = periodoSelecionado.inicio || '';
     var fim = periodoSelecionado.fim || '';
 
