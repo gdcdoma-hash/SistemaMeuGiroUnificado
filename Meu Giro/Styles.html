@@ -3516,20 +3516,42 @@
     text-transform: uppercase;
   }
 
-  .painel-desafio-periodo {
-    margin: 0 0 2px;
-    color: #6b7280;
-    font-size: 15px;
-    font-weight: 800;
-    line-height: 1.3;
+  .painel-desafio-detalhes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3px 18px;
+    margin: 0 0 14px;
+    max-width: 430px;
   }
 
-  .painel-desafio-termino {
-    margin: 0 0 14px;
+  .painel-desafio-detalhes p {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    margin: 0;
     color: #6b7280;
     font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .painel-desafio-detalhes span {
     font-weight: 700;
-    line-height: 1.3;
+  }
+
+  .painel-desafio-detalhes strong {
+    color: #374151;
+    font-weight: 800;
+  }
+
+  .painel-desafio-restante strong {
+    color: #111827;
+  }
+
+  @media (max-width: 520px) {
+    .painel-desafio-detalhes {
+      grid-template-columns: 1fr;
+      gap: 2px;
+    }
   }
 
   .painel-metricas-emocionais span {
