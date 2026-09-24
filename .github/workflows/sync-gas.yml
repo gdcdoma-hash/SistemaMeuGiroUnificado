@@ -41,6 +41,12 @@ jobs:
           fi
           printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
           chmod 600 "$HOME/.clasprc.json"
+      - name: Diagnosticar deployments e versoes
+        run: |
+          echo "=== DEPLOYMENTS ==="
+          clasp list-deployments
+          echo "=== VERSOES ==="
+          clasp list-versions
       - name: Confirmar arquivos que serao enviados
         run: clasp show-file-status
       - name: Sincronizar com Meu Giro GAS
