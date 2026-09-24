@@ -23,12 +23,16 @@ function voltarAoPortalGiro(){openPortalFromMeuGiro('minhas',null)}
 function abrirPortalPorHandoff_(destino){const server=loadServerSession();if(!server||!server.token){ocultarRetornoPortal_();clearServerSession();showScreen('login');return}google.script.run.withSuccessHandler(function(res){if(res&&res.ok===true&&res.url)window.top.location.href=res.url;else ocultarRetornoPortal_()}).withFailureHandler(function(){ocultarRetornoPortal_()}).portalAtletaCriarHandoff(server.token,destino)}
 function enviarPortalNavEmbedded_(destino){
   var payload={type:'DGMB_PORTAL_NAV',destino:destino};
-  try{
-    if(window.top&&window.top!==window)window.top.postMessage(payload,'*');
-  }catch(e){}
-  try{
-    if(window.parent&&window.parent!==window&&window.parent!==window.top)window.parent.postMessage(payload,'*');
-  }catch(e){}
+  var alvos=[];
+  try{if(window.parent&&window.parent!==window)alvos.push(window.parent)}catch(e){}
+  try{if(window.parent&&window.parent.parent)alvos.push(window.parent.parent)}catch(e){}
+  try{if(window.parent&&window.parent.parent&&window.parent.parent.parent)alvos.push(window.parent.parent.parent)}catch(e){}
+  try{if(window.top&&window.top!==window)alvos.push(window.top)}catch(e){}
+  alvos.forEach(function(alvo,indice){
+    if(!alvo||typeof alvo.postMessage!=='function')return;
+    for(var i=0;i<indice;i++){if(alvos[i]===alvo)return}
+    try{alvo.postMessage(payload,'*')}catch(e){}
+  });
 }
 function openPortalFromMeuGiro(destino,botao){
   destino=destino||'minhas';
@@ -57,6 +61,6 @@ window.addEventListener('message',function(ev){
 });
 function logoutUser(){const s=loadServerSession();if(s&&s.token)google.script.run.withFailureHandler(function(){}).atletaEncerrarSessao(s.token);currentUser=null;currentPainel=null;window.__painelAtual=null;clearUserSession();clearServerSession();updateAuthUI();showScreen('inicio')}
 function iniciarHandoffAtleta_(handoff){handoff=String(handoff||'').trim();if(!handoff)return false;currentUser=null;currentPainel=null;clearUserSession();clearServerSession();applyEmbeddedMode();showScreen('inicio');google.script.run.withSuccessHandler(function(res){if(!res||res.ok!==true||!res.usuario||!res.usuario.id_dgmb){showScreen('login');return}currentUser={id_dgmb:String(res.usuario.id_dgmb),nome:'',cidade_uf:''};saveUserSession(currentUser);saveServerSession(res.session_token,res.expira_em);updateAuthUI();showScreen('painel');carregarPainel()}).atletaTrocarHandoffPorSessao(handoff);return true}
-function processarLocalizacaoInicial_(loc){const p=loc&&loc.parameter?loc.parameter:{};PORTAL_LOCATION_PARAMS=p;PORTAL_EMBEDDED_MODE=String(p.embedded||'').trim()==='1';applyEmbeddedMode();const page=String(p.page||'').toLowerCase(),handoff=String(p.handoff||'').trim();if(page==='atleta'&&handoff){iniciarHandoffAtleta_(handoff);return}if(PORTAL_EMBEDDED_MODE){garantirMenuEmbedded();return}const saved=loadUserSession();if(saved&&saved.id_dgmb){currentUser=saved;updateAuthUI();showScreen('painel');carregarPainel()}else updateAuthUI()}
+function processarLocalizacaoInicial_(loc){const p=loc&&loc.parameter?loc.parameter:{};PORTAL_LOCATION_PARAMS=p;PORTAL_EMBEDDED_MODE=PORTAL_EMBEDDED_MODE||String(p.embedded||'').trim()==='1';applyEmbeddedMode();const page=String(p.page||'').toLowerCase(),handoff=String(p.handoff||'').trim();if(page==='atleta'&&handoff){iniciarHandoffAtleta_(handoff);return}if(PORTAL_EMBEDDED_MODE){garantirMenuEmbedded();return}const saved=loadUserSession();if(saved&&saved.id_dgmb){currentUser=saved;updateAuthUI();showScreen('painel');carregarPainel()}else updateAuthUI()}
 function restoreUserSessionOnLoad(){ensureUnifiedAppStyles();const boot=window.__MEU_GIRO_BOOT__||{};if(boot.embedded){PORTAL_EMBEDDED_MODE=true;applyEmbeddedMode()}if(window.google&&google.script&&google.script.url)google.script.url.getLocation(function(loc){processarLocalizacaoInicial_(loc||{})})}
 </script>
