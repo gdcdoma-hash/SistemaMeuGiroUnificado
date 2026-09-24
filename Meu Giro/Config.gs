@@ -1,6 +1,8 @@
 const PERFORMANCE_DEBUG = false;
 
-const SPREADSHEET_ID = '1vC4ivc3DMevxtedDXAVAIsjZxzZbtbP794n63tky0Vw';
+// Fonte oficial compartilhada com o Portal Giro.
+// Manter este identificador como única origem para todas as abas do Meu Giro.
+const SPREADSHEET_ID = '1sFxmiWmIrPlwXgSb56M8maHF5niRYVLWRMFSUQYXgHM';
 
 const SHEETS = {
   PESSOAS: 'DadosPessoais',
