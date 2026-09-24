@@ -75,6 +75,8 @@ const TELAS_RELEVANTES_SESSAO = {
 let telaPrivadaRestaurada = 'home';
 const statusMessageTimers = {};
 const certificadoImagemLinks_ = {};
+let html2CanvasLoaderPromise_ = null;
+let compartilharCardFeedbackTimer_ = null;
 
 function perfStart(label) {
   if (!PERFORMANCE_DEBUG || !label || typeof console === 'undefined' || !console.time) return;
@@ -3260,6 +3262,147 @@ function atualizarResumoPrazoDesafioPainel_(desafio, contexto) {
   setTextById('painel-desafio-restante', obterTempoRestanteDesafioPainel_(fim));
 }
 
+function carregarHtml2Canvas_() {
+  if (window.html2canvas) return Promise.resolve(window.html2canvas);
+  if (html2CanvasLoaderPromise_) return html2CanvasLoaderPromise_;
+
+  html2CanvasLoaderPromise_ = new Promise(function(resolve, reject) {
+    var script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    script.async = true;
+    script.crossOrigin = 'anonymous';
+    script.onload = function() {
+      if (window.html2canvas) {
+        resolve(window.html2canvas);
+      } else {
+        reject(new Error('Biblioteca de compartilhamento indisponível.'));
+      }
+    };
+    script.onerror = function() {
+      html2CanvasLoaderPromise_ = null;
+      reject(new Error('Não foi possível carregar o gerador de imagem.'));
+    };
+    document.head.appendChild(script);
+  });
+
+  return html2CanvasLoaderPromise_;
+}
+
+function setCompartilharCardFeedback_(mensagem) {
+  var el = document.getElementById('painel-compartilhar-feedback');
+  if (!el) return;
+
+  window.clearTimeout(compartilharCardFeedbackTimer_);
+  el.textContent = String(mensagem || '').trim();
+
+  if (el.textContent) {
+    compartilharCardFeedbackTimer_ = window.setTimeout(function() {
+      el.textContent = '';
+    }, 4500);
+  }
+}
+
+function nomeArquivoCardPainel_(desafio) {
+  var nome = String(getDesafioTitulo(desafio || {}) || 'meu-giro').toLowerCase();
+  nome = nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  nome = nome.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return (nome || 'meu-giro') + '-progresso.png';
+}
+
+function canvasParaBlobPainel_(canvas) {
+  return new Promise(function(resolve, reject) {
+    canvas.toBlob(function(blob) {
+      if (blob) resolve(blob);
+      else reject(new Error('Não foi possível gerar a imagem do card.'));
+    }, 'image/png', 0.96);
+  });
+}
+
+function baixarImagemCardPainel_(blob, nomeArquivo) {
+  var url = URL.createObjectURL(blob);
+  var link = document.createElement('a');
+  link.href = url;
+  link.download = nomeArquivo;
+  link.rel = 'noopener';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(function() {
+    URL.revokeObjectURL(url);
+  }, 1500);
+}
+
+async function compartilharCardPainel() {
+  var card = document.getElementById('painel-share-card');
+  var btn = document.getElementById('btn-compartilhar-card');
+  var desafioAtual = getDesafioEmFocoAtual();
+
+  if (!card || !desafioAtual) {
+    setCompartilharCardFeedback_('Nenhum desafio disponível para compartilhar.');
+    return;
+  }
+
+  var textoOriginal = btn ? btn.querySelector('span') : null;
+  var labelOriginal = textoOriginal ? textoOriginal.textContent : '';
+
+  if (btn) btn.disabled = true;
+  if (textoOriginal) textoOriginal.textContent = 'Preparando imagem...';
+  setCompartilharCardFeedback_('');
+
+  try {
+    var html2canvasFn = await carregarHtml2Canvas_();
+    if (document.fonts && document.fonts.ready) {
+      try { await document.fonts.ready; } catch (e) {}
+    }
+
+    var canvas = await html2canvasFn(card, {
+      backgroundColor: '#fffaf5',
+      scale: Math.max(2, Math.min(3, window.devicePixelRatio || 2)),
+      useCORS: true,
+      logging: false,
+      scrollX: 0,
+      scrollY: -window.scrollY
+    });
+
+    var blob = await canvasParaBlobPainel_(canvas);
+    var arquivo = new File([blob], nomeArquivoCardPainel_(desafioAtual), { type: 'image/png' });
+    var percentual = montarPainelContextual(currentPainel || {}, desafioAtual).percentual;
+    var textoCompartilhar = 'Meu progresso no ' + getDesafioTitulo(desafioAtual) +
+      ': ' + formatNumber(percentual) + '% concluído.';
+
+    var podeCompartilharArquivo = !!(
+      navigator.share &&
+      (!navigator.canShare || navigator.canShare({ files: [arquivo] }))
+    );
+
+    if (podeCompartilharArquivo) {
+      try {
+        await navigator.share({
+          files: [arquivo],
+          title: 'Meu Giro - ' + getDesafioTitulo(desafioAtual),
+          text: textoCompartilhar
+        });
+        setCompartilharCardFeedback_('Card pronto para compartilhar.');
+        return;
+      } catch (erroCompartilhar) {
+        if (erroCompartilhar && erroCompartilhar.name === 'AbortError') {
+          setCompartilharCardFeedback_('Compartilhamento cancelado.');
+          return;
+        }
+      }
+    }
+
+    baixarImagemCardPainel_(blob, arquivo.name);
+    setCompartilharCardFeedback_('Imagem salva. Agora você pode compartilhar o card.');
+  } catch (erro) {
+    console.error('Erro ao compartilhar card do Meu Giro:', erro);
+    setCompartilharCardFeedback_('Não foi possível gerar o card agora. Tente novamente.');
+  } finally {
+    if (btn) btn.disabled = false;
+    if (textoOriginal) textoOriginal.textContent = labelOriginal || 'Compartilhar meu progresso';
+  }
+}
+
 function sincronizarPainelComDesafioEmFoco() {
   var painel = currentPainel || {};
   var desafioAtual = getDesafioEmFocoAtual();
@@ -3271,6 +3414,10 @@ function sincronizarPainelComDesafioEmFoco() {
   var contexto = montarPainelContextual(painel, desafioAtual);
   debugPeriodoDesafioFrontend_('sincronizarPainelComDesafioEmFoco', getPeriodoDesafioVisual_(desafioAtual, contexto), contexto.periodo_desafio, desafioAtual || {});
   atualizarContextoVisualRanking(desafioAtual);
+
+  setTextById('painel-card-atleta', String(painel.nome || '').trim().toUpperCase() || 'ATLETA');
+  var btnCompartilharCard = document.getElementById('btn-compartilhar-card');
+  if (btnCompartilharCard) btnCompartilharCard.disabled = !desafioAtual;
 
   setTextById('frase-box', contexto.frase);
   setTextById('desafio-foco-operacional', contexto.mensagem_operacional);
@@ -3601,7 +3748,10 @@ function renderCardDesafioSelecionado() {
   var box = document.getElementById('desafio-selecionado-card');
   var desafioAtual = getDesafioEmFocoAtual();
   setTextById('painel-desafio-nome', desafioAtual ? getDesafioTitulo(desafioAtual) : 'Nenhum desafio disponível');
+  setTextById('painel-card-atleta', String((currentPainel && currentPainel.nome) || '').trim().toUpperCase() || 'ATLETA');
   atualizarResumoPrazoDesafioPainel_(desafioAtual, montarPainelContextual(currentPainel || {}, desafioAtual));
+  var btnCompartilharCard = document.getElementById('btn-compartilhar-card');
+  if (btnCompartilharCard) btnCompartilharCard.disabled = !desafioAtual;
   if (!box) return;
   box.innerHTML = '';
   box.hidden = true;
