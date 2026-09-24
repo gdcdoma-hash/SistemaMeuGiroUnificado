@@ -1,18 +1,46 @@
-MEU GIRO V1
+MEU GIRO — ESTADO OPERACIONAL ATUAL
+Atualizado em 24/09/2026
 
-1. Cole todos os arquivos no projeto Apps Script.
-2. Em Config.gs, troque SPREADSHEET_ID pelo ID real da sua planilha.
-3. Garanta que as abas existentes estejam com estes nomes exatos:
-   - dadosPessoais
-   - dgmgCamisa
-4. Crie a nova aba REGISTRO_KM com cabeçalho na linha 1:
-   Timestamp | ID_DGMB | Data_Atividade | KM | activity_id
-5. Crie a nova aba FRASES com cabeçalho na linha 1:
-   Fase | Situacao | Frase
-6. Publique como Web App.
+Este arquivo substitui as instruções antigas de "MEU GIRO V1".
 
-Observações:
-- Login apenas por CPF.
-- Não há cadastro novo.
-- Não há inscrição.
-- O sistema atualiza Distancia_Realizada na aba dgmgCamisa.
+FONTE OFICIAL
+- Repositório: gdcdoma-hash/SistemaMeuGiroUnificado
+- Branch: main
+- Código ativo: pasta "Meu Giro"
+- GitHub é canônico.
+
+AMBIENTE DEV
+- Script ID: 1N-10MQMYaq_91O75W_TFF837vPR6KfSDpJwVQJNS7776IwGo56NuppzG
+- Deployment: AKfycbxCV-6fDri2y2ppdPC1JPLqCTxEOwXLuSameujgVkoYokm-sfQgPtDY4oQQ0Z_uVCmRKg
+- Planilha oficial: 1sFxmiWmIrPlwXgSb56M8maHF5niRYVLWRMFSUQYXgHM
+
+ABAS PRINCIPAIS
+- DadosPessoais
+- dgmbDesafios
+- REGISTRO_KM
+- MEU_GIRO_RESUMO
+- ListaDesafios
+- FRASES
+- CONFIG_CERTIFICADO_TEMPLATE
+- _PORTAL_HANDOFF
+
+INTEGRAÇÃO COM PORTAL GIRO
+- Portal e Meu Giro são Web Apps separados.
+- O Portal cria handoff temporário para o atleta.
+- O Meu Giro pode funcionar embutido no Portal.
+- O doGet() deve manter XFrameOptionsMode.ALLOWALL.
+- Não remover essa configuração: sem ela o iframe é bloqueado.
+
+PRAZO_DIAS
+- Prazo_Dias > 0 = janela individual.
+- Após data_consolidacao, usar data_inicio_desafio e data_fim_desafio.
+- Não substituir a data fim individual pelo fim mensal.
+
+DEPLOY
+- Não executar deploy manual como fluxo padrão.
+- O workflow .github/workflows/sync-gas.yml faz push e atualiza o deployment DEV.
+- Só testar após o Action concluir.
+
+DOCUMENTAÇÃO COMPLETA
+Ver:
+docs/ESTADO_ATUAL_2026-09-24.md
