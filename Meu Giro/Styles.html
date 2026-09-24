@@ -3088,6 +3088,38 @@
       margin-bottom: 12px;
     }
 
+    .painel-inicio-card {
+      padding: 16px;
+    }
+
+    .painel-desafio-topo h2 {
+      font-size: 21px;
+    }
+
+    .painel-progresso-donut-grid {
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    .painel-progress-donut {
+      width: min(72vw, 205px);
+    }
+
+    .painel-metricas-emocionais {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-rows: none;
+      gap: 6px;
+    }
+
+    .painel-metricas-emocionais p {
+      min-height: 58px;
+      padding: 8px;
+    }
+
+    .painel-card-assinatura {
+      margin-top: 12px;
+    }
+
     #screen-painel .card > h2 {
       margin-bottom: 10px;
     }
@@ -3457,9 +3489,31 @@
 
   /* P9 — Tela Início emocional */
   .painel-inicio-card {
-    border: 1px solid #fed7aa;
-    background: linear-gradient(180deg, #fff7ed 0%, #ffffff 58%);
-    box-shadow: 0 18px 42px rgba(249, 115, 22, 0.12);
+    position: relative;
+    isolation: isolate;
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 22px;
+    overflow: hidden;
+    border: 1px solid #fdba74;
+    background:
+      radial-gradient(circle at 92% 0%, rgba(249, 115, 22, 0.10), transparent 30%),
+      linear-gradient(145deg, #fffaf5 0%, #ffffff 72%);
+    box-shadow: 0 20px 48px rgba(249, 115, 22, 0.14);
+  }
+
+  .painel-inicio-card::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    width: 210px;
+    height: 210px;
+    right: -92px;
+    top: 118px;
+    border-radius: 50%;
+    background: rgba(34, 197, 94, 0.05);
+    pointer-events: none;
   }
 
   .painel-inicio-label,
@@ -3507,50 +3561,94 @@
     line-height: 1.35;
   }
 
-  .painel-desafio-topo h2 {
-    margin: 4px 0 6px;
-    color: #111827;
-    font-size: 22px;
+  .painel-card-kicker-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .painel-card-brand {
+    flex: 0 0 auto;
+    padding: 5px 9px;
+    border: 1px solid #fdba74;
+    border-radius: 999px;
+    background: rgba(255, 247, 237, 0.92);
+    color: #ea580c;
+    font-size: 10px;
     font-weight: 900;
-    line-height: 1.2;
+    letter-spacing: 0.08em;
+    line-height: 1;
+  }
+
+  .painel-desafio-topo h2 {
+    margin: 7px 0 3px;
+    color: #111827;
+    font-size: 24px;
+    font-weight: 900;
+    line-height: 1.15;
+    text-transform: uppercase;
+  }
+
+  .painel-card-atleta {
+    margin: 0 0 12px;
+    color: #4b5563;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.025em;
+    line-height: 1.3;
     text-transform: uppercase;
   }
 
   .painel-desafio-detalhes {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 3px 18px;
-    margin: 0 0 14px;
-    max-width: 430px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0 0 18px;
   }
 
   .painel-desafio-detalhes p {
     display: flex;
-    align-items: baseline;
-    gap: 5px;
+    min-width: 0;
+    flex-direction: column;
+    gap: 3px;
     margin: 0;
-    color: #6b7280;
-    font-size: 12px;
-    line-height: 1.35;
+    padding: 9px 10px;
+    border: 1px solid #ffedd5;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.84);
+    box-shadow: 0 5px 14px rgba(17, 24, 39, 0.035);
   }
 
   .painel-desafio-detalhes span {
-    font-weight: 700;
+    color: #9a5b25;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.055em;
+    line-height: 1.1;
+    text-transform: uppercase;
   }
 
   .painel-desafio-detalhes strong {
-    color: #374151;
-    font-weight: 800;
+    color: #1f2937;
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1.25;
+    white-space: nowrap;
+  }
+
+  .painel-desafio-detalhes .painel-desafio-restante {
+    border-color: #fdba74;
+    background: linear-gradient(180deg, #fff7ed 0%, #fffaf5 100%);
   }
 
   .painel-desafio-restante strong {
-    color: #111827;
+    color: #c2410c;
   }
 
-  @media (max-width: 520px) {
+  @media (max-width: 640px) {
     .painel-desafio-detalhes {
-      grid-template-columns: 1fr;
-      gap: 2px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
@@ -3564,12 +3662,88 @@
     text-transform: uppercase;
   }
 
+  .painel-card-assinatura {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid #ffedd5;
+    color: #9a5b25;
+  }
+
+  .painel-card-assinatura span {
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+  }
+
+  .painel-card-assinatura small {
+    color: #9ca3af;
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  .painel-compartilhar-wrap {
+    display: grid;
+    justify-items: center;
+    gap: 5px;
+    max-width: 720px;
+    margin: -2px auto 14px;
+  }
+
+  .painel-compartilhar-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    min-height: 44px;
+    padding: 10px 16px;
+    border: 1px solid #fdba74;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #c2410c;
+    font-size: 13px;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 8px 22px rgba(249, 115, 22, 0.10);
+  }
+
+  .painel-compartilhar-btn:hover {
+    background: #fff7ed;
+  }
+
+  .painel-compartilhar-btn:disabled {
+    cursor: wait;
+    opacity: 0.65;
+  }
+
+  .painel-compartilhar-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.9;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .painel-compartilhar-feedback {
+    min-height: 16px;
+    margin: 0;
+    color: #6b7280;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+  }
+
   .painel-progresso-donut-grid {
     display: grid;
-    grid-template-columns: minmax(148px, 0.95fr) minmax(148px, 1fr);
+    grid-template-columns: minmax(180px, 0.9fr) minmax(220px, 1.1fr);
     align-items: stretch;
-    gap: 12px;
-    margin: 0 0 12px;
+    gap: 18px;
+    margin: 0 0 14px;
   }
 
   .painel-progress-donut {
@@ -3623,6 +3797,7 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
+    min-height: 62px;
     margin: 0;
     padding: 12px;
     border: 1px solid #ffedd5;
