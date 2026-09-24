@@ -411,6 +411,8 @@ function obterDadosInscricaoUsuario_(idDgmb, contextoDesafios) {
   var idxStatus = getOptionalColumnIndex_(map, ['status_inscricao', 'status inscrição', 'status', 'situacao', 'situação']);
   var idxStatusUsuarioDesafio = getOptionalColumnIndex_(map, ['status_usuario_desafio', 'status usuário desafio', 'status usuario desafio']);
   var idxConfirmacao = getOptionalColumnIndex_(map, ['confirmacao', 'confirmação', 'confirmado', 'inscricao_confirmada']);
+  var idxPrazoDias = getOptionalColumnIndex_(map, ['prazo_dias', 'prazo dias']);
+  var idxConsolidacao = getOptionalColumnIndex_(map, ['data_consolidacao', 'data consolidação', 'data consolidacao']);
   var idxPagamento = getOptionalColumnIndex_(map, ['status_pagamento', 'pagamento_status', 'pagto_status', 'pagamento', 'pix_status']);
   var primeiraInscricaoInvalida = null;
 
@@ -1477,7 +1479,7 @@ function obterMeuGiroResumoAtualizado_(idDgmb) {
   return saida;
 }
 
-function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb, periodosLista) {
+function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb, contextoLista) {
   var id = normalizeText_(idDgmb);
   var values = cacheDesafios && cacheDesafios.values ? cacheDesafios.values : [];
   var map = cacheDesafios && cacheDesafios.map ? cacheDesafios.map : {};
@@ -1488,12 +1490,16 @@ function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb, periodosLista
     detalhePorDesafio: {},
     statusPorResumoKey: {},
     statusPorDesafio: {},
+    prazoIndividualPorResumoKey: {},
+    prazoIndividualPorDesafio: {},
     inscricoesAptas: {}
   };
 
   if (!id || !values || values.length < 2) return periodos;
 
-  periodosLista = periodosLista || { byId: {} };
+  contextoLista = contextoLista || {};
+  var periodosLista = contextoLista.periodos || { byId: {}, byIdPeriodo: {} };
+  var tipoMetaLista = contextoLista.tipoMeta || { byId: {}, byIdPeriodo: {} };
 
   var idxId = getOptionalColumnIndex_(map, ['id_dgmb']);
   var idxPeriodo = getOptionalColumnIndex_(map, MEU_GIRO_PERIODO_DESAFIO_ALIASES_);
@@ -1566,14 +1572,30 @@ function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb, periodosLista
     };
     var periodoTextoNormalizado = extrairPeriodoDesafioTexto_(periodoTexto);
     var idDesafio = obterIdDesafioRegistro_(row, idxIdDesafio, idxObs);
-    var periodoLista = (idDesafio && periodosLista.byId[idDesafio]) || { inicio: '', fim: '', periodo_desafio: '' };
-    var periodoDetalhe = periodoCompletoValido_(periodoTextoNormalizado)
-      ? { inicio: periodoTextoNormalizado.inicio, fim: periodoTextoNormalizado.fim, periodo_desafio: periodoTexto }
-      : periodoCompletoValido_(periodoLista)
-        ? { inicio: periodoLista.inicio, fim: periodoLista.fim, periodo_desafio: periodoTexto || normalizeText_(periodoLista.periodo_desafio) }
-        : periodoCompletoValido_(periodoDatas)
-          ? { inicio: periodoDatas.inicio, fim: periodoDatas.fim, periodo_desafio: periodoTexto }
-          : { inicio: '', fim: '', periodo_desafio: periodoTexto };
+    var periodoLista = resolverPeriodoListaDesafio_(periodosLista, idDesafio, periodoTexto, periodoDatas.inicio);
+    var tipoMeta = resolverTipoMetaListaDesafio_(tipoMetaLista, idDesafio, periodoTexto, periodoDatas.inicio) ||
+      normalizeText_(periodoLista && periodoLista.tipo_meta).toUpperCase();
+    var prazoDias = idxPrazoDias > -1 ? parseInt(row[idxPrazoDias], 10) || 0 : 0;
+    if (prazoDias > 0) tipoMeta = 'PRAZO_DIAS';
+    var ehPrazoIndividual = ehTipoMetaPrazoDias_(tipoMeta);
+    var consolidadoPrazo = ehPrazoIndividual && idxConsolidacao > -1 && !!row[idxConsolidacao];
+
+    var periodoDetalhe;
+    if (ehPrazoIndividual) {
+      // Regra oficial do Portal Giro: PRAZO_DIAS usa exclusivamente a janela
+      // individual persistida após consolidação. Nunca herda o fim mensal.
+      periodoDetalhe = consolidadoPrazo && periodoCompletoValido_(periodoDatas)
+        ? { inicio: periodoDatas.inicio, fim: periodoDatas.fim, periodo_desafio: periodoTexto }
+        : { inicio: '', fim: '', periodo_desafio: periodoTexto };
+    } else {
+      periodoDetalhe = periodoCompletoValido_(periodoTextoNormalizado)
+        ? { inicio: periodoTextoNormalizado.inicio, fim: periodoTextoNormalizado.fim, periodo_desafio: periodoTexto }
+        : periodoCompletoValido_(periodoLista)
+          ? { inicio: periodoLista.inicio, fim: periodoLista.fim, periodo_desafio: periodoTexto || normalizeText_(periodoLista.periodo_desafio) }
+          : periodoCompletoValido_(periodoDatas)
+            ? { inicio: periodoDatas.inicio, fim: periodoDatas.fim, periodo_desafio: periodoTexto }
+            : { inicio: '', fim: '', periodo_desafio: periodoTexto };
+    }
 
 
     var idItem = idxItem > -1 ? normalizeText_(row[idxItem]) : '';
@@ -1607,18 +1629,21 @@ function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb, periodosLista
     if (chave) {
       if (periodoTexto && !periodos.byResumoKey[chave]) periodos.byResumoKey[chave] = periodoTexto;
       if (!periodos.detalhePorResumoKey[chave]) periodos.detalhePorResumoKey[chave] = periodoDetalhe;
+      if (ehPrazoIndividual) periodos.prazoIndividualPorResumoKey[chave] = true;
       if (!periodos.statusPorResumoKey[chave]) periodos.statusPorResumoKey[chave] = statusDgmb;
     }
 
     if (chaveLegadaUnica && aliasLegadoContagem[chaveLegadaUnica] === 1) {
       if (periodoTexto && !periodos.byResumoKey[chaveLegadaUnica]) periodos.byResumoKey[chaveLegadaUnica] = periodoTexto;
       if (!periodos.detalhePorResumoKey[chaveLegadaUnica]) periodos.detalhePorResumoKey[chaveLegadaUnica] = periodoDetalhe;
+      if (ehPrazoIndividual) periodos.prazoIndividualPorResumoKey[chaveLegadaUnica] = true;
       if (!periodos.statusPorResumoKey[chaveLegadaUnica]) periodos.statusPorResumoKey[chaveLegadaUnica] = statusDgmb;
     }
 
     if (idDesafio && !idInscricao) {
       if (periodoTexto && !periodos.byDesafio[idDesafio]) periodos.byDesafio[idDesafio] = periodoTexto;
       if (!periodos.detalhePorDesafio[idDesafio]) periodos.detalhePorDesafio[idDesafio] = periodoDetalhe;
+      if (ehPrazoIndividual) periodos.prazoIndividualPorDesafio[idDesafio] = true;
       if (!periodos.statusPorDesafio[idDesafio]) periodos.statusPorDesafio[idDesafio] = statusDgmb;
     }
   }
@@ -1659,11 +1684,12 @@ function obterMeuGiroResumoAtualizadoLeve_(idDgmb, opcoes) {
 
   var layoutResumo = meuGiroResumoObterLayout_(valoresResumo[0] || [], sheetName);
   var mapResumo = layoutResumo.map;
-  var periodosListaDesafios = buildListaDesafiosContexto_(ss).periodos;
+  var contextoListaDesafios = buildListaDesafiosContexto_(ss);
+  var periodosListaDesafios = contextoListaDesafios.periodos;
   var periodosDgmbDesafios = buildPeriodosDgmbDesafiosPorChave_(
     obterDgmbDesafiosCacheExecucao_('obterMeuGiroResumoAtualizadoLeve_'),
     id,
-    periodosListaDesafios
+    contextoListaDesafios
   );
   var idxInscricaoResumo = getOptionalColumnIndex_(mapResumo, ['id_inscricao', 'id inscrição', 'id inscricao']);
   var idxId = getOptionalColumnIndex_(mapResumo, ['id_dgmb']);
@@ -1710,8 +1736,14 @@ function obterMeuGiroResumoAtualizadoLeve_(idDgmb, opcoes) {
     var periodoDgmbResumo = periodosDgmbDesafios.byResumoKey[chaveResumo] || (usarFallbackDesafio ? periodosDgmbDesafios.byDesafio[idDesafioResumo] : '') || '';
     var detalhePeriodoDgmb = periodosDgmbDesafios.detalhePorResumoKey[chaveResumo] || (usarFallbackDesafio ? periodosDgmbDesafios.detalhePorDesafio[idDesafioResumo] : null) || null;
     var statusDgmbResumo = periodosDgmbDesafios.statusPorResumoKey[chaveResumo] || (usarFallbackDesafio ? periodosDgmbDesafios.statusPorDesafio[idDesafioResumo] : null) || {};
-    var periodoInicioLeve = periodoCompletoValido_(detalhePeriodoDgmb) ? detalhePeriodoDgmb.inicio : periodoListaResumo.inicio || '';
-    var periodoFimLeve = periodoCompletoValido_(detalhePeriodoDgmb) ? detalhePeriodoDgmb.fim : periodoListaResumo.fim || '';
+    var ehPrazoIndividualResumo = !!periodosDgmbDesafios.prazoIndividualPorResumoKey[chaveResumo] ||
+      !!(usarFallbackDesafio && periodosDgmbDesafios.prazoIndividualPorDesafio[idDesafioResumo]);
+    var periodoInicioLeve = periodoCompletoValido_(detalhePeriodoDgmb)
+      ? detalhePeriodoDgmb.inicio
+      : (ehPrazoIndividualResumo ? '' : periodoListaResumo.inicio || '');
+    var periodoFimLeve = periodoCompletoValido_(detalhePeriodoDgmb)
+      ? detalhePeriodoDgmb.fim
+      : (ehPrazoIndividualResumo ? '' : periodoListaResumo.fim || '');
     var periodoLeveEnviado = periodoDgmbResumo || periodoListaResumo.periodo_desafio || '';
 
     debugPeriodoDesafioBackend_('obterMeuGiroResumoAtualizadoLeve_', periodoDgmbResumo || periodoListaResumo.periodo_desafio, periodoLeveEnviado, {
