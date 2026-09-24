@@ -1,6 +1,11 @@
 function doGet(e) {
-  return HtmlService
-    .createTemplateFromFile('Index')
+  var template = HtmlService.createTemplateFromFile('Index');
+  var parametros = e && e.parameter ? e.parameter : {};
+  template.meuGiroBootJson = JSON.stringify({
+    embedded: String(parametros.embedded || '').trim() === '1'
+  });
+
+  return template
     .evaluate()
     .setTitle('MEU GIRO')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
