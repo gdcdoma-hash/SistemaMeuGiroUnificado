@@ -3200,6 +3200,30 @@ function atualizarDonutProgressoPainel_(percentual) {
   donut.setAttribute('aria-label', formatNumber(percentualNormalizado) + '% concluído');
 }
 
+function formatarDataFimDesafioPainel_(valor) {
+  var data = parseIsoDateLocal(String(valor || '').trim());
+  if (!data) return '';
+  var dia = String(data.getDate()).padStart(2, '0');
+  var mes = String(data.getMonth() + 1).padStart(2, '0');
+  return dia + '/' + mes + '/' + data.getFullYear();
+}
+
+function atualizarTerminoDesafioPainel_(desafio, contexto) {
+  var el = document.getElementById('painel-desafio-termino');
+  if (!el) return;
+
+  var fim = String((desafio && desafio.periodo_fim) || (contexto && contexto.periodo_fim) || '').trim();
+  var dataFim = formatarDataFimDesafioPainel_(fim);
+  if (!dataFim) {
+    el.innerText = '';
+    el.hidden = true;
+    return;
+  }
+
+  el.innerText = 'Término: ' + dataFim;
+  el.hidden = false;
+}
+
 function sincronizarPainelComDesafioEmFoco() {
   var painel = currentPainel || {};
   var desafioAtual = getDesafioEmFocoAtual();
@@ -3215,6 +3239,7 @@ function sincronizarPainelComDesafioEmFoco() {
   setTextById('frase-box', contexto.frase);
   setTextById('desafio-foco-operacional', contexto.mensagem_operacional);
   setTextById('painel-desafio-periodo', getDesafioMesAnoLabel(desafioAtual, contexto));
+  atualizarTerminoDesafioPainel_(desafioAtual, contexto);
   setTextById('meta-km', formatNumber(contexto.meta));
   setTextById('realizado-km', formatNumber(contexto.realizado));
   setTextById('restante-km', formatNumber(contexto.restante));
