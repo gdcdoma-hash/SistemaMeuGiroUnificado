@@ -1611,7 +1611,9 @@ function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb, contextoLista
       status_usuario_desafio: statusUsuarioDesafio,
       status_validacao_certificado: idxStatusValidacaoCertificado > -1 ? normalizeText_(row[idxStatusValidacaoCertificado]).toUpperCase() : '',
       status_desafio: idxStatusDesafio > -1 ? normalizeText_(row[idxStatusDesafio]) : '',
-      status_pagamento: idxStatusPag > -1 ? normalizeText_(row[idxStatusPag]) : ''
+      status_pagamento: idxStatusPag > -1 ? normalizeText_(row[idxStatusPag]) : '',
+      tipo_meta: tipoMeta || '',
+      prazo_dias: prazoDias || 0
     };
 
     var tipoDesafio = idxTipo > -1 ? normalizeText_(row[idxTipo]) : '';
@@ -1772,6 +1774,8 @@ function obterMeuGiroResumoAtualizadoLeve_(idDgmb, opcoes) {
       status_usuario_desafio: normalizeText_(statusDgmbResumo.status_usuario_desafio),
       status_pagamento: normalizeText_(statusDgmbResumo.status_pagamento),
       status_lista_desafios: '',
+      tipo_meta: normalizeText_(statusDgmbResumo.tipo_meta).toUpperCase(),
+      prazo_dias: parseInt(statusDgmbResumo.prazo_dias, 10) || 0,
       periodo_inicio: periodoInicioLeve,
       periodo_fim: periodoFimLeve,
       periodo_desafio: periodoLeveEnviado
