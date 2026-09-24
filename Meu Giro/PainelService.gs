@@ -745,6 +745,11 @@ function painelMG_obterInscricaoLevePorDesafio_(idDgmb, desafioPrincipal) {
     var periodoLista = resolverPeriodoListaDesafio_(periodosLista, idDesafio, periodoTextoLinha, inicioLinha);
     var tipoMeta = resolverTipoMetaListaDesafio_(contextoLista.tipoMeta, idDesafio, periodoTextoLinha, inicioLinha) ||
       painelMG_norm_(periodoLista.tipo_meta).toUpperCase();
+    var idxPrazoDias = getOptionalColumnIndex_(map, ['prazo_dias', 'prazo dias']);
+    var prazoDias = idxPrazoDias > -1 ? parseInt(row[idxPrazoDias], 10) || 0 : 0;
+    // A própria inscrição é a fonte mais forte: PRAZO_DIAS > 0 caracteriza janela individual.
+    // Isso evita depender exclusivamente do casamento de ID/período com ListaDesafios.
+    if (prazoDias > 0) tipoMeta = 'PRAZO_DIAS';
     var periodoSelecionado = montarPeriodoHistoricoVinculo_(row, {
       periodo: idxPeriodo,
       inicio: idxInicio,
