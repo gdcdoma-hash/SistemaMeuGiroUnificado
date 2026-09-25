@@ -7,9 +7,7 @@ function normalizeCell_(value) {
 }
 
 function getSpreadsheet_() {
-  var spreadsheetId = typeof dgmbMeuGiroSpreadsheetId_ === 'function'
-    ? dgmbMeuGiroSpreadsheetId_()
-    : String(SPREADSHEET_ID || '').trim();
+  var spreadsheetId = dgmbMeuGiroSpreadsheetId_();
 
   if (!spreadsheetId) {
     throw new Error('ID da planilha do Meu Giro não informado.');

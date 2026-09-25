@@ -25,7 +25,7 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
     }
 
     perfEtapaInicio = meuGiroPerfNow_();
-    var sheet = SpreadsheetApp.openById(SPREADSHEET_ID)
+    var sheet = getSpreadsheet_()
       .getSheetByName(SHEETS.REGISTRO_KM);
 
     var dados = sheet.getDataRange().getValues();
@@ -334,7 +334,7 @@ function editarAtividade(payload) {
     }
 
     perfEtapaInicio = meuGiroPerfNow_();
-    var sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEETS.REGISTRO_KM);
+    var sheet = getSpreadsheet_().getSheetByName(SHEETS.REGISTRO_KM);
     var dados = sheet.getDataRange().getValues();
     meuGiroPerfLog_('editar-atividade', 'leitura_REGISTRO_KM', perfEtapaInicio, {
       quantidade_linhas_registro_km: dados && dados.length ? dados.length - 1 : 0
@@ -565,7 +565,7 @@ function excluirAtividade(payload) {
     }
 
     perfEtapaInicio = meuGiroPerfNow_();
-    var sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEETS.REGISTRO_KM);
+    var sheet = getSpreadsheet_().getSheetByName(SHEETS.REGISTRO_KM);
     var dados = sheet.getDataRange().getValues();
     meuGiroPerfLog_('excluir-atividade', 'leitura_REGISTRO_KM', perfEtapaInicio, {
       quantidade_linhas_registro_km: dados && dados.length ? dados.length - 1 : 0
