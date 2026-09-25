@@ -1,5 +1,4 @@
 var PORTAL_ATLETA_RETURN_TTL_MS_ = 5 * 60 * 1000;
-var PORTAL_ATLETA_RETURN_URL_ = 'https://script.google.com/macros/s/AKfycbxqA6LmqyTca8i9af5EWKOzuaibTDQKFa6Mtsht4jm7tR29iVZeohNZYLdc3WjNFFJA5Q/exec';
 
 function portalAtletaReturnDestino_(valor) {
   var destino = String(valor || '').trim().toLowerCase();
@@ -36,6 +35,6 @@ function portalAtletaCriarHandoff(sessionToken, destinoSolicitado) {
     ok: true,
     expira_em: expiraEm,
     destino: destino,
-    url: PORTAL_ATLETA_RETURN_URL_ + '?page=portal&handoff=' + encodeURIComponent(token) + '&destino=' + encodeURIComponent(destino)
+    url: dgmbMeuGiroPortalWebappUrl_() + '?page=portal&handoff=' + encodeURIComponent(token) + '&destino=' + encodeURIComponent(destino)
   };
 }
