@@ -232,3 +232,18 @@ Não quebrar:
 - Melhorias futuras no Ranking, quando priorizadas.
 - Integração Strava permanece futura.
 - Melhorias de performance devem evitar reintroduzir cache integral de iframe ou outras estratégias já revertidas por regressão.
+
+
+## Correcao Meu Giro Admin - 25/09/2026
+- Sintoma identificado no Portal Admin: ao buscar atleta no modulo Meu Giro Admin, aparecia "Resposta invalida recebida do Meu Giro".
+- Causa: o Portal chamava a rota `?api=admin`, mas o `doGet` atual do Meu Giro sempre devolvia a pagina HTML do atleta.
+- Correcao implementada no commit `25c073633384a19041df5f3e3006765077669f44`.
+- Criado `Meu Giro/AdminApiService.gs` com as operacoes administrativas protegidas pelo handoff ADMIN:
+  - buscar atleta;
+  - consultar painel do atleta;
+  - corrigir atividade;
+  - registrar historico administrativo da correcao.
+- `Meu Giro/Code.gs` agora direciona chamadas `api=admin` para resposta JSON e aceita POST administrativo.
+- GitHub Action #38 concluida com SUCCESS, incluindo sincronizacao do GAS e atualizacao do deployment DEV.
+- Fluxo do atleta nao foi alterado.
+- Homologacao pendente: repetir busca no Meu Giro Admin pelo Portal.
