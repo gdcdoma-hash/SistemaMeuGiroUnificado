@@ -265,3 +265,16 @@ Não quebrar:
 - Nenhum GAS PROD foi criado e nenhum ambiente publico antigo foi alterado.
 - GitHub Action #39: SUCCESS, incluindo sincronizacao GAS DEV e atualizacao do deployment DEV.
 - Homologacao pendente: abrir Meu Giro pelo Portal, confirmar carregamento dos dados e retornar ao Portal.
+
+
+## Configuracao segura por ambiente do Meu Giro - 25/09/2026
+- O teste apos o rollback confirmou ida Portal -> Meu Giro e retorno Meu Giro -> Portal funcionando normalmente.
+- A tentativa anterior com configuracao calculada na inicializacao global foi descartada.
+- Nova abordagem implementada no commit `c9fd947c5bce1ce568cdd77279f9d68022d2ce62`.
+- Criado `Meu Giro/EnvironmentConfig.gs` somente com funcoes de leitura em tempo de execucao; nenhum valor e calculado na abertura global do Apps Script.
+- Chaves preparadas: `DGMB_SPREADSHEET_ID`, `DGMB_PORTAL_WEBAPP_URL`, `DGMB_CERTIFICADOS_FOLDER_ID` e `DGMB_CERTIFICADO_TEMPLATE_ID`.
+- Os valores DEV atuais permanecem como fallback, portanto nenhum ID, URL, pasta ou template foi trocado.
+- `getSpreadsheet_()`, retorno ao Portal e servicos de certificado passaram a usar a leitura segura nos pontos migrados.
+- `SPREADSHEET_ID` antigo permanece temporariamente para compatibilidade com arquivos ainda nao migrados.
+- GitHub Action #41 concluiu com SUCCESS, incluindo sincronizacao do GAS e atualizacao do deployment DEV.
+- Homologacao pendente: repetir Portal -> Meu Giro -> Portal.
