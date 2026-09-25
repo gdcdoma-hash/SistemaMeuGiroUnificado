@@ -1,6 +1,11 @@
 function doGet(e) {
-  var template = HtmlService.createTemplateFromFile('Index');
   var parametros = e && e.parameter ? e.parameter : {};
+
+  if (String(parametros.api || '').trim().toLowerCase() === 'admin') {
+    return meuGiroAdminApiDoGet_(parametros);
+  }
+
+  var template = HtmlService.createTemplateFromFile('Index');
   template.meuGiroBootJson = JSON.stringify({
     embedded: String(parametros.embedded || '').trim() === '1',
     page: String(parametros.page || '').trim().toLowerCase(),
@@ -19,4 +24,9 @@ function doGet(e) {
  */
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+
+function doPost(e) {
+  return meuGiroAdminApiDoPost_(e);
 }
