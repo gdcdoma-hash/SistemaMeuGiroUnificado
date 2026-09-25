@@ -278,3 +278,16 @@ Não quebrar:
 - `SPREADSHEET_ID` antigo permanece temporariamente para compatibilidade com arquivos ainda nao migrados.
 - GitHub Action #41 concluiu com SUCCESS, incluindo sincronizacao do GAS e atualizacao do deployment DEV.
 - Homologacao pendente: repetir Portal -> Meu Giro -> Portal.
+
+
+## Fechamento da preparacao DEV/PROD - 25/09/2026
+- Ida Portal -> Meu Giro e retorno Meu Giro -> Portal homologados apos a implementacao segura.
+- Configuracao por ambiente esta em `Meu Giro/EnvironmentConfig.gs` e so e lida quando uma funcao precisa do valor.
+- Chaves preparadas: `DGMB_SPREADSHEET_ID`, `DGMB_PORTAL_WEBAPP_URL`, `DGMB_CERTIFICADOS_FOLDER_ID`, `DGMB_CERTIFICADO_TEMPLATE_ID`.
+- Todos os usos restantes encontrados de `SPREADSHEET_ID` foram migrados para `getSpreadsheet_()`.
+- `Config.gs` nao mantem mais o ID fixo da planilha.
+- Os valores DEV atuais continuam como fallback; nenhum valor PROD foi cadastrado.
+- Commit funcional final desta etapa: `f5e72249c4089f43757dbef20f7118813b08e7ce`.
+- GitHub Action #42 concluida com SUCCESS, incluindo sincronizacao GAS DEV e atualizacao do deployment.
+- A API administrativa corrigida anteriormente permanece ativa.
+- Nenhum GAS PROD foi criado e nenhuma planilha foi trocada.
