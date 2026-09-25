@@ -247,3 +247,21 @@ Não quebrar:
 - GitHub Action #38 concluida com SUCCESS, incluindo sincronizacao do GAS e atualizacao do deployment DEV.
 - Fluxo do atleta nao foi alterado.
 - Homologacao pendente: repetir busca no Meu Giro Admin pelo Portal.
+
+
+## Separacao DEV/PROD do Meu Giro - etapa inicial - 25/09/2026
+- Busca e abertura de atleta no Meu Giro Admin foram homologadas pelo responsavel apos a correcao da API administrativa.
+- Commit funcional da configuracao por ambiente: `f92f3b5a338e4703a607d9c58a4baced134f2a68`.
+- `Meu Giro/Config.gs` passou a centralizar:
+  - `DGMB_ENVIRONMENT`;
+  - `DGMB_SPREADSHEET_ID`;
+  - `DGMB_PORTAL_WEBAPP_URL`;
+  - `DGMB_CERTIFICADOS_FOLDER_ID`;
+  - `DGMB_CERTIFICADO_TEMPLATE_ID`.
+- Script Properties tem prioridade; os valores DEV atuais permanecem como fallback para nao alterar o funcionamento durante a migracao.
+- `PortalAtletaReturnService.gs` passou a obter a URL do Portal pela configuracao central.
+- `CertificadoService.gs` passou a obter pasta e template padrao pela configuracao central.
+- A planilha oficial do DEV permanece a mesma.
+- Nenhum GAS PROD foi criado e nenhum ambiente publico antigo foi alterado.
+- GitHub Action #39: SUCCESS, incluindo sincronizacao GAS DEV e atualizacao do deployment DEV.
+- Homologacao pendente: abrir Meu Giro pelo Portal, confirmar carregamento dos dados e retornar ao Portal.
