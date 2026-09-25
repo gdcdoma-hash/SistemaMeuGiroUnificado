@@ -23,7 +23,7 @@ function gerarCertificadoImagem_(contexto) {
     };
   }
 
-  var templatePadraoId = String(TEMPLATE_CERTIFICADO_SLIDES_ID_ || '').trim();
+  var templatePadraoId = String(dgmbMeuGiroCertificadoTemplateId_() || '').trim();
   if (!templatePadraoId) {
     return {
       ok: false,

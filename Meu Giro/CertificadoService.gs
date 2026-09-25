@@ -1,5 +1,3 @@
-var CERTIFICADO_PASTA_BASE_ID_ = '1GncBumQM3RAS6WIT0jHQPaIMKBlT7OHi';
-var TEMPLATE_CERTIFICADO_SLIDES_ID_ = '13BP2rHBiqymQyOk1bJsNFsSPxJAhQEPHj5FRIuAssfo';
 
 function gerarOuObterCertificadoDesafio(payload) {
   try {
@@ -143,7 +141,7 @@ function gerarCertificadoDesafio_(contexto) {
     }
   }
 
-  var templatePadraoId = String(TEMPLATE_CERTIFICADO_SLIDES_ID_ || '').trim();
+  var templatePadraoId = String(dgmbMeuGiroCertificadoTemplateId_() || '').trim();
   if (!templatePadraoId) {
     return {
       ok: false,
@@ -186,7 +184,7 @@ function gerarCertificadoDesafio_(contexto) {
 }
 
 function certificadoResolverTemplateSlides_(idDesafio, idItemEstoque) {
-  var templatePadrao = String(TEMPLATE_CERTIFICADO_SLIDES_ID_ || '').trim();
+  var templatePadrao = String(dgmbMeuGiroCertificadoTemplateId_() || '').trim();
   var padrao = function(reason) {
     return { templateId: templatePadrao, source: 'PADRAO', fallback: true, reason: reason };
   };
@@ -522,7 +520,7 @@ function certificadoBuscarNomeParticipante_(idDgmb) {
 }
 
 function certificadoGetOuCriarPastaDesafio_(idDesafio) {
-  var pastaBase = DriveApp.getFolderById(CERTIFICADO_PASTA_BASE_ID_);
+  var pastaBase = DriveApp.getFolderById(dgmbMeuGiroCertificadosFolderId_());
   var nomeSubpasta = 'ID_DESAFIO_' + String(idDesafio || 'sem-id').trim();
   var subpastas = pastaBase.getFoldersByName(nomeSubpasta);
   if (subpastas.hasNext()) return subpastas.next();

@@ -7,14 +7,18 @@ function normalizeCell_(value) {
 }
 
 function getSpreadsheet_() {
-  if (!SPREADSHEET_ID) {
-    throw new Error('SPREADSHEET_ID não informado no Config.gs');
+  var spreadsheetId = typeof dgmbMeuGiroSpreadsheetId_ === 'function'
+    ? dgmbMeuGiroSpreadsheetId_()
+    : String(SPREADSHEET_ID || '').trim();
+
+  if (!spreadsheetId) {
+    throw new Error('ID da planilha do Meu Giro não informado.');
   }
 
   try {
-    return SpreadsheetApp.openById(SPREADSHEET_ID);
+    return SpreadsheetApp.openById(spreadsheetId);
   } catch (e) {
-    throw new Error('Não foi possível abrir a planilha pelo SPREADSHEET_ID');
+    throw new Error('Não foi possível abrir a planilha configurada para o Meu Giro.');
   }
 }
 
