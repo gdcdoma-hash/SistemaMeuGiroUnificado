@@ -18,6 +18,18 @@ function dgmbMeuGiroConfigGet_(chave, fallback) {
 
   if (valor) return valor;
 
+  var ambiente = '';
+  try {
+    ambiente = String(
+      PropertiesService.getScriptProperties().getProperty('DGMB_ENVIRONMENT') || ''
+    ).trim().toUpperCase();
+  } catch (erroAmbiente) {}
+
+  // Em PROD, nunca usar silenciosamente os valores padrão do DEV.
+  if (ambiente === 'PROD' && nome !== 'DGMB_ENVIRONMENT') {
+    throw new Error('Configuracao obrigatoria ausente no Meu Giro PROD: ' + nome);
+  }
+
   var padrao = String(fallback == null ? '' : fallback).trim();
   if (padrao) return padrao;
 
