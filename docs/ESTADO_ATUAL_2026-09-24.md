@@ -312,3 +312,18 @@ Não quebrar:
 - Próxima ação manual:
   1. `MeuGiroProdSetupService.gs > SETUP_MEU_GIRO_PROD_INICIAL`;
   2. `MeuGiroProdSetupService.gs > VERIFICAR_MEU_GIRO_PROD_CONFIG`.
+
+
+## Meu Giro PROD configurado e validado — 28/09/2026
+**Marcador:** `MEU_GIRO_PROD_CONFIG_VALIDADA_2026_09_28`
+- `MeuGiroProdSetupService.gs > SETUP_MEU_GIRO_PROD_INICIAL`: OK.
+- `MeuGiroProdSetupService.gs > VERIFICAR_MEU_GIRO_PROD_CONFIG`: OK.
+- Script ID correto: true.
+- Ambiente: PROD.
+- Planilha PROD acessível: true.
+- Pasta certificados PROD acessível: true.
+- Template certificado acessível: true.
+- `prontoSemPortalUrl = true`.
+- `prontoCompleto = false` apenas porque `DGMB_PORTAL_WEBAPP_URL` ainda está vazio.
+- Pasta certificados PROD: `1gh_pMdvzMfL7s5fbG5gW2GIf5fmhNUzk`.
+- Próxima ação: criar deployments PROD de Portal e Meu Giro, depois configurar URLs cruzadas.
