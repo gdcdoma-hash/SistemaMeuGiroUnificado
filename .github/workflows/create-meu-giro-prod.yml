@@ -1,0 +1,92 @@
+name: Criar Meu Giro GAS PROD
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/create-meu-giro-prod.yml'
+
+jobs:
+  criar:
+    if: contains(github.event.head_commit.message, '[CREATE_MEU_GIRO_PROD]')
+    name: Criar projeto Apps Script Meu Giro PROD sem deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Baixar codigo do GitHub
+        uses: actions/checkout@v4
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar clasp
+        run: npm install --global @google/clasp@3.4.1
+
+      - name: Configurar credencial Google
+        shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          if [ -z "$CLASPRC_JSON" ]; then
+            echo "ERRO: secret CLASPRC_JSON nao configurado."
+            exit 1
+          fi
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+
+      - name: Criar projeto Meu Giro PROD
+        id: criar
+        shell: bash
+        run: |
+          set -euo pipefail
+          TMP_DIR="$RUNNER_TEMP/meu-giro-prod"
+          mkdir -p "$TMP_DIR"
+          cd "$TMP_DIR"
+
+          clasp create --type standalone --title "Meu Giro PROD"
+
+          SCRIPT_ID="$(jq -r '.scriptId' .clasp.json)"
+          if [ -z "$SCRIPT_ID" ] || [ "$SCRIPT_ID" = "null" ]; then
+            echo "ERRO: Script ID PROD nao foi criado."
+            exit 1
+          fi
+
+          echo "script_id=$SCRIPT_ID" >> "$GITHUB_OUTPUT"
+          printf '{"scriptId":"%s","rootDir":"Meu Giro"}\n' "$SCRIPT_ID" > "$GITHUB_WORKSPACE/.clasp.json"
+
+      - name: Confirmar destino PROD
+        shell: bash
+        run: |
+          echo "Projeto novo criado. Script ID:"
+          jq -r '.scriptId' .clasp.json
+          clasp show-file-status
+
+      - name: Enviar codigo homologado ao Meu Giro PROD
+        run: clasp push --force
+
+      - name: Registrar informacoes do Meu Giro PROD
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/meu-giro-prod-info"
+          SCRIPT_ID="$(jq -r '.scriptId' .clasp.json)"
+          cat > "$RUNNER_TEMP/meu-giro-prod-info/meu-giro-prod-info.json" <<EOF
+          {
+            "title": "Meu Giro PROD",
+            "scriptId": "$SCRIPT_ID",
+            "deploymentCreated": false,
+            "spreadsheetConfigured": false,
+            "createdFromCommit": "$GITHUB_SHA"
+          }
+          EOF
+          cat "$RUNNER_TEMP/meu-giro-prod-info/meu-giro-prod-info.json"
+
+      - name: Salvar comprovante da criacao
+        uses: actions/upload-artifact@v4
+        with:
+          name: meu-giro-prod-info
+          path: ${{ runner.temp }}/meu-giro-prod-info/meu-giro-prod-info.json
+          retention-days: 30
