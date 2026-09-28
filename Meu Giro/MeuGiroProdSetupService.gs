@@ -7,6 +7,8 @@ var DGMB_MEU_GIRO_PROD_SPREADSHEET_ID_ = '1hQlopo_pbsp_KGEtXsDUZQ8ilPLjCwHhAyKiv
 var DGMB_MEU_GIRO_PROD_FILES_ROOT_ID_ = '1x6kIh-PzC7eGjJkS5gy0ggBw9KqRh4Y-';
 var DGMB_MEU_GIRO_PROD_CERT_FOLDER_NAME_ = 'CERTIFICADOS_DGMB';
 var DGMB_MEU_GIRO_PROD_CERT_TEMPLATE_ID_ = '13BP2rHBiqymQyOk1bJsNFsSPxJAhQEPHj5FRIuAssfo';
+var DGMB_PORTAL_PROD_WEBAPP_URL_ = 'https://script.google.com/macros/s/AKfycbx3I_pc35_LWv1SpeEJbJ_3pq9aLE1lIc6tE4BccQGdD18nyKzmw5quivht3zOEdyCP/exec';
+var DGMB_MEU_GIRO_PROD_WEBAPP_URL_ = 'https://script.google.com/macros/s/AKfycbzgCdo-kgL9Hf-f43wPIrt_hFYlamgZD5AaIEM9l3f2q8oM7cgOHUnMEDctvztqTC6s3w/exec';
 
 function SETUP_MEU_GIRO_PROD_INICIAL() {
   var scriptAtual = ScriptApp.getScriptId();
@@ -97,6 +99,7 @@ function VERIFICAR_MEU_GIRO_PROD_CONFIG() {
     certificadoTemplateId: String(props.getProperty('DGMB_CERTIFICADO_TEMPLATE_ID') || ''),
     templateAcessivel: templateAcessivel,
     portalWebappUrl: portalUrl,
+    portalUrlCorreta: portalUrl === DGMB_PORTAL_PROD_WEBAPP_URL_,
     prontoSemPortalUrl: (
       scriptAtual === DGMB_MEU_GIRO_PROD_SCRIPT_ID_ &&
       String(props.getProperty('DGMB_ENVIRONMENT') || '') === 'PROD' &&
@@ -112,10 +115,37 @@ function VERIFICAR_MEU_GIRO_PROD_CONFIG() {
       spreadsheetAcessivel &&
       certificadosFolderAcessivel &&
       templateAcessivel &&
-      !!portalUrl
+      portalUrl === DGMB_PORTAL_PROD_WEBAPP_URL_
     )
   };
 
   Logger.log('[MEU_GIRO][PROD_CONFIG] ' + JSON.stringify(retorno));
+  return retorno;
+}
+
+
+function CONFIGURAR_URL_PORTAL_PROD() {
+  var scriptAtual = ScriptApp.getScriptId();
+  if (scriptAtual !== DGMB_MEU_GIRO_PROD_SCRIPT_ID_) {
+    throw new Error(
+      'BLOQUEADO: esta função só pode ser executada no projeto Meu Giro PROD.'
+    );
+  }
+
+  var props = PropertiesService.getScriptProperties();
+  if (String(props.getProperty('DGMB_ENVIRONMENT') || '').trim().toUpperCase() !== 'PROD') {
+    throw new Error('Ambiente PROD ainda não configurado neste projeto.');
+  }
+
+  props.setProperty('DGMB_PORTAL_WEBAPP_URL', DGMB_PORTAL_PROD_WEBAPP_URL_);
+
+  var retorno = {
+    status: 'OK',
+    meuGiroProdUrl: DGMB_MEU_GIRO_PROD_WEBAPP_URL_,
+    portalProdUrl: String(props.getProperty('DGMB_PORTAL_WEBAPP_URL') || ''),
+    configurado: String(props.getProperty('DGMB_PORTAL_WEBAPP_URL') || '') === DGMB_PORTAL_PROD_WEBAPP_URL_
+  };
+
+  Logger.log('[MEU_GIRO][PROD_URL_PORTAL] ' + JSON.stringify(retorno));
   return retorno;
 }
