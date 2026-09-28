@@ -1,0 +1,57 @@
+name: Criar deployment Meu Giro PROD
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/deploy-meu-giro-prod.yml'
+
+jobs:
+  deploy:
+    if: contains(github.event.head_commit.message, '[DEPLOY_MEU_GIRO_PROD_INITIAL]')
+    name: Criar primeiro deployment Meu Giro PROD
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Baixar codigo do GitHub
+        uses: actions/checkout@v4
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar clasp
+        run: npm install --global @google/clasp@3.4.1
+
+      - name: Configurar credencial Google
+        shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          if [ -z "$CLASPRC_JSON" ]; then
+            echo "ERRO: secret CLASPRC_JSON nao configurado."
+            exit 1
+          fi
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+
+      - name: Apontar somente para Meu Giro PROD
+        shell: bash
+        run: |
+          printf '{"scriptId":"1gCtXj8xlNLhQi6XSJhQF7c8bxgvVvMuq3-ZmZ4_BIGoubMUs09D8VKY2","rootDir":"Meu Giro"}\n' > .clasp.json
+          jq -r '.scriptId' .clasp.json
+
+      - name: Garantir codigo atual no Meu Giro PROD
+        run: clasp push --force
+
+      - name: Criar deployment PROD
+        shell: bash
+        run: |
+          set -euo pipefail
+          clasp deploy --description "PROD inicial - 2026-09-28"
+
+      - name: Listar deployments
+        run: clasp deployments
