@@ -350,3 +350,14 @@ Não quebrar:
 - prontoCompleto = true.
 - Portal PROD também validado com meuGiroUrlCorreta = true e prontoCompleto = true.
 - Próxima ação: teste real Portal PROD → Meu Giro PROD → Portal PROD, inicialmente somente navegação/leitura.
+
+
+## Smoke test PROD Portal ↔ Meu Giro concluído — 28/09/2026
+**Marcador:** `PROD_SMOKE_PORTAL_MEU_GIRO_OK_2026_09_28`
+- Portal PROD → Meu Giro PROD: OK.
+- Meu Giro PROD → Portal PROD: OK.
+- Sessão compartilhada/retorno: OK.
+- Dados do atleta carregaram normalmente.
+- Smoke test foi somente leitura/navegação, sem registrar KM ou alterar inscrição.
+- Integração PROD homologada.
+- Próxima etapa: regressão funcional controlada dos fluxos principais.
