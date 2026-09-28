@@ -327,3 +327,17 @@ Não quebrar:
 - `prontoCompleto = false` apenas porque `DGMB_PORTAL_WEBAPP_URL` ainda está vazio.
 - Pasta certificados PROD: `1gh_pMdvzMfL7s5fbG5gW2GIf5fmhNUzk`.
 - Próxima ação: criar deployments PROD de Portal e Meu Giro, depois configurar URLs cruzadas.
+
+
+## Deployments PROD e URLs cruzadas — 28/09/2026
+**Marcador:** `PROD_DEPLOYMENTS_CRIADOS_2026_09_28`
+- Portal PROD URL: `https://script.google.com/macros/s/AKfycbx3I_pc35_LWv1SpeEJbJ_3pq9aLE1lIc6tE4BccQGdD18nyKzmw5quivht3zOEdyCP/exec`.
+- Meu Giro PROD URL: `https://script.google.com/macros/s/AKfycbzgCdo-kgL9Hf-f43wPIrt_hFYlamgZD5AaIEM9l3f2q8oM7cgOHUnMEDctvztqTC6s3w/exec`.
+- Função Meu Giro para gravar Portal PROD:
+  - arquivo `MeuGiroProdSetupService.gs`;
+  - função `CONFIGURAR_URL_PORTAL_PROD`.
+- Função Portal para gravar Meu Giro PROD:
+  - arquivo `ProdSetupService.gs`;
+  - função `CONFIGURAR_URL_MEU_GIRO_PROD`.
+- Sincronizações PROD concluídas com sucesso.
+- Nenhum endpoint antigo foi substituído.
