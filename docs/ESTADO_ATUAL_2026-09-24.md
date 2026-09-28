@@ -341,3 +341,12 @@ Não quebrar:
   - função `CONFIGURAR_URL_MEU_GIRO_PROD`.
 - Sincronizações PROD concluídas com sucesso.
 - Nenhum endpoint antigo foi substituído.
+
+
+## Integração cruzada PROD validada — 28/09/2026
+**Marcador:** `PROD_INTEGRACAO_CRUZADA_VALIDADA_2026_09_28`
+- Meu Giro PROD recebeu URL do Portal PROD.
+- portalUrlCorreta = true.
+- prontoCompleto = true.
+- Portal PROD também validado com meuGiroUrlCorreta = true e prontoCompleto = true.
+- Próxima ação: teste real Portal PROD → Meu Giro PROD → Portal PROD, inicialmente somente navegação/leitura.
