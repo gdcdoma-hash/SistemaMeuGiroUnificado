@@ -291,3 +291,24 @@ Não quebrar:
 - GitHub Action #42 concluida com SUCCESS, incluindo sincronizacao GAS DEV e atualizacao do deployment.
 - A API administrativa corrigida anteriormente permanece ativa.
 - Nenhum GAS PROD foi criado e nenhuma planilha foi trocada.
+
+
+## Meu Giro PROD criado — 28/09/2026
+**Marcador:** `MEU_GIRO_PROD_CRIADO_2026_09_28`
+- Novo projeto Apps Script standalone: `Meu Giro PROD`.
+- Script ID PROD: `1gCtXj8xlNLhQi6XSJhQF7c8bxgvVvMuq3-ZmZ4_BIGoubMUs09D8VKY2`.
+- Código homologado enviado ao novo projeto.
+- Nenhum deployment público criado ainda.
+- `EnvironmentConfig.gs` ajustado para impedir fallback DEV quando `DGMB_ENVIRONMENT=PROD`.
+- Novo arquivo `MeuGiroProdSetupService.gs`:
+  - trava pelo Script ID PROD;
+  - configura a planilha PROD `1hQlopo_pbsp_KGEtXsDUZQ8ilPLjCwHhAyKivYlXRug`;
+  - cria/reutiliza pasta `CERTIFICADOS_DGMB` dentro da pasta raiz PROD;
+  - mantém o template padrão atual de certificado;
+  - remove eventual URL do Portal DEV;
+  - possui verificação de configuração.
+- Sincronização Meu Giro DEV: SUCCESS.
+- Sincronização Meu Giro PROD: SUCCESS.
+- Próxima ação manual:
+  1. `MeuGiroProdSetupService.gs > SETUP_MEU_GIRO_PROD_INICIAL`;
+  2. `MeuGiroProdSetupService.gs > VERIFICAR_MEU_GIRO_PROD_CONFIG`.
