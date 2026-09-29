@@ -1,0 +1,104 @@
+name: Congelar Meu Giro legado no corte
+
+on:
+  push:
+    branches:
+      - cutover/freeze-old-2026-09-29
+    paths:
+      - '.github/workflows/cutover-freeze-old.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  congelar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SCRIPT_ID: 1yzt1owd383lRUWPe-sI3mEbxKkqWPwYE1FmzsGPXLBd5YNUQUO5cuJaR
+      DEPLOYMENT_ID: AKfycbz-wiU2Svg3mv6KyxYkzCAW-YZAEpBy_tOo21YnIu2vOyupLNUytZVkVQuV0eCTvKnl
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar clasp
+        run: npm install --global @google/clasp@3.4.1
+
+      - name: Autenticar
+        shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          test -n "$CLASPRC_JSON"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+
+      - name: Baixar fonte exata do Meu Giro legado
+        shell: bash
+        run: |
+          rm -rf legacy-live legacy-snapshot
+          mkdir legacy-live
+          printf '{"scriptId":"%s","rootDir":"."}\n' "$SCRIPT_ID" > legacy-live/.clasp.json
+          cd legacy-live
+          clasp pull
+          cd ..
+          cp -a legacy-live legacy-snapshot
+
+      - name: Guardar snapshot anterior ao congelamento
+        uses: actions/upload-artifact@v4
+        with:
+          name: meu-giro-legado-pre-corte-2026-09-29
+          path: legacy-snapshot
+          retention-days: 30
+
+      - name: Aplicar bloqueio de manutenção
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          function walk(dir) {
+            for (const name of fs.readdirSync(dir)) {
+              const p = path.join(dir, name);
+              const st = fs.statSync(p);
+              if (st.isDirectory()) walk(p);
+              else if (p.endsWith('.gs')) {
+                let s = fs.readFileSync(p, 'utf8');
+                s = s.replace(/function\s+doGet\s*\(/g, 'function doGet_LEGACY_DISABLED_(');
+                s = s.replace(/function\s+doPost\s*\(/g, 'function doPost_LEGACY_DISABLED_(');
+                fs.writeFileSync(p, s);
+              }
+            }
+          }
+          walk('legacy-live');
+          NODE
+
+          cat > legacy-live/CutoverMaintenance.gs <<'EOF'
+          function doGet(e) {
+            var html = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Meu Giro</title></head>' +
+              '<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#081120;color:#fff;font-family:Arial,sans-serif">' +
+              '<main style="max-width:520px;padding:32px;text-align:center"><h2>Meu Giro em atualização</h2>' +
+              '<p style="line-height:1.55;color:#d8e0ec">Os registros de atividades estão temporariamente bloqueados enquanto concluímos a publicação da nova versão.</p>' +
+              '<p style="line-height:1.55;color:#d8e0ec">Tente novamente em alguns minutos.</p></main></body></html>';
+            return HtmlService.createHtmlOutput(html)
+              .setTitle('Meu Giro')
+              .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+          }
+
+          function doPost(e) {
+            return ContentService
+              .createTextOutput(JSON.stringify({status:'BLOQUEADO', motivo:'CORTE_EM_ANDAMENTO'}))
+              .setMimeType(ContentService.MimeType.JSON);
+          }
+          EOF
+
+      - name: Publicar bloqueio no Meu Giro legado
+        shell: bash
+        run: |
+          cd legacy-live
+          clasp push --force
+          clasp update-deployment "$DEPLOYMENT_ID" --description "CORTE 2026-09-29 - Meu Giro legado congelado"
+          clasp deployments
