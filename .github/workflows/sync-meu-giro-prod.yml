@@ -56,4 +56,4 @@ jobs:
           echo "Código enviado ao Meu Giro PROD."
           echo "Nenhum deployment foi criado ou atualizado por este workflow."
 
-# sync-bump: 2026-09-28-cross-url
+# sync-bump: 2026-09-29-simulacao-resumo-otimizada
