@@ -3,7 +3,7 @@
  * Travada pelo Script ID do projeto PROD para impedir execução no DEV.
  */
 var DGMB_MEU_GIRO_PROD_SCRIPT_ID_ = '1gCtXj8xlNLhQi6XSJhQF7c8bxgvVvMuq3-ZmZ4_BIGoubMUs09D8VKY2';
-var DGMB_MEU_GIRO_PROD_SPREADSHEET_ID_ = '1hQlopo_pbsp_KGEtXsDUZQ8ilPLjCwHhAyKivYlXRug';
+var DGMB_MEU_GIRO_PROD_SPREADSHEET_ID_ = '1h9Rlk5WbsuuaJLPcmSd6CpglP23XkhXY1bo9dON2stQ';
 var DGMB_MEU_GIRO_PROD_FILES_ROOT_ID_ = '1x6kIh-PzC7eGjJkS5gy0ggBw9KqRh4Y-';
 var DGMB_MEU_GIRO_PROD_CERT_FOLDER_NAME_ = 'CERTIFICADOS_DGMB';
 var DGMB_MEU_GIRO_PROD_CERT_TEMPLATE_ID_ = '13BP2rHBiqymQyOk1bJsNFsSPxJAhQEPHj5FRIuAssfo';
@@ -149,3 +149,31 @@ function CONFIGURAR_URL_PORTAL_PROD() {
   Logger.log('[MEU_GIRO][PROD_URL_PORTAL] ' + JSON.stringify(retorno));
   return retorno;
 }
+
+function APONTAR_MEU_GIRO_PROD_PARA_BASE_FINAL() {
+  var scriptAtual = ScriptApp.getScriptId();
+  if (scriptAtual !== DGMB_MEU_GIRO_PROD_SCRIPT_ID_) {
+    throw new Error('BLOQUEADO: função disponível somente no Meu Giro PROD.');
+  }
+
+  var ss = SpreadsheetApp.openById(DGMB_MEU_GIRO_PROD_SPREADSHEET_ID_);
+  if (!ss) throw new Error('Não foi possível abrir a planilha final.');
+
+  var props = PropertiesService.getScriptProperties();
+  props.setProperty('DGMB_ENVIRONMENT', 'PROD');
+  props.setProperty('DGMB_SPREADSHEET_ID', DGMB_MEU_GIRO_PROD_SPREADSHEET_ID_);
+
+  var retorno = {
+    status: 'OK',
+    scriptId: scriptAtual,
+    spreadsheetId: String(props.getProperty('DGMB_SPREADSHEET_ID') || ''),
+    spreadsheetName: ss.getName(),
+    portalWebappUrl: String(props.getProperty('DGMB_PORTAL_WEBAPP_URL') || ''),
+    apontadoParaBaseFinal:
+      String(props.getProperty('DGMB_SPREADSHEET_ID') || '') === DGMB_MEU_GIRO_PROD_SPREADSHEET_ID_
+  };
+
+  Logger.log('[MEU_GIRO][CORTE_APONTADO_FINAL] ' + JSON.stringify(retorno));
+  return retorno;
+}
+
