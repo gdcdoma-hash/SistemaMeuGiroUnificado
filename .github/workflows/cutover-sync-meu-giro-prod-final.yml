@@ -1,0 +1,38 @@
+name: Corte - sincronizar Meu Giro PROD final
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/cutover-sync-meu-giro-prod-final.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  sincronizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --global @google/clasp@3.4.1
+      - name: Autenticar
+        shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          test -n "$CLASPRC_JSON"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+      - name: Apontar para Meu Giro PROD
+        shell: bash
+        run: |
+          printf '{"scriptId":"1gCtXj8xlNLhQi6XSJhQF7c8bxgvVvMuq3-ZmZ4_BIGoubMUs09D8VKY2","rootDir":"Meu Giro"}\n' > .clasp.json
+      - name: Enviar código
+        run: clasp push --force
+      - name: Atualizar deployment
+        run: clasp update-deployment AKfycbzgCdo-kgL9Hf-f43wPIrt_hFYlamgZD5AaIEM9l3f2q8oM7cgOHUnMEDctvztqTC6s3w --description "CORTE 2026-09-29 - base final"
