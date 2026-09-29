@@ -11,7 +11,11 @@
  *
  * Esta função é deliberadamente somente leitura e não altera nenhuma aba.
  */
+var SIMULAR_RESUMO_TIMEZONE_CACHE_ = '';
+var SIMULAR_RESUMO_DATA_ISO_CACHE_ = {};
+
 function simularReconstrucaoMeuGiroResumo() {
+  var inicioTotal = Date.now();
   var ss = getSpreadsheet_();
   var nomes = {
     desafios: SHEETS.DESAFIO || 'dgmbDesafios',
@@ -20,18 +24,53 @@ function simularReconstrucaoMeuGiroResumo() {
     resumo: SHEETS.MEU_GIRO_RESUMO || 'MEU_GIRO_RESUMO'
   };
 
+  // Evita milhares de chamadas repetidas a Session.getScriptTimeZone()
+  // durante a normalização das datas vindas do Sheets.
+  SIMULAR_RESUMO_TIMEZONE_CACHE_ = Session.getScriptTimeZone();
+  SIMULAR_RESUMO_DATA_ISO_CACHE_ = {};
+
+  var etapa = Date.now();
   var dadosDesafios = simularResumoLerAba_(ss, nomes.desafios);
+  Logger.log('[Meu Giro][simulação etapa] leitura ' + nomes.desafios +
+    ': ' + (Date.now() - etapa) + ' ms; linhas=' + Math.max(dadosDesafios.length - 1, 0) +
+    '; colunas=' + ((dadosDesafios[0] || []).length));
+
+  etapa = Date.now();
   var dadosRegistros = simularResumoLerAba_(ss, nomes.registros);
+  Logger.log('[Meu Giro][simulação etapa] leitura ' + nomes.registros +
+    ': ' + (Date.now() - etapa) + ' ms; linhas=' + Math.max(dadosRegistros.length - 1, 0) +
+    '; colunas=' + ((dadosRegistros[0] || []).length));
+
+  etapa = Date.now();
   var dadosLista = simularResumoLerAba_(ss, nomes.lista);
+  Logger.log('[Meu Giro][simulação etapa] leitura ' + nomes.lista +
+    ': ' + (Date.now() - etapa) + ' ms; linhas=' + Math.max(dadosLista.length - 1, 0) +
+    '; colunas=' + ((dadosLista[0] || []).length));
+
+  etapa = Date.now();
   var dadosResumo = simularResumoLerAba_(ss, nomes.resumo);
+  Logger.log('[Meu Giro][simulação etapa] leitura ' + nomes.resumo +
+    ': ' + (Date.now() - etapa) + ' ms; linhas=' + Math.max(dadosResumo.length - 1, 0) +
+    '; colunas=' + ((dadosResumo[0] || []).length));
+
+  etapa = Date.now();
   var layoutResumo = meuGiroResumoObterLayout_(dadosResumo[0] || [], nomes.resumo);
+  Logger.log('[Meu Giro][simulação etapa] layout resumo: ' + (Date.now() - etapa) + ' ms');
+
+  etapa = Date.now();
   var esperado = simularResumoCalcularEsperado_(
     dadosDesafios,
     dadosRegistros,
     dadosLista,
     layoutResumo.possuiIdInscricao
   );
+  Logger.log('[Meu Giro][simulação etapa] cálculo esperado: ' + (Date.now() - etapa) +
+    ' ms; chaves=' + esperado.chaves.length);
+
+  etapa = Date.now();
   var comparativo = simularResumoComparar_(esperado, dadosResumo, layoutResumo);
+  Logger.log('[Meu Giro][simulação etapa] comparação: ' + (Date.now() - etapa) + ' ms');
+  Logger.log('[Meu Giro][simulação etapa] total: ' + (Date.now() - inicioTotal) + ' ms');
 
   Logger.log('[Meu Giro][simulação reconstrução] total esperado: ' + comparativo.total_esperado);
   Logger.log('[Meu Giro][simulação reconstrução] total atual: ' + comparativo.total_atual);
@@ -152,6 +191,49 @@ function reconstruirResumoCompararItens_(a, b) {
   if (diferencaMeta !== 0) return diferencaMeta;
 
   return normalizeText_(a.id_inscricao).localeCompare(normalizeText_(b.id_inscricao));
+}
+
+
+function simularResumoNormalizarDataISO_(value) {
+  if (!value) return '';
+
+  var ehData = Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value.getTime());
+  if (ehData) {
+    var chaveData = 'D|' + value.getTime();
+    if (Object.prototype.hasOwnProperty.call(SIMULAR_RESUMO_DATA_ISO_CACHE_, chaveData)) {
+      return SIMULAR_RESUMO_DATA_ISO_CACHE_[chaveData];
+    }
+    var timezone = SIMULAR_RESUMO_TIMEZONE_CACHE_ || Session.getScriptTimeZone();
+    var dataIso = Utilities.formatDate(value, timezone, 'yyyy-MM-dd');
+    SIMULAR_RESUMO_DATA_ISO_CACHE_[chaveData] = dataIso;
+    return dataIso;
+  }
+
+  var s = String(value).trim();
+  if (!s) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+    return s.slice(6, 10) + '-' + s.slice(3, 5) + '-' + s.slice(0, 2);
+  }
+  if (/^\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}(?::\d{2})?$/.test(s)) {
+    return s.slice(6, 10) + '-' + s.slice(3, 5) + '-' + s.slice(0, 2);
+  }
+
+  var chaveTexto = 'S|' + s;
+  if (Object.prototype.hasOwnProperty.call(SIMULAR_RESUMO_DATA_ISO_CACHE_, chaveTexto)) {
+    return SIMULAR_RESUMO_DATA_ISO_CACHE_[chaveTexto];
+  }
+
+  var d = new Date(s);
+  if (isNaN(d.getTime())) {
+    SIMULAR_RESUMO_DATA_ISO_CACHE_[chaveTexto] = '';
+    return '';
+  }
+
+  var timezoneTexto = SIMULAR_RESUMO_TIMEZONE_CACHE_ || Session.getScriptTimeZone();
+  var iso = Utilities.formatDate(d, timezoneTexto, 'yyyy-MM-dd');
+  SIMULAR_RESUMO_DATA_ISO_CACHE_[chaveTexto] = iso;
+  return iso;
 }
 
 function simularResumoLerAba_(ss, nomeAba) {
