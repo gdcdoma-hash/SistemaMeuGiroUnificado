@@ -1104,6 +1104,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
   var contextoLista = buildListaDesafiosContexto_(ss);
   var periodos = contextoLista.periodos;
   var statusListaDesafios = contextoLista.status;
+  var tipoMetaListaDesafios = contextoLista.tipoMeta || { byId: {}, byIdPeriodo: {} };
   perfEtapaInicio = meuGiroPerfNow_();
   var cacheDesafios = obterDgmbDesafiosCacheExecucao_('obterVinculosDesafioUsuario_');
   var abaDesafio = cacheDesafios.aba;
@@ -1134,6 +1135,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
   var idxPeriodoHistorico = getOptionalColumnIndex_(map, MEU_GIRO_PERIODO_DESAFIO_ALIASES_);
   var idxInicioHistorico = getOptionalColumnIndex_(map, ['data_inicio_desafio', 'data inicio desafio', 'data início desafio']);
   var idxFimHistorico = getOptionalColumnIndex_(map, ['data_fim_desafio', 'data fim desafio']);
+  var idxPrazoDias = getOptionalColumnIndex_(map, ['prazo_dias', 'prazo dias']);
 
   var vinculos = [];
   var chaves = {};
@@ -1187,8 +1189,17 @@ function obterVinculosDesafioUsuario_(idDgmb) {
       ? aptoBase && !!idDesafio && metaKm > 0
       : aptoBase;
 
-    var periodoLista = (idDesafio && periodos.byId[idDesafio]) || (!ehNormal && periodos.byAba[abaDesafio]) || { inicio: '', fim: '', nome_desafio: '' };
+    var periodoTextoHistorico = idxPeriodoHistorico > -1 ? normalizeText_(row[idxPeriodoHistorico]) : '';
+    var inicioHistorico = idxInicioHistorico > -1 ? row[idxInicioHistorico] : '';
+    var periodoLista = resolverPeriodoListaDesafio_(periodos, idDesafio, periodoTextoHistorico, inicioHistorico) ||
+      ((!ehNormal && periodos.byAba[abaDesafio]) || { inicio: '', fim: '', nome_desafio: '' });
     periodoLista.nome_desafio = obterNomeDesafioListaPorId_(periodos, idDesafio, periodoLista.nome_desafio);
+
+    var tipoMeta = resolverTipoMetaListaDesafio_(tipoMetaListaDesafios, idDesafio, periodoTextoHistorico, inicioHistorico) ||
+      normalizeText_(periodoLista && periodoLista.tipo_meta).toUpperCase();
+    var prazoDias = idxPrazoDias > -1 ? parseInt(row[idxPrazoDias], 10) || 0 : 0;
+    if (prazoDias > 0) tipoMeta = 'PRAZO_DIAS';
+
     var periodo = montarPeriodoHistoricoVinculo_(row, {
       periodo: idxPeriodoHistorico,
       inicio: idxInicioHistorico,
@@ -1199,7 +1210,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
       id_inscricao: idInscricao || '',
       id_item_estoque: idItem || '',
       linha: numeroLinha
-    });
+    }, tipoMeta);
 
     var chave = [id, idInscricao, idDesafio, idItem || ('META_' + Math.round((metaKm + Number.EPSILON) * 10) / 10)].join('|');
     if (chaves[chave]) continue;
