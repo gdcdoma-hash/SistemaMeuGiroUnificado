@@ -1191,8 +1191,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
 
     var periodoTextoHistorico = idxPeriodoHistorico > -1 ? normalizeText_(row[idxPeriodoHistorico]) : '';
     var inicioHistorico = idxInicioHistorico > -1 ? row[idxInicioHistorico] : '';
-    var periodoLista = resolverPeriodoListaDesafio_(periodos, idDesafio, periodoTextoHistorico, inicioHistorico) ||
-      ((!ehNormal && periodos.byAba[abaDesafio]) || { inicio: '', fim: '', nome_desafio: '' });
+    var periodoLista = (idDesafio && periodos.byId[idDesafio]) || (!ehNormal && periodos.byAba[abaDesafio]) || { inicio: '', fim: '', nome_desafio: '' };
     periodoLista.nome_desafio = obterNomeDesafioListaPorId_(periodos, idDesafio, periodoLista.nome_desafio);
 
     var tipoMeta = resolverTipoMetaListaDesafio_(tipoMetaListaDesafios, idDesafio, periodoTextoHistorico, inicioHistorico) ||
