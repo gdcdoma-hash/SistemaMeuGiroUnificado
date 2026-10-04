@@ -130,3 +130,18 @@ test('feed mantém um único card sem cabeçalho quando não há desafio simult�
   assert.match(fonte, /header\.hidden = totalCards <= 1/);
   assert.match(fonte, /painel-desafios-feed-multiplo', totalCards > 1/);
 });
+
+test('formulário de registro fica compacto, fixo e com campos lado a lado', () => {
+  const index = fs.readFileSync(path.join(repoRoot, 'Meu Giro', 'Index.html'), 'utf8');
+  const styles = fs.readFileSync(path.join(repoRoot, 'Meu Giro', 'Styles.html'), 'utf8');
+
+  assert.doesNotMatch(index, /<h2>Registrar atividades<\/h2>/);
+  assert.match(index, /Preencha só o dia e os km do pedal\./);
+  assert.match(index, /class="registro-campos-grid"/);
+  assert.match(index, /for="data-atividade"/);
+  assert.match(index, /for="km-atividade"/);
+
+  assert.match(styles, /#screen-registrar \.card-registro-atividade\s*\{[\s\S]*?position:\s*sticky/);
+  assert.match(styles, /\.registro-campos-grid\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\) minmax\(0, 1fr\)/);
+  assert.match(styles, /#screen-registrar #btn-salvar\s*\{[\s\S]*?width:\s*100%/);
+});
