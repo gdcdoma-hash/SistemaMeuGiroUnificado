@@ -2335,6 +2335,66 @@ function liberarConquistaActionLock_() {
   setConquistaActionLock_(false);
 }
 
+function getConquistaUsuarioStorageId_() {
+  var u = currentUser || {};
+  return String(u.id_dgmb || u.idDgmb || u.cpf || 'anonimo').trim() || 'anonimo';
+}
+
+function getConquistaVistaStorageKey_(desafio) {
+  var chave = String(getDesafioKey(desafio || {}) || '').trim();
+  if (!chave) return '';
+  return 'meuGiro.conquistaVista.' + getConquistaUsuarioStorageId_() + '.' + chave;
+}
+
+function isConquistaNova_(desafio) {
+  var chave = getConquistaVistaStorageKey_(desafio);
+  if (!chave) return false;
+  try {
+    return localStorage.getItem(chave) !== '1';
+  } catch (e) {
+    return false;
+  }
+}
+
+function marcarConquistaVista_(desafio) {
+  var chave = getConquistaVistaStorageKey_(desafio);
+  if (!chave) return;
+  try {
+    localStorage.setItem(chave, '1');
+  } catch (e) {}
+}
+
+function getConquistaMetaRotulo_(desafio) {
+  var meta = Math.max(0, toFiniteNumber(desafio && desafio.meta_km, 0));
+  if (!meta) return 'META';
+  return formatNumber(meta) + ' KM';
+}
+
+function buildMedalhaVirtualHtml_(desafio, grande) {
+  var titulo = getDesafioTitulo(desafio || {});
+  var meta = getConquistaMetaRotulo_(desafio);
+  return '<div class="medalha-virtual ' + (grande ? 'medalha-virtual-grande' : 'medalha-virtual-card') + '" aria-label="Medalha virtual conquistada: ' + escapeHtml(titulo) + '">' +
+    '<div class="medalha-virtual-fita"><span></span><span></span></div>' +
+    '<div class="medalha-virtual-disco">' +
+      '<span class="medalha-virtual-icone" aria-hidden="true">★</span>' +
+      '<strong>' + escapeHtml(meta) + '</strong>' +
+      '<small>MEU GIRO</small>' +
+    '</div>' +
+  '</div>';
+}
+
+function renderMedalhaVirtualConquistaDetalhe_(desafio) {
+  var box = document.getElementById('conquista-detalhe-medalha');
+  if (!box) return;
+  box.innerHTML =
+    '<div class="conquista-detalhe-premio">' +
+      buildMedalhaVirtualHtml_(desafio, true) +
+      '<div><span class="conquista-desbloqueada-label">Conquista desbloqueada</span>' +
+      '<strong>' + escapeHtml(getDesafioTitulo(desafio || {})) + '</strong>' +
+      '<p>' + escapeHtml(getDesafioPeriodoCardLabel_(desafio || {})) + '</p></div>' +
+    '</div>';
+}
+
 function renderConquistasV2() {
   var mensagem = document.getElementById('conquistas-msg');
   var secaoConcluidas = document.getElementById('conquistas-concluidas');
@@ -2438,11 +2498,19 @@ function buildConquistaCard_(desafio) {
   var certificadoDisponivel = isDesafioElegivelCertificado_(desafio);
   var chave = getDesafioKey(desafio);
 
-  card.className = 'conquista-card conquista-concluida-card';
+  var conquistaNova = isConquistaNova_(desafio);
+  card.className = 'conquista-card conquista-concluida-card' + (conquistaNova ? ' conquista-card-nova' : '');
   card.tabIndex = 0;
   card.setAttribute('role', 'button');
   card.setAttribute('aria-label', 'Ver atividades de ' + getDesafioTitulo(desafio));
   card.innerHTML =
+    '<div class="conquista-card-premio">' +
+      buildMedalhaVirtualHtml_(desafio, false) +
+      '<div class="conquista-card-premio-texto">' +
+        '<span class="conquista-desbloqueada-label">Conquista desbloqueada</span>' +
+        (conquistaNova ? '<span class="conquista-nova-badge">Nova conquista</span>' : '') +
+      '</div>' +
+    '</div>' +
     '<div class="conquista-card-conteudo">' +
       '<strong class="conquista-card-titulo">' + escapeHtml(getDesafioTitulo(desafio)) + '</strong>' +
       '<div class="conquista-card-metricas">' +
@@ -2456,12 +2524,20 @@ function buildConquistaCard_(desafio) {
       : '');
   card.addEventListener('click', function(event) {
     if (event.target && event.target.closest && event.target.closest('button, a')) return;
+    marcarConquistaVista_(desafio);
+    card.classList.remove('conquista-card-nova');
+    var badgeNova = card.querySelector('.conquista-nova-badge');
+    if (badgeNova) badgeNova.remove();
     abrirDetalheConquistaV2_(chave);
   });
   card.addEventListener('keydown', function(event) {
     if (event.target && event.target.closest && event.target.closest('button, a')) return;
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
+      marcarConquistaVista_(desafio);
+      card.classList.remove('conquista-card-nova');
+      var badgeNova = card.querySelector('.conquista-nova-badge');
+      if (badgeNova) badgeNova.remove();
       abrirDetalheConquistaV2_(chave);
     }
   });
@@ -2755,6 +2831,8 @@ function abrirDetalheConquistaV2_(chave) {
     }
     setTextById('conquista-detalhe-titulo', getDesafioTitulo(desafio));
     setTextById('conquista-detalhe-periodo', getDesafioMesExtensoAnoLabel_(desafio));
+    marcarConquistaVista_(desafio);
+    renderMedalhaVirtualConquistaDetalhe_(desafio);
     renderCertificadoConquistaDetalhe_(desafio);
     renderConquistaDetalheAtividadesV2_(desafio);
     showScreen('conquista-detalhe');
