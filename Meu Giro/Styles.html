@@ -3497,6 +3497,106 @@
   }
 
   /* P9 — Tela Início emocional */
+  .painel-feed-wrap {
+    width: min(100%, 780px);
+    margin: 0 auto;
+  }
+
+  .painel-feed-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 14px;
+    margin: 0 8px 10px;
+  }
+
+  .painel-feed-header[hidden] {
+    display: none;
+  }
+
+  .painel-feed-kicker,
+  .painel-feed-hint {
+    margin: 0;
+  }
+
+  .painel-feed-kicker {
+    color: #111827;
+    font-size: 15px;
+    font-weight: 900;
+    line-height: 1.25;
+  }
+
+  .painel-feed-hint {
+    margin-top: 3px;
+    color: #6b7280;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .painel-feed-indicador {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 5px;
+    min-width: 32px;
+    min-height: 12px;
+  }
+
+  .painel-feed-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: #fed7aa;
+    transition: width 160ms ease, background-color 160ms ease;
+  }
+
+  .painel-feed-dot.is-active {
+    width: 18px;
+    background: #f97316;
+  }
+
+  .painel-desafios-feed {
+    display: flex;
+    align-items: stretch;
+    gap: 14px;
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0 8px 10px;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 8px;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .painel-desafios-feed::-webkit-scrollbar {
+    display: none;
+  }
+
+  .painel-desafios-feed > .painel-inicio-card {
+    flex: 0 0 100%;
+    width: 100%;
+    max-width: 720px;
+    margin: 0;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+
+  .painel-desafios-feed-multiplo > .painel-inicio-card {
+    flex-basis: min(90%, 700px);
+  }
+
+  .painel-inicio-card-feed {
+    cursor: pointer;
+  }
+
+  .painel-inicio-card-feed:focus-visible {
+    outline: 3px solid rgba(249, 115, 22, 0.28);
+    outline-offset: 2px;
+  }
+
   .painel-inicio-card {
     position: relative;
     isolation: isolate;
@@ -3861,6 +3961,26 @@
 
 
   @media (max-width: 420px) {
+    .painel-feed-wrap {
+      width: 100%;
+    }
+
+    .painel-feed-header {
+      margin-left: 4px;
+      margin-right: 4px;
+    }
+
+    .painel-desafios-feed {
+      gap: 10px;
+      padding-left: 2px;
+      padding-right: 16px;
+      scroll-padding-inline: 2px;
+    }
+
+    .painel-desafios-feed-multiplo > .painel-inicio-card {
+      flex-basis: 92%;
+    }
+
     .painel-progresso-donut-grid {
       grid-template-columns: minmax(112px, 128px) minmax(0, 1fr);
       align-items: center;
