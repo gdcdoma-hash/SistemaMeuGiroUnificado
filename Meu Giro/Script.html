@@ -2582,6 +2582,18 @@ function renderGrupoDesafiosV2_(secao, itens, grupo) {
   });
 }
 
+function getDesafioPeriodoCardLabel_(desafio) {
+  var item = desafio || {};
+  var tipoMeta = String(item.tipo_meta || '').trim().toUpperCase();
+  var prazoDias = parseInt(item.prazo_dias, 10) || 0;
+
+  if (tipoMeta === 'PRAZO_DIAS' || prazoDias > 0) {
+    return getDesafioPeriodoLabelV2_(item) || 'Período não informado';
+  }
+
+  return getDesafioMesAnoPortugues_(item) || 'Período não informado';
+}
+
 function buildDesafioCardV2_(desafio, grupo) {
   debugPeriodoDesafioFrontend_('buildDesafioCardV2_', getPeriodoDesafioVisual_(desafio), getPeriodoDesafioVisual_(desafio), desafio);
   var card = document.createElement('article');
@@ -2600,7 +2612,7 @@ function buildDesafioCardV2_(desafio, grupo) {
       '<div class="desafio-v2-metricas">' +
         '<p><span>Meta</span><strong>' + formatNumber(meta) + ' km</strong></p>' +
         '<p><span>Realizado</span><strong>' + formatNumber(realizado) + ' km</strong></p>' +
-        '<p><span>Período</span><strong>' + escapeHtml(getDesafioMesAnoPortugues_(desafio)) + '</strong></p>' +
+        '<p><span>Período</span><strong>' + escapeHtml(getDesafioPeriodoCardLabel_(desafio)) + '</strong></p>' +
       '</div>' +
       '<div class="desafio-v2-progress-track" aria-hidden="true"><span class="desafio-v2-progress-fill" style="width:' + Math.max(0, Math.min(100, percentual)) + '%"></span></div>' +
       '<p class="desafio-v2-percentual">' + formatNumber(percentual) + '%</p>' +
@@ -2641,7 +2653,7 @@ function renderDetalheDesafioV2_(desafio) {
   var falta = Math.max(0, meta - realizado);
   var percentual = calcularPercentualDesafio_(meta, realizado);
   setTextById('desafio-detalhe-titulo', getDesafioTitulo(desafio));
-  setTextById('desafio-detalhe-periodo', getDesafioMesAnoPortugues_(desafio));
+  setTextById('desafio-detalhe-periodo', getDesafioPeriodoCardLabel_(desafio));
   setTextById('desafio-detalhe-meta', formatNumber(meta) + ' km');
   setTextById('desafio-detalhe-realizado', formatNumber(realizado) + ' km');
   setTextById('desafio-detalhe-falta', formatNumber(falta) + ' km');
