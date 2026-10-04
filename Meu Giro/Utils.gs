@@ -1414,6 +1414,10 @@ function obterMeuGiroResumoAtualizado_(idDgmb) {
 
   var layoutResumo = meuGiroResumoObterLayout_(valoresResumo[0] || [], sheetName);
   var mapResumo = layoutResumo.map;
+  if (reconciliarAusentes && meuGiroResumoReconciliarPrazoDiasUmaVez_(id, periodosDgmbDesafios)) {
+    return obterMeuGiroResumoAtualizadoLeve_(id, { reconciliar: false });
+  }
+
   var idxInscricaoResumo = getOptionalColumnIndex_(mapResumo, ['id_inscricao', 'id inscrição', 'id inscricao']);
   var idxId = getOptionalColumnIndex_(mapResumo, ['id_dgmb']);
   var idxDesafio = getOptionalColumnIndex_(mapResumo, ['id_desafio']);
@@ -1681,6 +1685,31 @@ function meuGiroResumoPossuiInscricaoAusente_(valoresResumo, idxId, idxInscricao
     if (!existentes[ids[j]]) return true;
   }
   return false;
+}
+
+function meuGiroResumoReconciliarPrazoDiasUmaVez_(idDgmb, periodosDgmbDesafios) {
+  var id = normalizeText_(idDgmb);
+  if (!id || !periodosDgmbDesafios) return false;
+
+  var porResumo = periodosDgmbDesafios.prazoIndividualPorResumoKey || {};
+  var porDesafio = periodosDgmbDesafios.prazoIndividualPorDesafio || {};
+  if (!Object.keys(porResumo).length && !Object.keys(porDesafio).length) return false;
+
+  var propriedades = PropertiesService.getScriptProperties();
+  var chave = 'MEU_GIRO_FIX_PRAZO_ATRAVESSA_MESES_20261003_' + id;
+  if (propriedades.getProperty(chave) === '1') return false;
+
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) return false;
+
+  try {
+    if (propriedades.getProperty(chave) === '1') return false;
+    atualizarMeuGiroResumoComLockAdquirido_(id);
+    propriedades.setProperty(chave, '1');
+    return true;
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function obterMeuGiroResumoAtualizadoLeve_(idDgmb, opcoes) {
