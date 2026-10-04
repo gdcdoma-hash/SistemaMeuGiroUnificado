@@ -2146,3 +2146,65 @@ function atualizarMeuGiroResumoEmLote_() {
 function atualizarMeuGiroResumoEmLote() {
   return atualizarMeuGiroResumoEmLote_();
 }
+
+
+function atualizarMeuGiroResumoPrazoDiasEmLote_() {
+  var cacheDesafios = obterDgmbDesafiosCacheExecucao_('atualizarMeuGiroResumoPrazoDiasEmLote_');
+  var values = cacheDesafios.values;
+  if (!values || values.length < 2) {
+    return { total_ids: 0, atualizados: 0, ids: [] };
+  }
+
+  var map = buildHeaderMap_(values[0]);
+  var idxId = getOptionalColumnIndex_(map, ['id_dgmb']);
+  var idxPrazoDias = getOptionalColumnIndex_(map, ['prazo_dias', 'prazo dias']);
+  if (idxId === -1 || idxPrazoDias === -1) {
+    return { total_ids: 0, atualizados: 0, ids: [] };
+  }
+
+  var idxStatusUsuarioDesafio = getOptionalColumnIndex_(map, ['status_usuario_desafio', 'status usuário desafio', 'status usuario desafio']);
+  var idxStatusPag = getOptionalColumnIndex_(map, ['status_pagamento', 'pagamento_status', 'pagamento', 'pix_status']);
+  var idxStatusInscricao = getOptionalColumnIndex_(map, ['status_inscricao', 'status inscrição']);
+  var idxConfirmacao = getOptionalColumnIndex_(map, ['confirmacao', 'confirmação', 'confirmado', 'inscricao_confirmada']);
+  var ids = [];
+  var idsMap = {};
+
+  for (var i = 1; i < values.length; i++) {
+    var row = values[i] || [];
+    var prazoDias = parseInt(row[idxPrazoDias], 10) || 0;
+    if (prazoDias <= 0) continue;
+
+    var id = normalizeText_(row[idxId]);
+    if (!id || idsMap[id]) continue;
+
+    var statusInscricao = idxStatusInscricao > -1 ? normalizeText_(row[idxStatusInscricao]) : '';
+    var statusConfirmacao = idxConfirmacao > -1 ? normalizeText_(row[idxConfirmacao]) : '';
+    var statusPagamento = idxStatusPag > -1 ? normalizeText_(row[idxStatusPag]) : '';
+    var statusUsuarioDesafio = idxStatusUsuarioDesafio > -1 ? normalizeText_(row[idxStatusUsuarioDesafio]) : '';
+    var validacao = validarInscricaoMinima_({
+      status_inscricao: statusInscricao || statusUsuarioDesafio,
+      status_confirmacao: statusConfirmacao,
+      status_pagamento: statusPagamento
+    });
+    var apto = validacao.valida && !inscricaoTemBloqueioMinimo_(statusUsuarioDesafio);
+    if (!apto) continue;
+
+    idsMap[id] = true;
+    ids.push(id);
+  }
+
+  for (var j = 0; j < ids.length; j++) {
+    atualizarMeuGiroResumo_(ids[j]);
+  }
+
+  return {
+    total_ids: ids.length,
+    atualizados: ids.length,
+    ids: ids
+  };
+}
+
+function atualizarMeuGiroResumoPrazoDiasEmLote() {
+  return atualizarMeuGiroResumoPrazoDiasEmLote_();
+}
+
