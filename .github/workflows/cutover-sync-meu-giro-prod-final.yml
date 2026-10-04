@@ -37,4 +37,5 @@ jobs:
       - name: Atualizar deployment
         run: clasp update-deployment AKfycbzgCdo-kgL9Hf-f43wPIrt_hFYlamgZD5AaIEM9l3f2q8oM7cgOHUnMEDctvztqTC6s3w --description "PROD 2026-10-03 - correcao PRAZO_DIAS atravessando meses"
 
-# deploy-bump: 2026-10-03-prazo-dias-atravessa-meses
+
+# deploy-bump: 2026-10-04-reconciliacao-prazo-fluxo-leve
