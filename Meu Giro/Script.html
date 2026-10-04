@@ -2594,6 +2594,50 @@ function getDesafioPeriodoCardLabel_(desafio) {
   return getDesafioMesAnoPortugues_(item) || 'Período não informado';
 }
 
+function getDesafioPrazoCardInfo_(desafio) {
+  var item = desafio || {};
+  var tipoMeta = String(item.tipo_meta || '').trim().toUpperCase();
+  var prazoDias = parseInt(item.prazo_dias, 10) || 0;
+  var ehPrazo = tipoMeta === 'PRAZO_DIAS' || prazoDias > 0;
+
+  if (!ehPrazo) {
+    return {
+      eh_prazo: false,
+      titulo: 'Período',
+      valor: getDesafioMesAnoPortugues_(item) || 'Período não informado',
+      complemento: ''
+    };
+  }
+
+  var inicio = String(item.periodo_inicio || '').trim();
+  var fim = String(item.periodo_fim || '').trim();
+  var inicioMatch = inicio.match(/^(\d{4})-(\d{2})-(\d{2})/) || inicio.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  var fimMatch = fim.match(/^(\d{4})-(\d{2})-(\d{2})/) || fim.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  var complemento = getDesafioPeriodoLabelV2_(item) || '';
+
+  if (inicioMatch && fimMatch) {
+    var inicioIso = /^\d{4}-/.test(inicio);
+    var fimIso = /^\d{4}-/.test(fim);
+    var anoInicio = inicioIso ? inicioMatch[1] : inicioMatch[3];
+    var mesInicio = inicioIso ? inicioMatch[2] : inicioMatch[2];
+    var diaInicio = inicioIso ? inicioMatch[3] : inicioMatch[1];
+    var anoFim = fimIso ? fimMatch[1] : fimMatch[3];
+    var mesFim = fimIso ? fimMatch[2] : fimMatch[2];
+    var diaFim = fimIso ? fimMatch[3] : fimMatch[1];
+
+    complemento = anoInicio === anoFim
+      ? diaInicio + '/' + mesInicio + ' a ' + diaFim + '/' + mesFim + '/' + anoFim.slice(-2)
+      : diaInicio + '/' + mesInicio + '/' + anoInicio.slice(-2) + ' a ' + diaFim + '/' + mesFim + '/' + anoFim.slice(-2);
+  }
+
+  return {
+    eh_prazo: true,
+    titulo: 'Prazo',
+    valor: prazoDias > 0 ? prazoDias + ' dias' : 'Prazo individual',
+    complemento: complemento
+  };
+}
+
 function buildDesafioCardV2_(desafio, grupo) {
   debugPeriodoDesafioFrontend_('buildDesafioCardV2_', getPeriodoDesafioVisual_(desafio), getPeriodoDesafioVisual_(desafio), desafio);
   var card = document.createElement('article');
@@ -2601,6 +2645,7 @@ function buildDesafioCardV2_(desafio, grupo) {
   var realizado = toFiniteNumber(desafio.distancia_realizada, 0);
   var percentual = calcularPercentualDesafio_(meta, realizado);
   var chave = getDesafioKey(desafio);
+  var prazoCard = getDesafioPrazoCardInfo_(desafio);
 
   card.className = 'desafio-v2-card desafio-v2-card-' + grupo;
   card.tabIndex = 0;
@@ -2612,7 +2657,9 @@ function buildDesafioCardV2_(desafio, grupo) {
       '<div class="desafio-v2-metricas">' +
         '<p><span>Meta</span><strong>' + formatNumber(meta) + ' km</strong></p>' +
         '<p><span>Realizado</span><strong>' + formatNumber(realizado) + ' km</strong></p>' +
-        '<p><span>Período</span><strong>' + escapeHtml(getDesafioPeriodoCardLabel_(desafio)) + '</strong></p>' +
+        '<p><span>' + escapeHtml(prazoCard.titulo) + '</span><strong>' + escapeHtml(prazoCard.valor) + '</strong>' +
+          (prazoCard.complemento ? '<small class="desafio-v2-prazo-datas">' + escapeHtml(prazoCard.complemento) + '</small>' : '') +
+        '</p>' +
       '</div>' +
       '<div class="desafio-v2-progress-track" aria-hidden="true"><span class="desafio-v2-progress-fill" style="width:' + Math.max(0, Math.min(100, percentual)) + '%"></span></div>' +
       '<p class="desafio-v2-percentual">' + formatNumber(percentual) + '%</p>' +
