@@ -69,3 +69,18 @@ test('reconciliação de PRAZO_DIAS roda no fluxo leve usado pelo painel', () =>
   assert.match(leve, /meuGiroResumoReconciliarPrazoDiasUmaVez_\(id, periodosDgmbDesafios\)/);
   assert.match(leve, /return obterMeuGiroResumoAtualizadoLeve_\(id, \{ reconciliar: false \}\)/);
 });
+
+test('card de PRAZO_DIAS exibe janela individual e mensal permanece mes/ano', () => {
+  const script = fs.readFileSync(path.join(repoRoot, 'Meu Giro', 'Script.html'), 'utf8');
+  const inicio = script.indexOf('function getDesafioPeriodoCardLabel_');
+  const fim = script.indexOf('\nfunction buildDesafioCardV2_', inicio);
+  assert.ok(inicio >= 0 && fim > inicio, 'helper visual de período deve existir');
+  const fonte = script.slice(inicio, fim);
+
+  assert.match(fonte, /tipoMeta === 'PRAZO_DIAS' \|\| prazoDias > 0/);
+  assert.match(fonte, /getDesafioPeriodoLabelV2_\(item\)/);
+  assert.match(fonte, /getDesafioMesAnoPortugues_\(item\)/);
+
+  assert.match(script, /<p><span>Período<\/span><strong>' \+ escapeHtml\(getDesafioPeriodoCardLabel_\(desafio\)\)/);
+  assert.match(script, /setTextById\('desafio-detalhe-periodo', getDesafioPeriodoCardLabel_\(desafio\)\)/);
+});
