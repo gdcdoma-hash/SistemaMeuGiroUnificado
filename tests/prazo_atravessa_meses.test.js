@@ -84,3 +84,16 @@ test('card de PRAZO_DIAS exibe janela individual e mensal permanece mes/ano', ()
   assert.match(script, /<p><span>Período<\/span><strong>' \+ escapeHtml\(getDesafioPeriodoCardLabel_\(desafio\)\)/);
   assert.match(script, /setTextById\('desafio-detalhe-periodo', getDesafioPeriodoCardLabel_\(desafio\)\)/);
 });
+
+test('card PRAZO_DIAS mostra prazo em dias e faixa compacta', () => {
+  const script = fs.readFileSync(path.join(repoRoot, 'Meu Giro', 'Script.html'), 'utf8');
+  const inicio = script.indexOf('function getDesafioPrazoCardInfo_');
+  const fim = script.indexOf('\nfunction buildDesafioCardV2_', inicio);
+  assert.ok(inicio >= 0 && fim > inicio, 'helper de prazo do card deve existir');
+  const fonte = script.slice(inicio, fim);
+
+  assert.match(fonte, /titulo: 'Prazo'/);
+  assert.match(fonte, /prazoDias \+ ' dias'/);
+  assert.match(fonte, /diaInicio \+ '\/' \+ mesInicio \+ ' a ' \+ diaFim \+ '\/' \+ mesFim \+ '\/' \+ anoFim\.slice\(-2\)/);
+  assert.match(script, /desafio-v2-prazo-datas/);
+});
