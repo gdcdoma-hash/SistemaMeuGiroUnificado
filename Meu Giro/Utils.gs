@@ -1414,10 +1414,6 @@ function obterMeuGiroResumoAtualizado_(idDgmb) {
 
   var layoutResumo = meuGiroResumoObterLayout_(valoresResumo[0] || [], sheetName);
   var mapResumo = layoutResumo.map;
-  if (reconciliarAusentes && meuGiroResumoReconciliarPrazoDiasUmaVez_(id, periodosDgmbDesafios)) {
-    return obterMeuGiroResumoAtualizadoLeve_(id, { reconciliar: false });
-  }
-
   var idxInscricaoResumo = getOptionalColumnIndex_(mapResumo, ['id_inscricao', 'id inscrição', 'id inscricao']);
   var idxId = getOptionalColumnIndex_(mapResumo, ['id_dgmb']);
   var idxDesafio = getOptionalColumnIndex_(mapResumo, ['id_desafio']);
@@ -1734,6 +1730,10 @@ function obterMeuGiroResumoAtualizadoLeve_(idDgmb, opcoes) {
     id,
     contextoListaDesafios
   );
+  if (reconciliarAusentes && meuGiroResumoReconciliarPrazoDiasUmaVez_(id, periodosDgmbDesafios)) {
+    return obterMeuGiroResumoAtualizadoLeve_(id, { reconciliar: false });
+  }
+
   var idxInscricaoResumo = getOptionalColumnIndex_(mapResumo, ['id_inscricao', 'id inscrição', 'id inscricao']);
   var idxId = getOptionalColumnIndex_(mapResumo, ['id_dgmb']);
   var idxDesafio = getOptionalColumnIndex_(mapResumo, ['id_desafio']);
