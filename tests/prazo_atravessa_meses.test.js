@@ -38,3 +38,17 @@ test('janela individual atravessa setembro e outubro sem corte mensal', () => {
   assert.equal(ctx.atividadeDentroPeriodoOficial_('2026-09-02', '2026-09-03', '2026-12-01'), false);
   assert.equal(ctx.atividadeDentroPeriodoOficial_('2026-12-02', '2026-09-03', '2026-12-01'), false);
 });
+
+test('resumo antigo de PRAZO_DIAS é reconciliado uma vez após a correção', () => {
+  const inicio = utils.indexOf('function meuGiroResumoReconciliarPrazoDiasUmaVez_');
+  const fim = utils.indexOf('\nfunction obterMeuGiroResumoAtualizadoLeve_', inicio);
+  assert.ok(inicio >= 0 && fim > inicio, 'helper de reconciliação deve existir');
+  const fonte = utils.slice(inicio, fim);
+
+  assert.match(fonte, /prazoIndividualPorResumoKey/);
+  assert.match(fonte, /prazoIndividualPorDesafio/);
+  assert.match(fonte, /PropertiesService\.getScriptProperties\(\)/);
+  assert.match(fonte, /MEU_GIRO_FIX_PRAZO_ATRAVESSA_MESES_20261003_/);
+  assert.match(fonte, /atualizarMeuGiroResumoComLockAdquirido_\(id\)/);
+  assert.match(fonte, /propriedades\.setProperty\(chave, '1'\)/);
+});
