@@ -52,3 +52,20 @@ test('resumo antigo de PRAZO_DIAS é reconciliado uma vez após a correção', (
   assert.match(fonte, /atualizarMeuGiroResumoComLockAdquirido_\(id\)/);
   assert.match(fonte, /propriedades\.setProperty\(chave, '1'\)/);
 });
+
+test('reconciliação de PRAZO_DIAS roda no fluxo leve usado pelo painel', () => {
+  const pesadoInicio = utils.indexOf('function obterMeuGiroResumoAtualizado_');
+  const helperInicio = utils.indexOf('function meuGiroResumoReconciliarPrazoDiasUmaVez_');
+  const leveInicio = utils.indexOf('function obterMeuGiroResumoAtualizadoLeve_');
+  const leveFim = utils.indexOf('\nfunction meuGiroResumoAgruparLinhasContiguas_', leveInicio);
+
+  assert.ok(pesadoInicio >= 0 && helperInicio > pesadoInicio);
+  assert.ok(leveInicio > helperInicio && leveFim > leveInicio);
+
+  const pesado = utils.slice(pesadoInicio, helperInicio);
+  const leve = utils.slice(leveInicio, leveFim);
+
+  assert.doesNotMatch(pesado, /meuGiroResumoReconciliarPrazoDiasUmaVez_/);
+  assert.match(leve, /meuGiroResumoReconciliarPrazoDiasUmaVez_\(id, periodosDgmbDesafios\)/);
+  assert.match(leve, /return obterMeuGiroResumoAtualizadoLeve_\(id, \{ reconciliar: false \}\)/);
+});
