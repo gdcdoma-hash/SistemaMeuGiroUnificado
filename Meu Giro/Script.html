@@ -3504,6 +3504,179 @@ async function compartilharCardPainel() {
   }
 }
 
+function obterStatusMotivacionalFeed_(contexto) {
+  var statusText = normalizeRitmoText(contexto && contexto.ritmo_status, '');
+  var variant = painelMetaConcluida_(contexto) ? 'alerta-ritmo-concluido' : getRitmoAgoraVariant(statusText);
+
+  if (variant === 'alerta-ritmo-concluido') {
+    return {
+      classe: 'painel-status-bom',
+      titulo: '🏆 Desafio concluído!',
+      mensagem: 'Você alcançou sua meta. Parabéns pela conquista.'
+    };
+  }
+
+  if (variant === 'alerta-ritmo-acima') {
+    return {
+      classe: 'painel-status-bom',
+      titulo: '🔥 Você está voando!',
+      mensagem: 'Seu progresso está acima do ritmo esperado.'
+    };
+  }
+
+  if (variant === 'alerta-ritmo-atencao' || variant === 'alerta-ritmo-neutro') {
+    return {
+      classe: 'painel-status-reagir',
+      titulo: '🚴 Hora de reagir.',
+      mensagem: 'Sua meta está ficando distante.'
+    };
+  }
+
+  return {
+    classe: 'painel-status-bom',
+    titulo: '✅ Você está no ritmo.',
+    mensagem: 'Continue pedalando para manter sua evolução.'
+  };
+}
+
+function criarCardFeedDesafioPainel_(painel, desafio) {
+  var contexto = montarPainelContextual(painel || {}, desafio);
+  var card = document.createElement('article');
+  var percentual = Math.max(0, Math.min(100, toFiniteNumber(contexto.percentual, 0)));
+  var circunferencia = 301.593;
+  var dashOffset = circunferencia * (1 - percentual / 100);
+  var status = obterStatusMotivacionalFeed_(contexto);
+  var inicio = formatarDataDesafioPainel_(contexto.periodo_inicio) || '-';
+  var fim = formatarDataDesafioPainel_(contexto.periodo_fim) || '-';
+  var prazo = obterPrazoDesafioPainel_(desafio, contexto);
+  var restanteTempo = obterTempoRestanteDesafioPainel_(contexto.periodo_fim);
+  var atleta = String((painel && painel.nome) || '').trim().toUpperCase() || 'ATLETA';
+  var chave = getDesafioKey(desafio);
+
+  card.className = 'card painel-inicio-card painel-inicio-card-feed';
+  card.tabIndex = 0;
+  card.setAttribute('role', 'button');
+  card.setAttribute('aria-label', 'Ver ' + getDesafioTitulo(desafio) + ' como desafio em foco');
+  card.setAttribute('data-desafio-key', chave);
+  card.innerHTML =
+    '<div class="painel-desafio-topo">' +
+      '<div class="painel-card-kicker-row">' +
+        '<p class="painel-desafio-label">Desafio em andamento</p>' +
+        '<span class="painel-card-brand">MEU GIRO</span>' +
+      '</div>' +
+      '<h2>' + escapeHtml(getDesafioTitulo(desafio)) + '</h2>' +
+      '<p class="painel-card-atleta">' + escapeHtml(atleta) + '</p>' +
+      '<div class="painel-desafio-detalhes" aria-label="Prazo do desafio">' +
+        '<p><span>Início</span><strong>' + escapeHtml(inicio) + '</strong></p>' +
+        '<p><span>Término</span><strong>' + escapeHtml(fim) + '</strong></p>' +
+        '<p><span>Prazo</span><strong>' + escapeHtml(prazo) + '</strong></p>' +
+        '<p class="painel-desafio-restante"><span>Tempo restante</span><strong>' + escapeHtml(restanteTempo) + '</strong></p>' +
+      '</div>' +
+    '</div>' +
+    '<div class="painel-progresso-donut-grid" aria-label="Progresso do desafio">' +
+      '<div class="painel-progress-donut" role="img" aria-label="' + escapeHtml(formatNumber(percentual)) + '% concluído">' +
+        '<svg class="painel-progress-donut-svg" viewBox="0 0 120 120" aria-hidden="true">' +
+          '<circle class="painel-progress-donut-track" cx="60" cy="60" r="48"></circle>' +
+          '<circle class="painel-progress-donut-bar" cx="60" cy="60" r="48" style="stroke-dashoffset:' + dashOffset + '"></circle>' +
+        '</svg>' +
+        '<div class="painel-progress-donut-centro">' +
+          '<p class="painel-percentual">' + escapeHtml(formatNumber(percentual)) + '%</p>' +
+          '<span>concluído</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="painel-metricas-emocionais">' +
+        '<p><span>Meta</span><strong>' + escapeHtml(formatNumber(contexto.meta)) + ' <small>km</small></strong></p>' +
+        '<p><span>Realizado</span><strong>' + escapeHtml(formatNumber(contexto.realizado)) + ' <small>km</small></strong></p>' +
+        '<p><span>Faltam</span><strong>' + escapeHtml(formatNumber(contexto.restante)) + ' <small>km</small></strong></p>' +
+      '</div>' +
+    '</div>' +
+    '<p class="painel-progress-text">' + escapeHtml(formatNumber(contexto.realizado)) + ' km de ' + escapeHtml(formatNumber(contexto.meta)) + ' km</p>' +
+    '<div class="painel-status-motivacional ' + status.classe + '">' +
+      '<p class="painel-status-titulo">' + escapeHtml(status.titulo) + '</p>' +
+      '<p class="painel-status-texto">' + escapeHtml(status.mensagem) + '</p>' +
+    '</div>' +
+    '<div class="painel-card-assinatura" aria-hidden="true">' +
+      '<span>DESAFIO GIRO</span>' +
+      '<small>paixão por pedalar</small>' +
+    '</div>';
+
+  function ativar() {
+    if (chave) aplicarDesafioEmFoco(chave, { silent: true });
+  }
+
+  card.addEventListener('click', ativar);
+  card.addEventListener('keydown', function(event) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      ativar();
+    }
+  });
+
+  return card;
+}
+
+function atualizarIndicadorFeedPainel_() {
+  var feed = document.getElementById('painel-desafios-feed');
+  var indicador = document.getElementById('painel-feed-indicador');
+  if (!feed || !indicador) return;
+
+  var cards = Array.prototype.slice.call(feed.querySelectorAll('.painel-inicio-card'));
+  if (cards.length <= 1) {
+    indicador.innerHTML = '';
+    return;
+  }
+
+  var centro = feed.scrollLeft + feed.clientWidth / 2;
+  var melhor = 0;
+  var menorDistancia = Infinity;
+  cards.forEach(function(card, index) {
+    var meio = card.offsetLeft + card.offsetWidth / 2;
+    var distancia = Math.abs(meio - centro);
+    if (distancia < menorDistancia) {
+      menorDistancia = distancia;
+      melhor = index;
+    }
+  });
+
+  indicador.innerHTML = cards.map(function(_, index) {
+    return '<span class="painel-feed-dot' + (index === melhor ? ' is-active' : '') + '" aria-hidden="true"></span>';
+  }).join('');
+}
+
+function renderFeedDesafiosPainel_(painel, desafioAtual) {
+  var feed = document.getElementById('painel-desafios-feed');
+  var header = document.getElementById('painel-feed-header');
+  var principal = document.getElementById('painel-share-card');
+  if (!feed || !principal) return;
+
+  Array.prototype.slice.call(feed.querySelectorAll('.painel-inicio-card-feed')).forEach(function(card) {
+    card.remove();
+  });
+
+  var ativos = Array.isArray(desafiosAtivosCarouselItems) ? desafiosAtivosCarouselItems.slice() : [];
+  var chaveAtual = getDesafioKey(desafioAtual);
+  var adicionais = ativos.filter(function(item) {
+    return getDesafioKey(item) !== chaveAtual;
+  });
+
+  adicionais.forEach(function(item) {
+    feed.appendChild(criarCardFeedDesafioPainel_(painel, item));
+  });
+
+  var totalCards = 1 + adicionais.length;
+  if (header) header.hidden = totalCards <= 1;
+
+  feed.classList.toggle('painel-desafios-feed-multiplo', totalCards > 1);
+  feed.onscroll = totalCards > 1 ? function() {
+    window.requestAnimationFrame(atualizarIndicadorFeedPainel_);
+  } : null;
+
+  window.requestAnimationFrame(function() {
+    feed.scrollLeft = 0;
+    atualizarIndicadorFeedPainel_();
+  });
+}
+
 function sincronizarPainelComDesafioEmFoco() {
   var painel = currentPainel || {};
   var desafioAtual = getDesafioEmFocoAtual();
@@ -3558,6 +3731,7 @@ function sincronizarPainelComDesafioEmFoco() {
   var atividadesReaisPainel = (currentPainel && currentPainel.atividades) || [];
   renderUltimaAtividadePainel(obterAtividadesReaisUltimaPainel_(contexto, currentPainel));
   renderAtividades(atividadesReaisPainel);
+  renderFeedDesafiosPainel_(painel, desafioAtual);
 }
 
 function setTextById(id, text) {

@@ -97,3 +97,36 @@ test('card PRAZO_DIAS mostra prazo em dias e faixa compacta', () => {
   assert.match(fonte, /diaInicio \+ '\/' \+ mesInicio \+ ' a ' \+ diaFim \+ '\/' \+ mesFim \+ '\/' \+ anoFim\.slice\(-2\)/);
   assert.match(script, /desafio-v2-prazo-datas/);
 });
+
+test('tela inicial possui feed horizontal para desafios simultâneos', () => {
+  const index = fs.readFileSync(path.join(repoRoot, 'Meu Giro', 'Index.html'), 'utf8');
+  const script = fs.readFileSync(path.join(repoRoot, 'Meu Giro', 'Script.html'), 'utf8');
+  const styles = fs.readFileSync(path.join(repoRoot, 'Meu Giro', 'Styles.html'), 'utf8');
+
+  assert.match(index, /id="painel-desafios-feed"/);
+  assert.match(index, /id="painel-feed-header"/);
+  assert.match(index, /id="painel-share-card" class="card painel-inicio-card"/);
+
+  assert.match(script, /function renderFeedDesafiosPainel_/);
+  assert.match(script, /function criarCardFeedDesafioPainel_/);
+  assert.match(script, /desafiosAtivosCarouselItems/);
+  assert.match(script, /montarPainelContextual\(painel \|\| \{\}, desafio\)/);
+  assert.match(script, /aplicarDesafioEmFoco\(chave, \{ silent: true \}\)/);
+  assert.match(script, /renderFeedDesafiosPainel_\(painel, desafioAtual\)/);
+
+  assert.match(styles, /\.painel-desafios-feed\s*\{/);
+  assert.match(styles, /overflow-x:\s*auto/);
+  assert.match(styles, /scroll-snap-type:\s*x mandatory/);
+  assert.match(styles, /\.painel-desafios-feed-multiplo/);
+});
+
+test('feed mantém um único card sem cabeçalho quando não há desafio simultâneo', () => {
+  const script = fs.readFileSync(path.join(repoRoot, 'Meu Giro', 'Script.html'), 'utf8');
+  const inicio = script.indexOf('function renderFeedDesafiosPainel_');
+  const fim = script.indexOf('\nfunction sincronizarPainelComDesafioEmFoco', inicio);
+  assert.ok(inicio >= 0 && fim > inicio);
+  const fonte = script.slice(inicio, fim);
+
+  assert.match(fonte, /header\.hidden = totalCards <= 1/);
+  assert.match(fonte, /painel-desafios-feed-multiplo', totalCards > 1/);
+});
