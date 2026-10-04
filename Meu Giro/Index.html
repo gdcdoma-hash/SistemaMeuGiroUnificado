@@ -241,17 +241,21 @@
 
     <section id="screen-registrar" class="screen">
       <div id="registro-card" class="card card-registro-atividade">
-        <h2>Registrar atividades</h2>
         <p class="field-helper field-helper-intro">Preencha só o dia e os km do pedal.</p>
 
-        <label for="data-atividade">Data da atividade</label>
-        <input id="data-atividade" type="date">
+        <div class="registro-campos-grid">
+          <div class="registro-campo">
+            <label for="data-atividade">Data da atividade</label>
+            <input id="data-atividade" type="date">
+          </div>
 
-        <label for="km-atividade">KM pedalados</label>
-        <input id="km-atividade" type="text" inputmode="decimal" placeholder="Ex.: 25,5">
+          <div class="registro-campo">
+            <label for="km-atividade">KM pedalados</label>
+            <input id="km-atividade" type="text" inputmode="decimal" placeholder="Ex.: 25,5">
+          </div>
+        </div>
 
-        <p class="field-helper">Use vírgula ou ponto.</p>
-
+        <p class="field-helper registro-km-helper">Use vírgula ou ponto.</p>
 
         <input id="atividade-id" type="hidden" value="">
         <input id="atividade-activity-id" type="hidden" value="">
