@@ -316,6 +316,40 @@ function atualizarDistanciaRealizada_(idDgmb, opcoes){
     usou_cache_dgmbDesafios: cacheDesafios.usouCache
   });
 
+  // Uma inscrição antiga de ciclismo conserva o fluxo legado. Se há
+  // desafios simultâneos ou outra modalidade, cada inscrição recebe
+  // SOMENTE os quilômetros elegíveis ao próprio esporte e período.
+  var vinculosAtleta = obterVinculosDesafioUsuario_(idDgmb) || [];
+  var precisaIsolamento = vinculosAtleta.length > 1 || vinculosAtleta.some(function(v) {
+    return v && v.modalidade !== 'CICLISMO';
+  });
+  if (precisaIsolamento) {
+    if (!dados || dados.length < 2) return;
+    var mapaDesafio = buildHeaderMap_(dados[0]);
+    var idxRealizadoDesafio = getRequiredColumnIndex_(mapaDesafio,
+      ['distancia_realizada','distancia realizada'],abaDesafio);
+    var atividadesValidas = obterRegistrosKmUsuario_(idDgmb,opcoes);
+    var totalEscritas = 0;
+    vinculosAtleta.forEach(function(v) {
+      if (!v || !v.modalidade || !v.periodo_inicio || !v.periodo_fim ||
+        !v.linha_desafio || v.linha_desafio < 2) return;
+      var totalVinculo = 0;
+      atividadesValidas.forEach(function(atividade) {
+        if (atividade.modalidade === v.modalidade &&
+            atividadeDentroPeriodoOficial_(atividade.data_atividade,v.periodo_inicio,v.periodo_fim))
+          totalVinculo += Number(atividade.km||0);
+      });
+      totalVinculo=Math.round((totalVinculo+Number.EPSILON)*10)/10;
+      sheet.getRange(v.linha_desafio,idxRealizadoDesafio+1).setValue(totalVinculo);
+      dados[v.linha_desafio-1][idxRealizadoDesafio]=totalVinculo;
+      totalEscritas++;
+    });
+    meuGiroPerfLog_('atualizar-distancia-realizada','isolamento_por_inscricao',perfEtapaInicio,{
+      vinculos:vinculosAtleta.length,escritas:totalEscritas
+    });
+    return;
+  }
+
   var inscricao = obterDadosInscricaoUsuario_(idDgmb, {
     abaDesafio: abaDesafio,
     values: dados,
