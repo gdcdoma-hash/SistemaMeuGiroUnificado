@@ -238,7 +238,9 @@ function meuGiroValidarModalidadeInscrita_(idDgmb, dataIso, tipo) {
   var temCaminhada=vinculos.some(function(v){return v&&v.modalidade==='CAMINHADA_CORRIDA'});
   // Preserva atletas exclusivamente ciclistas mesmo com registros históricos.
   // Quem possui apenas caminhada/corrida não pode registrar RIDE por cliente antigo.
-  if (modalidade==='CICLISMO' && (!temCaminhada || temCiclismo)) return {ok:true};
+  // Com duas modalidades, até a pedalada deve respeitar o vínculo e seu prazo.
+  // O atalho antigo fica restrito aos atletas exclusivamente de ciclismo.
+  if (modalidade==='CICLISMO' && !temCaminhada) return {ok:true};
   var apto=vinculos.some(function(v) {
     return v && v.apto && v.modalidade===modalidade &&
       atividadeDentroPeriodoOficial_(dataIso,v.periodo_inicio,v.periodo_fim);
