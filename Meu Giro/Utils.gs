@@ -1232,6 +1232,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
 
     vinculos.push({
       id_dgmb: id,
+      linha_desafio: numeroLinha,
       id_inscricao: idInscricao,
       id_desafio: idDesafio,
       id_item_estoque: idItem,
@@ -1492,6 +1493,7 @@ function obterMeuGiroResumoAtualizado_(idDgmb) {
       id_desafio: normalizeText_(row[idxDesafio]),
       id_item_estoque: normalizeText_(row[idxItem]),
       nome_desafio: normalizeText_(vinculoAtual.nome_desafio),
+      modalidade: vinculoAtual.modalidade || 'CICLISMO',
       meta_km: Math.round((meta + Number.EPSILON) * 10) / 10,
       distancia_realizada: Math.round((parseLocalizedNumber_(row[idxDistanciaResumo]) + Number.EPSILON) * 10) / 10,
       percentual_concluido: Math.round((parseLocalizedNumber_(row[idxPercentualResumo]) + Number.EPSILON) * 10) / 10,
