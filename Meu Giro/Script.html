@@ -1664,6 +1664,14 @@ function meuGiroAtualizarTiposRegistroUI_() {
     o.hidden=!disponivel;
   });
   bloco.hidden=!caminhada&&!editando;
+  var ajuda=document.getElementById('registro-ajuda');
+  var rotuloKm=document.getElementById('registro-km-label');
+  if(ajuda) ajuda.textContent=!caminhada
+    ? 'Preencha só o dia e os km do pedal.'
+    : ciclismo
+      ? 'Selecione Pedalada, Caminhada ou Corrida para registrar os km na modalidade correta.'
+      : 'Selecione Caminhada ou Corrida e informe o dia e os km.';
+  if(rotuloKm) rotuloKm.textContent=caminhada?'KM da atividade':'KM pedalados';
   if (!caminhada&&!editando) seletor.value='RIDE';
   else if (!editando) {
     var escolhido=seletor.querySelector('option[value="'+tipoAnterior+'"]');
