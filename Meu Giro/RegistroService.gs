@@ -1,4 +1,4 @@
-function registrarAtividade(idDgmb, dataAtividade, km, force) {
+function registrarAtividade(idDgmb, dataAtividade, km, force, tipoAtividade) {
   var perfTotalInicio = meuGiroPerfNow_();
   var perfOperacaoAnterior = MEU_GIRO_PERF_OPERACAO_ATUAL_;
   MEU_GIRO_PERF_OPERACAO_ATUAL_ = 'registrarAtividade';
@@ -11,6 +11,7 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
     idDgmb = String(idDgmb || '').trim();
     dataAtividade = normalizarDataISO_(dataAtividade);
     km = parseKmInputSeguro_(km);
+    var tipo = meuGiroTipoAtividadeRegistro_(tipoAtividade);
 
     if (!idDgmb) {
       return { ok:false, code:'ID_OBRIGATORIO', msg:'ID do atleta é obrigatório.' };
@@ -23,6 +24,9 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
     if (!km || km <= 0) {
       return { ok:false, code:'KM_INVALIDO', msg:'Informe um valor de KM maior que zero.' };
     }
+    if (!tipo) return {ok:false,code:'TIPO_ATIVIDADE_INVALIDO',msg:'Selecione Pedalada, Caminhada ou Corrida.'};
+    var validacaoModalidade = meuGiroValidarModalidadeInscrita_(idDgmb, dataAtividade, tipo);
+    if (!validacaoModalidade.ok) return validacaoModalidade;
 
     perfEtapaInicio = meuGiroPerfNow_();
     var sheet = getSpreadsheet_()
@@ -35,6 +39,7 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
     var cols = getRegistroKmColumnIndexes_(dados);
 
     cols = ensureRegistroKmActivityIdColumn_(sheet, dados, cols);
+    cols = ensureRegistroKmTipoAtividadeColumn_(sheet, dados, cols);
     if (!dados[0]) dados[0] = [];
     dados[0][cols.idxActivityId] = dados[0][cols.idxActivityId] || 'activity_id';
     var activityId = gerarActivityId_();
@@ -55,6 +60,7 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
       var rowId = String(dados[i][cols.idxId] || '').trim();
       var rowData = normalizarDataISO_(dados[i][cols.idxData]);
       var rowKm = normalizarKmEdicao_(dados[i][cols.idxKm]);
+      var rowTipo = meuGiroTipoAtividadeRegistro_(cols.idxTipoAtividade >= 0 ? dados[i][cols.idxTipoAtividade] : '');
       duracaoNormalizacaoMs += meuGiroPerfNow_() - perfNormalizacaoDuplicidadeInicio;
 
       var perfComparacaoInicio = meuGiroPerfNow_();
@@ -72,7 +78,7 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
       }
       duracaoComparacoesMs += meuGiroPerfNow_() - perfComparacaoInicio;
 
-      if (mesmoId && mesmaData && mesmoKm) {
+      if (mesmoId && mesmaData && mesmoKm && rowTipo === tipo) {
         duplicidadeEncontrada = true;
         meuGiroPerfLog_('registrar-atividade', 'duplicidade_encontrada', perfBuscaDuplicidadeInicio, {
           linha_encontrada: i + 1
@@ -138,6 +144,7 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
       origem_registro: 'MANUAL',
       observacao: 'Lançamento manual Meu Giro',
       status_validacao: 'PENDENTE',
+      tipo_atividade: tipo,
       activity_id: activityId
     });
 
@@ -215,6 +222,37 @@ function maiorIndiceRegistroKm_(cols) {
   return maior;
 }
 
+function meuGiroTipoAtividadeRegistro_(valor) {
+  var texto=String(valor==null?'':valor).trim().normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'_');
+  if (!texto || ['RIDE','CICLISMO','PEDAL','PEDALADA','BIKE','GRAVELRIDE','MOUNTAINBIKERIDE'].indexOf(texto)>=0) return 'RIDE';
+  if (['WALK','CAMINHADA'].indexOf(texto)>=0) return 'WALK';
+  if (['RUN','TRAILRUN','CORRIDA'].indexOf(texto)>=0) return 'RUN';
+  return '';
+}
+function meuGiroValidarModalidadeInscrita_(idDgmb, dataIso, tipo) {
+  var modalidade=meuGiroModalidadeCanonica_(tipo);
+  if (modalidade === 'CICLISMO') return {ok:true}; // Mantém compatibilidade com registro histórico de pedal.
+  var vinculos=obterVinculosDesafioUsuario_(idDgmb)||[];
+  var apto=vinculos.some(function(v) {
+    return v && v.apto && v.modalidade===modalidade &&
+      atividadeDentroPeriodoOficial_(dataIso,v.periodo_inicio,v.periodo_fim);
+  });
+  return apto ? {ok:true} : {
+    ok:false,code:'MODALIDADE_FORA_DA_INSCRICAO',
+    msg:'Esta caminhada/corrida não está dentro de uma inscrição válida da modalidade e de seu prazo.'
+  };
+}
+function ensureRegistroKmTipoAtividadeColumn_(sheet,dados,cols) {
+  if (cols.idxTipoAtividade>=0) return cols;
+  var headerLength=dados&&dados[0]?dados[0].length:0;
+  sheet.getRange(1,headerLength+1).setValue('Tipo_Atividade');
+  if (!dados[0])dados[0]=[];
+  dados[0][headerLength]='Tipo_Atividade';
+  cols.idxTipoAtividade=headerLength;
+  return cols;
+}
+
 function preencherLinhaRegistroKmBruto_(rowLength, cols, registro) {
   var row = [];
   for (var i = 0; i < rowLength; i++) row[i] = '';
@@ -227,6 +265,7 @@ function preencherLinhaRegistroKmBruto_(rowLength, cols, registro) {
   row[cols.idxKm] = registro.km;
   if (cols.idxOrigemRegistro > -1) row[cols.idxOrigemRegistro] = registro.origem_registro || '';
   if (cols.idxObservacao > -1) row[cols.idxObservacao] = registro.observacao || '';
+  if (cols.idxTipoAtividade > -1) row[cols.idxTipoAtividade] = registro.tipo_atividade || 'RIDE';
   if (cols.idxStatusValidacao > -1) row[cols.idxStatusValidacao] = registro.status_validacao || '';
   row[cols.idxActivityId] = registro.activity_id;
 
@@ -635,7 +674,8 @@ function getRegistroKmColumnIndexes_(dados) {
     idxOrigemRegistro: -1,
     idxObservacao: -1,
     idxStatusValidacao: -1,
-    idxActivityId: -1
+    idxActivityId: -1,
+    idxTipoAtividade: -1
   };
 
   if (!dados || !dados.length || !dados[0] || !dados[0].length) return fallback;
@@ -658,7 +698,8 @@ function getRegistroKmColumnIndexes_(dados) {
     idxOrigemRegistro: indice(['origem_registro', 'origem registro'], -1),
     idxObservacao: indice(['observacao', 'observação'], -1),
     idxStatusValidacao: indice(['status_validacao', 'status validação', 'status validacao'], -1),
-    idxActivityId: indice(['activity_id', 'activity id', 'id_atividade', 'id atividade'], -1)
+    idxActivityId: indice(['activity_id', 'activity id', 'id_atividade', 'id atividade'], -1),
+    idxTipoAtividade: indice(['tipo_atividade', 'tipo atividade', 'sport_type', 'modalidade_esportiva', 'modalidade'], -1)
   };
 }
 
