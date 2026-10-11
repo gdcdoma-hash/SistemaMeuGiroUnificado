@@ -565,11 +565,14 @@ function buscarAtividadesUsuario_(idDgmb) {
         activityIdsIncluidos[activityId] = true;
       }
 
+      var tipoAtividade = painelMG_firstFilled_(row, ['Tipo_Atividade','tipo_atividade','Sport_Type','sport_type','Modalidade_Esportiva','modalidade']);
       out.push({
         activity_id: activityId,
         chave_edicao: String(chaveEdicao || '').trim(),
         data: dataNormalizada || painelMG_norm_(dataOriginal),
-        km: painelMG_round1_(painelMG_toNumber_(painelMG_firstFilled_(row, ['KM', 'km'])))
+        km: painelMG_round1_(painelMG_toNumber_(painelMG_firstFilled_(row, ['KM', 'km']))),
+        tipo_atividade: meuGiroTipoAtividadeRegistro_(tipoAtividade),
+        modalidade: meuGiroModalidadeCanonica_(tipoAtividade)
       });
     }
   }
