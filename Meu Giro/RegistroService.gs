@@ -207,7 +207,8 @@ function ensureRegistroKmActivityIdColumn_(sheet, dados, cols) {
   var newIndex = headerLength;
 
   sheet.getRange(1, newIndex + 1).setValue('activity_id');
-
+  if (!dados[0]) dados[0]=[];
+  dados[0][newIndex]='activity_id';
   cols.idxActivityId = newIndex;
   return cols;
 }
@@ -358,6 +359,8 @@ function editarAtividade(payload) {
     var chaveEdicao = String(payload.chave_edicao || '').trim();
     var novaDataAtividade = normalizarDataISO_(payload.data_atividade);
     var novoKm = parseKmInputSeguro_(payload.km);
+    var tipoInformado = payload.tipo_atividade !== undefined && payload.tipo_atividade !== null;
+    var tipoEditado = tipoInformado ? meuGiroTipoAtividadeRegistro_(payload.tipo_atividade) : '';
 
     if (!idDgmb) {
       return { ok: false, code: 'ID_OBRIGATORIO', msg: 'ID do atleta é obrigatório.' };
@@ -371,6 +374,7 @@ function editarAtividade(payload) {
     if (!novoKm || novoKm <= 0) {
       return { ok: false, code: 'KM_INVALIDO', msg: 'Informe um valor de KM maior que zero.' };
     }
+    if (tipoInformado && !tipoEditado) return {ok:false,code:'TIPO_ATIVIDADE_INVALIDO',msg:'Tipo de atividade inválido.'};
 
     perfEtapaInicio = meuGiroPerfNow_();
     var sheet = getSpreadsheet_().getSheetByName(SHEETS.REGISTRO_KM);
@@ -392,6 +396,12 @@ function editarAtividade(payload) {
 
     var linhasDoLancamento = {};
     linhasEncontradas.forEach(function(linha) { linhasDoLancamento[linha] = true; });
+    var tipoOriginal = meuGiroTipoAtividadeRegistro_(cols.idxTipoAtividade >= 0
+      ? dados[linhasEncontradas[0]-1][cols.idxTipoAtividade] : '');
+    var tipoFinal = tipoInformado ? tipoEditado : tipoOriginal;
+    if (!tipoFinal) return {ok:false,code:'TIPO_ATIVIDADE_DESCONHECIDO',msg:'Tipo original da atividade não identificado.'};
+    var validarModalidade = meuGiroValidarModalidadeInscrita_(idDgmb,novaDataAtividade,tipoFinal);
+    if (!validarModalidade.ok) return validarModalidade;
 
     var perfBuscaDuplicidadeInicio = meuGiroPerfNow_();
     var perfNormalizacaoDuplicidadeInicio = meuGiroPerfNow_();
@@ -409,6 +419,7 @@ function editarAtividade(payload) {
       var checkId = String(dados[j][cols.idxId] || '').trim();
       var checkData = normalizarDataEdicao_(dados[j][cols.idxData]);
       var checkKm = normalizarKmEdicao_(dados[j][cols.idxKm]);
+      var checkTipo = meuGiroTipoAtividadeRegistro_(cols.idxTipoAtividade>=0?dados[j][cols.idxTipoAtividade]:'');
       var linhaAtual = j + 1;
       duracaoNormalizacaoMs += meuGiroPerfNow_() - perfNormalizacaoDuplicidadeInicio;
 
@@ -432,7 +443,7 @@ function editarAtividade(payload) {
       }
       duracaoComparacoesMs += meuGiroPerfNow_() - perfComparacaoInicio;
 
-      if (foraDoLancamento && mesmoId && mesmaData && mesmoKm) {
+      if (foraDoLancamento && mesmoId && mesmaData && mesmoKm && tipoFinal===checkTipo) {
         duplicidadeEncontrada = true;
         meuGiroPerfLog_('editar-atividade', 'duplicidade_encontrada', perfBuscaDuplicidadeInicio, {
           linha_encontrada: linhaAtual
@@ -487,15 +498,22 @@ function editarAtividade(payload) {
     });
 
     var valoresOriginais = linhasEncontradas.map(function(linha) {
-      return [dados[linha - 1][cols.idxData], dados[linha - 1][cols.idxKm]];
+      return [dados[linha - 1][cols.idxData], dados[linha - 1][cols.idxKm],
+        cols.idxTipoAtividade>=0?dados[linha-1][cols.idxTipoAtividade]:''];
     });
+    if (tipoInformado && cols.idxTipoAtividade<0) {
+      cols=ensureRegistroKmTipoAtividadeColumn_(sheet,dados,cols);
+    }
 
     perfEtapaInicio = meuGiroPerfNow_();
     linhasEncontradas.forEach(function(linha) {
       sheet.getRange(linha, cols.idxData + 1).setValue(novaDataAtividade);
       sheet.getRange(linha, cols.idxKm + 1).setValue(novoKm);
+      if(cols.idxTipoAtividade>=0 && tipoInformado)
+        sheet.getRange(linha,cols.idxTipoAtividade+1).setValue(tipoFinal);
       dados[linha - 1][cols.idxData] = novaDataAtividade;
       dados[linha - 1][cols.idxKm] = novoKm;
+      if(cols.idxTipoAtividade>=0 && tipoInformado) dados[linha-1][cols.idxTipoAtividade]=tipoFinal;
     });
     var opcoesRegistroKm = criarOpcoesRegistroKmReaproveitado_(idDgmb, dados, cols);
     meuGiroPerfLog_('editar-atividade', 'edicao_atividade_REGISTRO_KM', perfEtapaInicio, {
@@ -514,6 +532,8 @@ function editarAtividade(payload) {
       linhasEncontradas.forEach(function(linha, index) {
         sheet.getRange(linha, cols.idxData + 1).setValue(valoresOriginais[index][0]);
         sheet.getRange(linha, cols.idxKm + 1).setValue(valoresOriginais[index][1]);
+        if(cols.idxTipoAtividade>=0&&tipoInformado)
+          sheet.getRange(linha,cols.idxTipoAtividade+1).setValue(valoresOriginais[index][2]);
       });
       throw syncErr;
     }
