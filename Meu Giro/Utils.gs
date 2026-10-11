@@ -815,6 +815,7 @@ function buildListaDesafiosContexto_(ss) {
     'tipo meta',
     'tipometa'
   ]);
+  var idxModalidade = getOptionalColumnIndex_(map, ['modalidade_esportiva','modalidade esportiva','modalidade']);
 
   if (idxAba === -1) idxAba = 1;
   if (idxIdStatus > -1 && idxStatus > -1) contexto.status.possuiColunaId = true;
@@ -829,12 +830,14 @@ function buildListaDesafiosContexto_(ss) {
       ? normalizarPeriodoMensal_(row[idxPeriodo])
       : { inicio: '', fim: '' };
     var tipoMeta = idxTipoMeta > -1 ? normalizeText_(row[idxTipoMeta]).toUpperCase() : '';
+    var modalidade = meuGiroModalidadeCanonica_(idxModalidade > -1 ? row[idxModalidade] : '');
     var periodo = {
       inicio: periodoMensal.inicio,
       fim: periodoMensal.fim,
       periodo_desafio: periodoTexto,
       nome_desafio: nomeDesafio || aba,
-      tipo_meta: tipoMeta
+      tipo_meta: tipoMeta,
+      modalidade: modalidade
     };
 
     if (aba) {
@@ -1191,7 +1194,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
 
     var periodoTextoHistorico = idxPeriodoHistorico > -1 ? normalizeText_(row[idxPeriodoHistorico]) : '';
     var inicioHistorico = idxInicioHistorico > -1 ? row[idxInicioHistorico] : '';
-    var periodoLista = (idDesafio && periodos.byId[idDesafio]) || (!ehNormal && periodos.byAba[abaDesafio]) || { inicio: '', fim: '', nome_desafio: '' };
+    var periodoLista = (idDesafio && periodos.byId[idDesafio]) || (!ehNormal && periodos.byAba[abaDesafio]) || { inicio: '', fim: '', nome_desafio: '', modalidade: 'CICLISMO' };
     periodoLista.nome_desafio = obterNomeDesafioListaPorId_(periodos, idDesafio, periodoLista.nome_desafio);
 
     var tipoMeta = resolverTipoMetaListaDesafio_(tipoMetaListaDesafios, idDesafio, periodoTextoHistorico, inicioHistorico) ||
@@ -1233,6 +1236,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
       id_desafio: idDesafio,
       id_item_estoque: idItem,
       meta_km: metaKm,
+      modalidade: Object.prototype.hasOwnProperty.call(periodoLista, 'modalidade') ? periodoLista.modalidade : 'CICLISMO',
       status_desafio: statusDesafio,
       status_usuario_desafio: statusUsuarioDesafio,
       status_pagamento: statusPagamento,
@@ -1266,6 +1270,20 @@ function obterVinculosDesafioUsuario_(idDgmb) {
   return vinculos;
 }
 
+/**
+ * Modalidade esportiva, independente do tipo de desafio NORMAL/REPESCAGEM.
+ * Registros e desafios antigos sem campo são exclusivamente CICLISMO.
+ * Valores explícitos desconhecidos são inválidos (não contam em nenhum esporte).
+ */
+function meuGiroModalidadeCanonica_(valor) {
+  var modalidade = normalizeText_(valor).normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '').toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  if (!modalidade || ['CICLISMO','BIKE','PEDAL','PEDALADA','RIDE','MOUNTAINBIKERIDE','GRAVELRIDE'].indexOf(modalidade) >= 0) return 'CICLISMO';
+  if (['CAMINHADA_CORRIDA','CAMINHADA_E_CORRIDA','WALK','RUN','TRAILRUN','CAMINHADA','CORRIDA'].indexOf(modalidade) >= 0) return 'CAMINHADA_CORRIDA';
+  return '';
+}
+
 function obterActivityIdRegistroKm_(registro) {
   return normalizeText_(firstFilledValue_(registro || {}, [
     'activity_id', 'Activity_ID', 'activity id', 'id_atividade', 'ID_Atividade'
@@ -1297,9 +1315,12 @@ function obterRegistrosKmUsuario_(idDgmb, opcoes) {
       activityIdsIncluidos[activityId] = true;
     }
 
+    var tipoAtividade = firstFilledValue_(r, ['Modalidade_Esportiva','modalidade_esportiva','Modalidade','modalidade',
+      'Tipo_Atividade','tipo_atividade','sport_type','Sport_Type']);
     out.push({
       data_atividade: normalizarDataISO_(firstFilledValue_(r, ['Data_Atividade', 'Data', 'data_atividade', 'data'])),
-      km: parseLocalizedNumber_(firstFilledValue_(r, ['KM', 'km']))
+      km: parseLocalizedNumber_(firstFilledValue_(r, ['KM', 'km'])),
+      modalidade: meuGiroModalidadeCanonica_(tipoAtividade)
     });
   }
 
@@ -2024,7 +2045,8 @@ function atualizarMeuGiroResumoComLockAdquirido_(idDgmb, opcoes) {
     if (apto) {
       for (var r = 0; r < registros.length; r++) {
         var reg = registros[r];
-        if (atividadeDentroPeriodoOficial_(reg.data_atividade, inicio, fim)) {
+        if (vinculo.modalidade && reg.modalidade === vinculo.modalidade &&
+            atividadeDentroPeriodoOficial_(reg.data_atividade, inicio, fim)) {
           distancia += Number(reg.km || 0);
         }
       }
