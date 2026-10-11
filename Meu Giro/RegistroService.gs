@@ -233,15 +233,21 @@ function meuGiroTipoAtividadeRegistro_(valor) {
 }
 function meuGiroValidarModalidadeInscrita_(idDgmb, dataIso, tipo) {
   var modalidade=meuGiroModalidadeCanonica_(tipo);
-  if (modalidade === 'CICLISMO') return {ok:true}; // Mantém compatibilidade com registro histórico de pedal.
   var vinculos=obterVinculosDesafioUsuario_(idDgmb)||[];
+  var temCiclismo=vinculos.some(function(v){return v&&v.modalidade==='CICLISMO'});
+  var temCaminhada=vinculos.some(function(v){return v&&v.modalidade==='CAMINHADA_CORRIDA'});
+  // Preserva atletas exclusivamente ciclistas mesmo com registros históricos.
+  // Quem possui apenas caminhada/corrida não pode registrar RIDE por cliente antigo.
+  if (modalidade==='CICLISMO' && (!temCaminhada || temCiclismo)) return {ok:true};
   var apto=vinculos.some(function(v) {
     return v && v.apto && v.modalidade===modalidade &&
       atividadeDentroPeriodoOficial_(dataIso,v.periodo_inicio,v.periodo_fim);
   });
   return apto ? {ok:true} : {
     ok:false,code:'MODALIDADE_FORA_DA_INSCRICAO',
-    msg:'Esta caminhada/corrida não está dentro de uma inscrição válida da modalidade e de seu prazo.'
+    msg:modalidade==='CICLISMO'
+      ? 'Não existe inscrição de ciclismo compatível com esta atividade.'
+      : 'Esta caminhada/corrida não está dentro de uma inscrição válida da modalidade e de seu prazo.'
   };
 }
 function ensureRegistroKmTipoAtividadeColumn_(sheet,dados,cols) {
