@@ -5228,6 +5228,7 @@ async function salvarEdicaoAtividade(forcarDuplicidade) {
 
   const data = readInputValue(dataInput);
   const km = readInputValue(kmInput);
+  const tipoAtividade=meuGiroTipoAtividadeForm_();
   const chaveEdicao = String(chaveEdicaoInput.value || '').trim();
   const activityId = String(activityIdInput.value || '').trim();
   const editKey = activityId || chaveEdicao;
@@ -5261,6 +5262,12 @@ async function salvarEdicaoAtividade(forcarDuplicidade) {
   if (parseValidActivityKm(km) === null) {
     releaseRegistroSubmitGuard();
     setRegistroMsg('Informe um KM válido maior que zero.', 'error');
+    return;
+  }
+
+  if(!tipoAtividade){
+    releaseRegistroSubmitGuard();
+    setRegistroMsg('Selecione Pedalada, Caminhada ou Corrida.', 'error');
     return;
   }
 
@@ -5299,6 +5306,7 @@ async function salvarEdicaoAtividade(forcarDuplicidade) {
           chave_edicao: chaveEdicao,
           data_atividade: data,
           km: km,
+          tipo_atividade: tipoAtividade,
           force: !!forcarDuplicidade
         });
     });
