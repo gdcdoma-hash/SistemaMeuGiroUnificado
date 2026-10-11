@@ -241,7 +241,17 @@
 
     <section id="screen-registrar" class="screen">
       <div id="registro-card" class="card card-registro-atividade">
-        <p class="field-helper field-helper-intro">Preencha só o dia e os km do pedal.</p>
+        <p id="registro-ajuda" class="field-helper field-helper-intro">Preencha só o dia e os km do pedal.</p>
+
+        <div id="registro-tipo-bloco" class="registro-tipo-atividade" hidden>
+          <label for="tipo-atividade">Tipo de atividade</label>
+          <select id="tipo-atividade" aria-label="Escolha entre pedalada, caminhada ou corrida">
+            <option value="">Selecione a atividade</option>
+            <option value="RIDE">🚴 Pedalada · Ciclismo</option>
+            <option value="WALK">🚶 Caminhada · Caminhada/Corrida</option>
+            <option value="RUN">🏃 Corrida · Caminhada/Corrida</option>
+          </select>
+        </div>
 
         <div class="registro-campos-grid">
           <div class="registro-campo">
@@ -250,7 +260,7 @@
           </div>
 
           <div class="registro-campo">
-            <label for="km-atividade">KM pedalados</label>
+            <label id="registro-km-label" for="km-atividade">KM pedalados</label>
             <input id="km-atividade" type="text" inputmode="decimal" placeholder="Ex.: 25,5">
           </div>
         </div>

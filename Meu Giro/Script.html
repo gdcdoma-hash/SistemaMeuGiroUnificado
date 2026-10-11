@@ -1636,15 +1636,69 @@ function playRecentActivityHighlight(itemEl, label) {
   }, 1700);
 }
 
+function meuGiroModalidadeUI_(valor) {
+  var t=String(valor==null?'':valor).trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toUpperCase().replace(/[^A-Z0-9]+/g,'_');
+  if(!t||['CICLISMO','PEDAL','PEDALADA','BIKE','RIDE','MOUNTAINBIKERIDE','GRAVELRIDE'].indexOf(t)>=0) return 'CICLISMO';
+  if(['CAMINHADA_CORRIDA','CAMINHADA_E_CORRIDA','WALK','RUN','CAMINHADA','CORRIDA','TRAILRUN'].indexOf(t)>=0) return 'CAMINHADA_CORRIDA';
+  return '';
+}
+function meuGiroAtualizarTiposRegistroUI_() {
+  var bloco=document.getElementById('registro-tipo-bloco');
+  var seletor=document.getElementById('tipo-atividade');
+  if (!bloco||!seletor) return;
+  var painel=typeof currentPainel!=='undefined' ? currentPainel : null;
+  var desafios=painel&&Array.isArray(painel.desafios_ativos) ? painel.desafios_ativos : [];
+  var caminhada=desafios.some(function(d){return meuGiroModalidadeUI_(d&&d.modalidade)==='CAMINHADA_CORRIDA'});
+  var ciclismo=desafios.some(function(d){return meuGiroModalidadeUI_(d&&d.modalidade)==='CICLISMO'});
+  // Sem desafios carregados, o fluxo anterior permanece exclusivamente ciclismo.
+  if(!caminhada) ciclismo=true;
+  var editando=!!(typeof activeEditKey!=='undefined'&&activeEditKey);
+  var tipoAnterior=seletor.value;
+  ['RIDE','WALK','RUN'].forEach(function(tipo) {
+    var o=seletor.querySelector('option[value="'+tipo+'"]');
+    if (!o) return;
+    var disponivel=tipo==='RIDE'?ciclismo:caminhada;
+    if (editando&&tipoAnterior===tipo) disponivel=true;
+    o.disabled=!disponivel;
+    o.hidden=!disponivel;
+  });
+  bloco.hidden=!caminhada&&!editando;
+  var ajuda=document.getElementById('registro-ajuda');
+  var rotuloKm=document.getElementById('registro-km-label');
+  if(ajuda) ajuda.textContent=!caminhada
+    ? 'Preencha só o dia e os km do pedal.'
+    : ciclismo
+      ? 'Selecione Pedalada, Caminhada ou Corrida para registrar os km na modalidade correta.'
+      : 'Selecione Caminhada ou Corrida e informe o dia e os km.';
+  if(rotuloKm) rotuloKm.textContent=caminhada?'KM da atividade':'KM pedalados';
+  if (!caminhada&&!editando) seletor.value='RIDE';
+  else if (!editando) {
+    var escolhido=seletor.querySelector('option[value="'+tipoAnterior+'"]');
+    if (!tipoAnterior||!escolhido||escolhido.disabled) seletor.value='';
+  }
+}
+function meuGiroTipoAtividadeForm_(){
+  var select=document.getElementById('tipo-atividade');
+  var bloco=document.getElementById('registro-tipo-bloco');
+  return !select||(bloco&&bloco.hidden)?'RIDE':String(select.value||'').trim();
+}
+function meuGiroRotuloTipoAtividade_(item){
+  var tipo=String(item&&item.tipo_atividade||'RIDE').toUpperCase();
+  return tipo==='WALK'?'Caminhada':tipo==='RUN'?'Corrida':'Pedalada';
+}
+
 function setActivityFormLocked(disabled) {
   const cancelBtn = document.getElementById('btn-cancelar-edicao');
   const dataInput = document.getElementById('data-atividade');
   const kmInput = document.getElementById('km-atividade');
+  const tipoInput = document.getElementById('tipo-atividade');
   const quickButtons = document.querySelectorAll('.quick-km-btn');
 
   if (cancelBtn) cancelBtn.disabled = !!disabled;
   if (dataInput) dataInput.disabled = !!disabled;
   if (kmInput) kmInput.disabled = !!disabled;
+  if (tipoInput) tipoInput.disabled = !!disabled;
 
   quickButtons.forEach(function(btn) {
     btn.disabled = !!disabled;
@@ -3102,6 +3156,7 @@ function filtrarAtividadesPorPeriodoDesafio(atividades, desafio) {
   var lista = Array.isArray(atividades) ? atividades : [];
   var inicio = String(desafio && desafio.periodo_inicio || '').trim();
   var fim = String(desafio && desafio.periodo_fim || '').trim();
+  var modalidadeFoco = meuGiroModalidadeUI_(desafio && desafio.modalidade);
 
   if (!desafio) return lista;
 
@@ -3116,7 +3171,8 @@ function filtrarAtividadesPorPeriodoDesafio(atividades, desafio) {
   return {
     items: lista.filter(function(item) {
       var data = String(item && item.data || '').trim();
-      return !!data && data >= inicio && data <= fim;
+      return !!data && data >= inicio && data <= fim &&
+        meuGiroModalidadeUI_(item&&item.modalidade)===modalidadeFoco;
     }),
     erro_periodo: false,
     mensagem: ''
@@ -3806,6 +3862,7 @@ function sincronizarPainelComDesafioEmFoco() {
       : 'Ranking carregado somente sob demanda.';
   }
 
+  meuGiroAtualizarTiposRegistroUI_();
   var atividadesReaisPainel = (currentPainel && currentPainel.atividades) || [];
   renderUltimaAtividadePainel(obterAtividadesReaisUltimaPainel_(contexto, currentPainel));
   renderAtividades(atividadesReaisPainel);
@@ -4764,6 +4821,11 @@ function renderAtividades(lista) {
   box.innerHTML = '';
 
   var atividades = Array.isArray(lista) ? lista.slice() : [];
+  var desafioLista=getDesafioEmFocoAtual();
+  if(desafioLista){
+    var modalidadeLista=meuGiroModalidadeUI_(desafioLista.modalidade);
+    atividades=atividades.filter(function(x){return meuGiroModalidadeUI_(x&&x.modalidade)===modalidadeLista});
+  }
   var meses = montarMesesAtividades_(atividades);
 
   if (!atividades.length) {
@@ -4817,7 +4879,7 @@ function renderAtividades(lista) {
 
     const info = document.createElement('div');
     info.className = 'atividade-info';
-    info.innerText = 'Dia ' + getActivityDayLabel_(item) + ' — ' + formatNumber(item.km) + ' km';
+    info.innerText = 'Dia ' + getActivityDayLabel_(item) + ' — ' + formatNumber(item.km) + ' km · ' + meuGiroRotuloTipoAtividade_(item);
     div.appendChild(info);
 
     const actions = document.createElement('div');
@@ -5018,6 +5080,7 @@ async function salvarAtividade(forcarDuplicidade) {
 
   const data = readInputValue(dataInput);
   const km = readInputValue(kmInput);
+  const tipoAtividade=meuGiroTipoAtividadeForm_();
 
   setRegistroMsg('');
 
@@ -5050,6 +5113,11 @@ async function salvarAtividade(forcarDuplicidade) {
     setRegistroMsg('Informe um KM válido maior que zero.', 'error');
     return;
   }
+  if (!tipoAtividade) {
+    releaseRegistroSubmitGuard();
+    setRegistroMsg('Selecione Pedalada, Caminhada ou Corrida.', 'error');
+    return;
+  }
 
   activityMutationInProgress = true;
   mostrarModalMeuGiro({
@@ -5079,7 +5147,7 @@ async function salvarAtividade(forcarDuplicidade) {
       google.script.run
         .withSuccessHandler(resolve)
         .withFailureHandler(reject)
-        .registrarAtividade(idDgmb, data, km, !!forcarDuplicidade);
+        .registrarAtividade(idDgmb, data, km, !!forcarDuplicidade, tipoAtividade);
     });
 
     if (!res || !res.ok) {
@@ -5169,6 +5237,7 @@ async function salvarEdicaoAtividade(forcarDuplicidade) {
 
   const data = readInputValue(dataInput);
   const km = readInputValue(kmInput);
+  const tipoAtividade=meuGiroTipoAtividadeForm_();
   const chaveEdicao = String(chaveEdicaoInput.value || '').trim();
   const activityId = String(activityIdInput.value || '').trim();
   const editKey = activityId || chaveEdicao;
@@ -5202,6 +5271,12 @@ async function salvarEdicaoAtividade(forcarDuplicidade) {
   if (parseValidActivityKm(km) === null) {
     releaseRegistroSubmitGuard();
     setRegistroMsg('Informe um KM válido maior que zero.', 'error');
+    return;
+  }
+
+  if(!tipoAtividade){
+    releaseRegistroSubmitGuard();
+    setRegistroMsg('Selecione Pedalada, Caminhada ou Corrida.', 'error');
     return;
   }
 
@@ -5240,6 +5315,7 @@ async function salvarEdicaoAtividade(forcarDuplicidade) {
           chave_edicao: chaveEdicao,
           data_atividade: data,
           km: km,
+          tipo_atividade: tipoAtividade,
           force: !!forcarDuplicidade
         });
     });
@@ -5344,6 +5420,11 @@ function iniciarEdicaoAtividadeUI(item) {
 
   const kmInput = document.getElementById('km-atividade');
   if (kmInput) kmInput.value = formatNumber(item.km);
+  const tipoInput=document.getElementById('tipo-atividade');
+  if(tipoInput) {
+    tipoInput.value=String(item.tipo_atividade||'RIDE').toUpperCase();
+    meuGiroAtualizarTiposRegistroUI_();
+  }
 
   const cancelBtn = document.getElementById('btn-cancelar-edicao');
   if (cancelBtn) cancelBtn.style.display = '';
@@ -6256,6 +6337,9 @@ function cancelarEdicaoAtividadeUI() {
 
   const kmInput = document.getElementById('km-atividade');
   if (kmInput) kmInput.value = '';
+  const tipoInput=document.getElementById('tipo-atividade');
+  if(tipoInput)tipoInput.value='';
+  meuGiroAtualizarTiposRegistroUI_();
 
   const cancelBtn = document.getElementById('btn-cancelar-edicao');
   if (cancelBtn) cancelBtn.style.display = 'none';
