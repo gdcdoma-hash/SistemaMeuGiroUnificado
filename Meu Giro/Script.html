@@ -1639,8 +1639,9 @@ function playRecentActivityHighlight(itemEl, label) {
 function meuGiroModalidadeUI_(valor) {
   var t=String(valor==null?'':valor).trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
     .toUpperCase().replace(/[^A-Z0-9]+/g,'_');
-  return ['CAMINHADA_CORRIDA','CAMINHADA_E_CORRIDA','WALK','RUN','CAMINHADA','CORRIDA','TRAILRUN'].indexOf(t)>=0
-    ? 'CAMINHADA_CORRIDA' : 'CICLISMO';
+  if(!t||['CICLISMO','PEDAL','PEDALADA','BIKE','RIDE','MOUNTAINBIKERIDE','GRAVELRIDE'].indexOf(t)>=0) return 'CICLISMO';
+  if(['CAMINHADA_CORRIDA','CAMINHADA_E_CORRIDA','WALK','RUN','CAMINHADA','CORRIDA','TRAILRUN'].indexOf(t)>=0) return 'CAMINHADA_CORRIDA';
+  return '';
 }
 function meuGiroAtualizarTiposRegistroUI_() {
   var bloco=document.getElementById('registro-tipo-bloco');
