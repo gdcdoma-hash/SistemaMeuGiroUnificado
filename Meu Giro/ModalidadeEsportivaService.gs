@@ -38,3 +38,38 @@ function meuGiroSomarKmPorVinculo_(atividades, vinculo) {
   });
   return Math.round((total + Number.EPSILON) * 100) / 100;
 }
+
+/**
+ * Validação autoritativa de data na gravação/edição.
+ * O atleta pode registrar uma atividade se E SOMENTE SE houver pelo menos
+ * uma inscrição elegível da mesma modalidade cuja janela contenha a data.
+ * Janelas podem atravessar meses, sem agrupamento por competência mensal.
+ */
+function meuGiroValidarDataModalidadeInscricao_(dataAtividade, modalidade, vinculos) {
+  var data = normalizarDataISO_(dataAtividade);
+  if (!isDataIsoValida_(data)) {
+    return {ok:false,code:'DATA_INVALIDA',msg:'Informe uma data válida.'};
+  }
+  var esporte = meuGiroModalidadeCanonica_(modalidade);
+  var elegiveis = (vinculos || []).filter(function(v) {
+    if (!v || !v.apto) return false;
+    if (meuGiroModalidadeCanonica_(v.modalidade_esportiva || v.modalidade || '') !== esporte)
+      return false;
+    var inicio = normalizarDataISO_(v.periodo_inicio);
+    var fim = normalizarDataISO_(v.periodo_fim);
+    return isDataIsoValida_(inicio) && isDataIsoValida_(fim) && inicio <= fim;
+  });
+  if (!elegiveis.length) {
+    return {ok:false,code:'SEM_DESAFIO_MODALIDADE',
+      msg:'Não há desafio disponível nesta modalidade com período válido para registrar atividades.'};
+  }
+  var aceito = elegiveis.some(function(v) {
+    return atividadeDentroPeriodoOficial_(
+      data, normalizarDataISO_(v.periodo_inicio), normalizarDataISO_(v.periodo_fim));
+  });
+  if (!aceito) {
+    return {ok:false,code:'DATA_FORA_DO_PRAZO',
+      msg:'Esta data está fora do período dos seus desafios desta modalidade. Confira o início e a data limite.'};
+  }
+  return {ok:true,modalidade_esportiva:esporte,data_atividade:data};
+}
