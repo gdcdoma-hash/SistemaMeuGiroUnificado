@@ -4782,8 +4782,13 @@ function sincronizarModalidadeFormularioAtividade_(modalidadePreferida) {
   var preferida = String(modalidadePreferida || '').trim().toUpperCase();
   // Preservar escolha existente quando o painel é atualizado.
   var atual = String(seletor.value || '').trim().toUpperCase();
-  var contextoAtual = String((currentPainel && currentPainel.id_dgmb) || '')+'|'+opcoes.join('|');
+  var chaveFoco = String((foco && (foco.id_inscricao || foco.id_desafio || foco.nome_desafio)) || '');
+  var contextoAtual = String((currentPainel && currentPainel.id_dgmb) || '')+'|'+
+    opcoes.join('|')+'|'+chaveFoco;
   var contextoMudou = contextoAtual !== meuGiroContextoModalidadeFormulario_;
+  // Ao trocar o desafio em foco, a modalidade acompanha esse desafio.
+  // Se o atleta escolher outro esporte manualmente, preservar a seleção
+  // enquanto o foco continuar o mesmo.
   var escolhido = opcoes.indexOf(preferida) >= 0 ? preferida :
     (!contextoMudou && opcoes.indexOf(atual) >= 0 ? atual :
       (opcoes.indexOf(focoModalidade) >= 0 ? focoModalidade : opcoes[0]));
