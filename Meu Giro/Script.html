@@ -3115,10 +3115,20 @@ function filtrarAtividadesPorPeriodoDesafio(atividades, desafio) {
     };
   }
 
+  // Histórico contextual: uma atividade de caminhada não pode aparecer
+  // na relação de um desafio de Ciclismo (e vice-versa).
+  // Itens legados sem modalidade são tratados como Ciclismo.
+  var modalidadeDesafio = String(
+    desafio && (desafio.modalidade_esportiva || desafio.modalidade) || 'CICLISMO'
+  ).trim().toUpperCase();
   return {
     items: lista.filter(function(item) {
-      var data = String(item && item.data || '').trim();
-      return !!data && data >= inicio && data <= fim;
+      var data = String(item && (item.data || item.data_atividade) || '').trim();
+      var modalidadeAtividade = String(
+        item && (item.modalidade_esportiva || item.modalidade) || 'CICLISMO'
+      ).trim().toUpperCase();
+      return !!data && data >= inicio && data <= fim &&
+        modalidadeAtividade === modalidadeDesafio;
     }),
     erro_periodo: false,
     mensagem: ''
