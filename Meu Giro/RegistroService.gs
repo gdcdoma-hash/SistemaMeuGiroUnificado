@@ -1,4 +1,4 @@
-function registrarAtividade(idDgmb, dataAtividade, km, force) {
+function registrarAtividade(idDgmb, dataAtividade, km, force, modalidadeEsportiva) {
   var perfTotalInicio = meuGiroPerfNow_();
   var perfOperacaoAnterior = MEU_GIRO_PERF_OPERACAO_ATUAL_;
   MEU_GIRO_PERF_OPERACAO_ATUAL_ = 'registrarAtividade';
@@ -11,6 +11,7 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
     idDgmb = String(idDgmb || '').trim();
     dataAtividade = normalizarDataISO_(dataAtividade);
     km = parseKmInputSeguro_(km);
+    var modalidadeRegistro = meuGiroModalidadeCanonica_(modalidadeEsportiva);
 
     if (!idDgmb) {
       return { ok:false, code:'ID_OBRIGATORIO', msg:'ID do atleta é obrigatório.' };
@@ -37,6 +38,7 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
     cols = ensureRegistroKmActivityIdColumn_(sheet, dados, cols);
     if (!dados[0]) dados[0] = [];
     dados[0][cols.idxActivityId] = dados[0][cols.idxActivityId] || 'activity_id';
+    cols = ensureRegistroKmModalidadeColumn_(sheet, dados, cols);
     var activityId = gerarActivityId_();
 
     var perfBuscaDuplicidadeInicio = meuGiroPerfNow_();
@@ -55,6 +57,7 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
       var rowId = String(dados[i][cols.idxId] || '').trim();
       var rowData = normalizarDataISO_(dados[i][cols.idxData]);
       var rowKm = normalizarKmEdicao_(dados[i][cols.idxKm]);
+      var modalidadeLinha = meuGiroModalidadeCanonica_(dados[i][cols.idxModalidade]);
       duracaoNormalizacaoMs += meuGiroPerfNow_() - perfNormalizacaoDuplicidadeInicio;
 
       var perfComparacaoInicio = meuGiroPerfNow_();
@@ -72,7 +75,7 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
       }
       duracaoComparacoesMs += meuGiroPerfNow_() - perfComparacaoInicio;
 
-      if (mesmoId && mesmaData && mesmoKm) {
+      if (mesmoId && mesmaData && mesmoKm && modalidadeLinha === modalidadeRegistro) {
         duplicidadeEncontrada = true;
         meuGiroPerfLog_('registrar-atividade', 'duplicidade_encontrada', perfBuscaDuplicidadeInicio, {
           linha_encontrada: i + 1
@@ -138,7 +141,8 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
       origem_registro: 'MANUAL',
       observacao: 'Lançamento manual Meu Giro',
       status_validacao: 'PENDENTE',
-      activity_id: activityId
+      activity_id: activityId,
+      modalidade_esportiva: modalidadeRegistro
     });
 
     var linhaInserida = sheet.getLastRow() + 1;
@@ -205,6 +209,16 @@ function ensureRegistroKmActivityIdColumn_(sheet, dados, cols) {
   return cols;
 }
 
+function ensureRegistroKmModalidadeColumn_(sheet, dados, cols) {
+  if (cols && cols.idxModalidade > -1) return cols;
+  var novoIndice = Math.max(sheet.getLastColumn(), (dados && dados[0] && dados[0].length) || 0);
+  sheet.getRange(1, novoIndice + 1).setValue('Modalidade_Esportiva');
+  if (!dados[0]) dados[0] = [];
+  dados[0][novoIndice] = 'Modalidade_Esportiva';
+  cols.idxModalidade = novoIndice;
+  return cols;
+}
+
 function maiorIndiceRegistroKm_(cols) {
   var maior = -1;
   Object.keys(cols || {}).forEach(function(chave) {
@@ -228,6 +242,7 @@ function preencherLinhaRegistroKmBruto_(rowLength, cols, registro) {
   if (cols.idxOrigemRegistro > -1) row[cols.idxOrigemRegistro] = registro.origem_registro || '';
   if (cols.idxObservacao > -1) row[cols.idxObservacao] = registro.observacao || '';
   if (cols.idxStatusValidacao > -1) row[cols.idxStatusValidacao] = registro.status_validacao || '';
+  if (cols.idxModalidade > -1) row[cols.idxModalidade] = meuGiroModalidadeCanonica_(registro.modalidade_esportiva);
   row[cols.idxActivityId] = registro.activity_id;
 
   return row;
@@ -242,65 +257,27 @@ function criarOpcoesRegistroKmReaproveitado_(idDgmb, valores, layoutRegistroKm) 
   };
 }
 
-function atualizarDistanciaRealizada_(idDgmb, opcoes){
-  var perfTotalInicio = meuGiroPerfNow_();
-  var perfEtapaInicio = meuGiroPerfNow_();
-  var registros = obterRegistrosKmObjetosReaproveitados_(idDgmb, opcoes);
-  meuGiroPerfLog_('atualizar-distancia-realizada', registros.reaproveitados ? 'leitura_REGISTRO_KM_reaproveitada' : 'leitura_REGISTRO_KM', perfEtapaInicio, {
-    quantidade_linhas_registro_km: registros.valores.length
+function atualizarDistanciaRealizada_(idDgmb, opcoes) {
+  // Cada inscrição recebe os quilômetros da sua modalidade e do seu prazo.
+  var id = String(idDgmb || '').trim();
+  if (!id) return;
+  var registros = obterRegistrosKmUsuario_(id, opcoes);
+  var vinculos = obterVinculosDesafioUsuario_(id) || [];
+  if (!vinculos.length) return;
+  var cache = obterDgmbDesafiosCacheExecucao_('atualizarDistanciaRealizada_');
+  var dados = cache.values || [];
+  var map = buildHeaderMap_(dados[0] || []);
+  var colId = getRequiredColumnIndex_(map, ['id_dgmb'], cache.aba);
+  var colRealizado = getRequiredColumnIndex_(map, ['distancia_realizada', 'distancia realizada'], cache.aba);
+  vinculos.forEach(function(vinculo) {
+    var linha = Number(vinculo.linha_inscricao || 0);
+    if (!vinculo.apto || !vinculo.periodo_inicio || !vinculo.periodo_fim ||
+        linha < 2 || linha > dados.length) return;
+    if (String(dados[linha - 1][colId] || '').trim() !== id) return;
+    var total = meuGiroSomarKmPorVinculo_(registros, vinculo);
+    cache.sheet.getRange(linha, colRealizado + 1).setValue(total);
+    dados[linha - 1][colRealizado] = total;
   });
-  var registrosValores = registros.valores;
-  var total = 0;
-  var activityIdsSomados = {};
-
-  registrosValores.forEach(function(r){
-    if(String(r.ID_DGMB).trim() !== String(idDgmb).trim()) return;
-
-    var activityId = obterActivityIdRegistroKm_(r);
-
-    if (activityId) {
-      if (activityIdsSomados[activityId]) return;
-      activityIdsSomados[activityId] = true;
-    }
-
-    total += Number(r.KM || 0);
-  });
-
-  perfEtapaInicio = meuGiroPerfNow_();
-  var cacheDesafios = obterDgmbDesafiosCacheExecucao_('atualizarDistanciaRealizada_');
-  var abaDesafio = cacheDesafios.aba;
-  var sheet = cacheDesafios.sheet;
-  var dados = cacheDesafios.values;
-  meuGiroPerfLog_('atualizar-distancia-realizada', 'leitura_dgmbDesafios_cache', perfEtapaInicio, {
-    quantidade_linhas_dgmbDesafios: dados && dados.length ? dados.length - 1 : 0,
-    usou_cache_dgmbDesafios: cacheDesafios.usouCache
-  });
-
-  var inscricao = obterDadosInscricaoUsuario_(idDgmb, {
-    abaDesafio: abaDesafio,
-    values: dados,
-    cache: cacheDesafios
-  });
-  if (!inscricao || !inscricao.aba_desafio) return;
-  if (!dados || dados.length < 2) return;
-
-  var map = buildHeaderMap_(dados[0]);
-  var idxId = getRequiredColumnIndex_(map, ['id_dgmb'], abaDesafio);
-  var idxRealizado = getRequiredColumnIndex_(map, ['distancia_realizada', 'distancia realizada'], abaDesafio);
-
-  for(var i=1;i<dados.length;i++){
-    if(String(dados[i][idxId]).trim() === String(idDgmb).trim()){
-      perfEtapaInicio = meuGiroPerfNow_();
-      sheet.getRange(i + 1, idxRealizado + 1).setValue(total);
-      dados[i][idxRealizado] = total;
-      meuGiroPerfLog_('atualizar-distancia-realizada', 'escrita_dgmbDesafios_distancia_realizada', perfEtapaInicio, {
-        linha_atualizada: i + 1,
-        cache_memoria_atualizado: true
-      });
-      break;
-    }
-  }
-  meuGiroPerfLog_('atualizar-distancia-realizada', 'atualizarDistanciaRealizada_total', perfTotalInicio);
 }
 
 function editarAtividade(payload) {
@@ -340,6 +317,7 @@ function editarAtividade(payload) {
       quantidade_linhas_registro_km: dados && dados.length ? dados.length - 1 : 0
     });
     var cols = getRegistroKmColumnIndexes_(dados);
+    cols = ensureRegistroKmModalidadeColumn_(sheet, dados, cols);
     perfEtapaInicio = meuGiroPerfNow_();
     var linhasEncontradas = localizarLinhasAtividade_(dados, cols, idDgmb, activityId, chaveEdicao);
     meuGiroPerfLog_('editar-atividade', 'localizar_linhas_atividade', perfEtapaInicio, {
@@ -353,6 +331,11 @@ function editarAtividade(payload) {
 
     var linhasDoLancamento = {};
     linhasEncontradas.forEach(function(linha) { linhasDoLancamento[linha] = true; });
+    var modalidadeOriginal = meuGiroModalidadeCanonica_(dados[linhasEncontradas[0]-1][cols.idxModalidade]);
+    if (linhasEncontradas.some(function(linha) {
+      return meuGiroModalidadeCanonica_(dados[linha-1][cols.idxModalidade]) !== modalidadeOriginal;
+    })) return {ok:false,code:'MODALIDADES_MISTURADAS',msg:'Não é possível editar esportes diferentes juntos.'};
+    var modalidadeEdicao = meuGiroModalidadeCanonica_(payload.modalidade_esportiva || modalidadeOriginal);
 
     var perfBuscaDuplicidadeInicio = meuGiroPerfNow_();
     var perfNormalizacaoDuplicidadeInicio = meuGiroPerfNow_();
@@ -370,6 +353,7 @@ function editarAtividade(payload) {
       var checkId = String(dados[j][cols.idxId] || '').trim();
       var checkData = normalizarDataEdicao_(dados[j][cols.idxData]);
       var checkKm = normalizarKmEdicao_(dados[j][cols.idxKm]);
+      var checkModalidade = meuGiroModalidadeCanonica_(dados[j][cols.idxModalidade]);
       var linhaAtual = j + 1;
       duracaoNormalizacaoMs += meuGiroPerfNow_() - perfNormalizacaoDuplicidadeInicio;
 
@@ -393,7 +377,7 @@ function editarAtividade(payload) {
       }
       duracaoComparacoesMs += meuGiroPerfNow_() - perfComparacaoInicio;
 
-      if (foraDoLancamento && mesmoId && mesmaData && mesmoKm) {
+      if (foraDoLancamento && mesmoId && mesmaData && mesmoKm && checkModalidade === modalidadeEdicao) {
         duplicidadeEncontrada = true;
         meuGiroPerfLog_('editar-atividade', 'duplicidade_encontrada', perfBuscaDuplicidadeInicio, {
           linha_encontrada: linhaAtual
@@ -448,15 +432,17 @@ function editarAtividade(payload) {
     });
 
     var valoresOriginais = linhasEncontradas.map(function(linha) {
-      return [dados[linha - 1][cols.idxData], dados[linha - 1][cols.idxKm]];
+      return [dados[linha - 1][cols.idxData], dados[linha - 1][cols.idxKm], dados[linha - 1][cols.idxModalidade]];
     });
 
     perfEtapaInicio = meuGiroPerfNow_();
     linhasEncontradas.forEach(function(linha) {
       sheet.getRange(linha, cols.idxData + 1).setValue(novaDataAtividade);
       sheet.getRange(linha, cols.idxKm + 1).setValue(novoKm);
+      sheet.getRange(linha, cols.idxModalidade + 1).setValue(modalidadeEdicao);
       dados[linha - 1][cols.idxData] = novaDataAtividade;
       dados[linha - 1][cols.idxKm] = novoKm;
+      dados[linha - 1][cols.idxModalidade] = modalidadeEdicao;
     });
     var opcoesRegistroKm = criarOpcoesRegistroKmReaproveitado_(idDgmb, dados, cols);
     meuGiroPerfLog_('editar-atividade', 'edicao_atividade_REGISTRO_KM', perfEtapaInicio, {
@@ -475,6 +461,7 @@ function editarAtividade(payload) {
       linhasEncontradas.forEach(function(linha, index) {
         sheet.getRange(linha, cols.idxData + 1).setValue(valoresOriginais[index][0]);
         sheet.getRange(linha, cols.idxKm + 1).setValue(valoresOriginais[index][1]);
+        sheet.getRange(linha, cols.idxModalidade + 1).setValue(valoresOriginais[index][2]);
       });
       throw syncErr;
     }
@@ -581,6 +568,19 @@ function excluirAtividade(payload) {
     if (!linhasEncontradas.length) {
       return { ok: false, code: 'ATIVIDADE_NAO_ENCONTRADA', msg: 'Atividade não encontrada para exclusão com a chave e ID informados.' };
     }
+    // Registros legados sem activity_id podem compartilhar timestamp;
+    // nunca apagar em conjunto modalidades diferentes silenciosamente.
+    var modalidadeDeExclusao = meuGiroModalidadeCanonica_(
+      cols.idxModalidade > -1 ? dados[linhasEncontradas[0]-1][cols.idxModalidade] : ''
+    );
+    if (linhasEncontradas.some(function(linha) {
+      return meuGiroModalidadeCanonica_(
+        cols.idxModalidade > -1 ? dados[linha-1][cols.idxModalidade] : ''
+      ) !== modalidadeDeExclusao;
+    })) {
+      return { ok:false, code:'MODALIDADES_MISTURADAS',
+        msg:'Atividades de modalidades diferentes não podem ser excluídas juntas.' };
+    }
 
     var linhasOriginais = linhasEncontradas.map(function(linha) {
       return { numero: linha, valores: dados[linha - 1].slice() };
@@ -635,6 +635,7 @@ function getRegistroKmColumnIndexes_(dados) {
     idxOrigemRegistro: -1,
     idxObservacao: -1,
     idxStatusValidacao: -1,
+    idxModalidade: -1,
     idxActivityId: -1
   };
 
@@ -658,6 +659,7 @@ function getRegistroKmColumnIndexes_(dados) {
     idxOrigemRegistro: indice(['origem_registro', 'origem registro'], -1),
     idxObservacao: indice(['observacao', 'observação'], -1),
     idxStatusValidacao: indice(['status_validacao', 'status validação', 'status validacao'], -1),
+    idxModalidade: indice(['modalidade_esportiva', 'modalidade esportiva', 'modalidade'], -1),
     idxActivityId: indice(['activity_id', 'activity id', 'id_atividade', 'id atividade'], -1)
   };
 }

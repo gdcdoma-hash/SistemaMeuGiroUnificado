@@ -1640,11 +1640,13 @@ function setActivityFormLocked(disabled) {
   const cancelBtn = document.getElementById('btn-cancelar-edicao');
   const dataInput = document.getElementById('data-atividade');
   const kmInput = document.getElementById('km-atividade');
+  const modalidadeInput = document.getElementById('modalidade-atividade');
   const quickButtons = document.querySelectorAll('.quick-km-btn');
 
   if (cancelBtn) cancelBtn.disabled = !!disabled;
   if (dataInput) dataInput.disabled = !!disabled;
   if (kmInput) kmInput.disabled = !!disabled;
+  if (modalidadeInput) modalidadeInput.disabled = !!disabled;
 
   quickButtons.forEach(function(btn) {
     btn.disabled = !!disabled;
@@ -4754,11 +4756,58 @@ function selecionarMesAtividades(key) {
   renderAtividades(currentPainel && currentPainel.atividades || []);
 }
 
+var meuGiroContextoModalidadeFormulario_ = '';
+function meuGiroModalidadeVisual_(valor) {
+  return valor === 'CAMINHADA_CORRIDA' ? 'Caminhada/Corrida' : 'Ciclismo';
+}
+function meuGiroModalidadesDoPainel_() {
+  var painel = currentPainel || {};
+  var desafios = (painel.desafios_ativos && painel.desafios_ativos.length)
+    ? painel.desafios_ativos : (painel.desafios || []);
+  var encontrados = {};
+  desafios.forEach(function(d) {
+    var v = String((d && (d.modalidade_esportiva || d.modalidade)) || 'CICLISMO').trim().toUpperCase();
+    if (v === 'CAMINHADA_CORRIDA' || v === 'CICLISMO') encontrados[v] = true;
+  });
+  var lista = Object.keys(encontrados);
+  return lista.length ? lista : ['CICLISMO'];
+}
+function sincronizarModalidadeFormularioAtividade_(modalidadePreferida) {
+  var seletor = document.getElementById('modalidade-atividade');
+  var box = document.getElementById('registro-modalidade-box');
+  if (!seletor || !box) return 'CICLISMO';
+  var opcoes = meuGiroModalidadesDoPainel_();
+  var foco = getDesafioEmFocoAtual();
+  var focoModalidade = String((foco && (foco.modalidade_esportiva || foco.modalidade)) || '').trim().toUpperCase();
+  var preferida = String(modalidadePreferida || '').trim().toUpperCase();
+  // Preservar escolha existente quando o painel é atualizado.
+  var atual = String(seletor.value || '').trim().toUpperCase();
+  var chaveFoco = String((foco && (foco.id_inscricao || foco.id_desafio || foco.nome_desafio)) || '');
+  var contextoAtual = String((currentPainel && currentPainel.id_dgmb) || '')+'|'+
+    opcoes.join('|')+'|'+chaveFoco;
+  var contextoMudou = contextoAtual !== meuGiroContextoModalidadeFormulario_;
+  // Ao trocar o desafio em foco, a modalidade acompanha esse desafio.
+  // Se o atleta escolher outro esporte manualmente, preservar a seleção
+  // enquanto o foco continuar o mesmo.
+  var escolhido = opcoes.indexOf(preferida) >= 0 ? preferida :
+    (!contextoMudou && opcoes.indexOf(atual) >= 0 ? atual :
+      (opcoes.indexOf(focoModalidade) >= 0 ? focoModalidade : opcoes[0]));
+  meuGiroContextoModalidadeFormulario_ = contextoAtual;
+  seletor.value = escolhido;
+  box.hidden = opcoes.length < 2;
+  return escolhido;
+}
+function meuGiroModalidadeFormularioAtividade_() {
+  var select = document.getElementById('modalidade-atividade');
+  return String(select && select.value || 'CICLISMO').trim().toUpperCase();
+}
+
 function renderAtividades(lista) {
   const box = document.getElementById('atividades-lista');
   const mesesBox = document.getElementById('atividades-meses');
   const resumo = document.getElementById('atividades-mes-resumo');
   if (!box) return;
+  sincronizarModalidadeFormularioAtividade_();
 
   clearRecentActivityHighlight();
   box.innerHTML = '';
@@ -4798,7 +4847,14 @@ function renderAtividades(lista) {
   }, 0);
 
   if (resumo) {
-    resumo.innerHTML = '<span>Total do mês: <strong id="total-pedalado">' + formatNumber(totalMes) + '</strong> km</span>';
+    var modos = {CICLISMO:0,CAMINHADA_CORRIDA:0};
+    listaFiltrada.forEach(function(item) {
+      var modo = item && item.modalidade_esportiva === 'CAMINHADA_CORRIDA' ? 'CAMINHADA_CORRIDA' : 'CICLISMO';
+      modos[modo] += toFiniteNumber(item && item.km, 0);
+    });
+    resumo.innerHTML = '<span>Ciclismo: <strong>' + formatNumber(modos.CICLISMO) +
+      '</strong> km · Caminhada/Corrida: <strong>' +
+      formatNumber(modos.CAMINHADA_CORRIDA) + '</strong> km</span>';
   }
 
   if (!listaFiltrada.length) {
@@ -4817,7 +4873,8 @@ function renderAtividades(lista) {
 
     const info = document.createElement('div');
     info.className = 'atividade-info';
-    info.innerText = 'Dia ' + getActivityDayLabel_(item) + ' — ' + formatNumber(item.km) + ' km';
+    info.innerText = 'Dia ' + getActivityDayLabel_(item) + ' — ' + formatNumber(item.km) +
+      ' km · ' + meuGiroModalidadeVisual_(item.modalidade_esportiva);
     div.appendChild(info);
 
     const actions = document.createElement('div');
@@ -5079,7 +5136,7 @@ async function salvarAtividade(forcarDuplicidade) {
       google.script.run
         .withSuccessHandler(resolve)
         .withFailureHandler(reject)
-        .registrarAtividade(idDgmb, data, km, !!forcarDuplicidade);
+        .registrarAtividade(idDgmb, data, km, !!forcarDuplicidade, meuGiroModalidadeFormularioAtividade_());
     });
 
     if (!res || !res.ok) {
@@ -5240,6 +5297,7 @@ async function salvarEdicaoAtividade(forcarDuplicidade) {
           chave_edicao: chaveEdicao,
           data_atividade: data,
           km: km,
+          modalidade_esportiva: meuGiroModalidadeFormularioAtividade_(),
           force: !!forcarDuplicidade
         });
     });
@@ -5344,6 +5402,7 @@ function iniciarEdicaoAtividadeUI(item) {
 
   const kmInput = document.getElementById('km-atividade');
   if (kmInput) kmInput.value = formatNumber(item.km);
+  sincronizarModalidadeFormularioAtividade_(item.modalidade_esportiva || 'CICLISMO');
 
   const cancelBtn = document.getElementById('btn-cancelar-edicao');
   if (cancelBtn) cancelBtn.style.display = '';
@@ -6256,6 +6315,7 @@ function cancelarEdicaoAtividadeUI() {
 
   const kmInput = document.getElementById('km-atividade');
   if (kmInput) kmInput.value = '';
+  sincronizarModalidadeFormularioAtividade_();
 
   const cancelBtn = document.getElementById('btn-cancelar-edicao');
   if (cancelBtn) cancelBtn.style.display = 'none';

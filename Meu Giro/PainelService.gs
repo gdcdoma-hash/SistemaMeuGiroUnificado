@@ -569,7 +569,8 @@ function buscarAtividadesUsuario_(idDgmb) {
         activity_id: activityId,
         chave_edicao: String(chaveEdicao || '').trim(),
         data: dataNormalizada || painelMG_norm_(dataOriginal),
-        km: painelMG_round1_(painelMG_toNumber_(painelMG_firstFilled_(row, ['KM', 'km'])))
+        km: painelMG_round1_(painelMG_toNumber_(painelMG_firstFilled_(row, ['KM', 'km']))),
+        modalidade_esportiva: meuGiroModalidadeRegistro_(row)
       });
     }
   }
