@@ -1247,6 +1247,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
     vinculos.push({
       id_dgmb: id,
       id_inscricao: idInscricao,
+      linha_inscricao: numeroLinha,
       id_desafio: idDesafio,
       id_item_estoque: idItem,
       meta_km: metaKm,
