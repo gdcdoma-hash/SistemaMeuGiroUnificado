@@ -1550,6 +1550,9 @@ function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb, contextoLista
   var idxConfirmacao = getOptionalColumnIndex_(map, ['confirmacao', 'confirmação', 'confirmado', 'inscricao_confirmada']);
   var idxPrazoDias = getOptionalColumnIndex_(map, ['prazo_dias', 'prazo dias']);
   var idxConsolidacao = getOptionalColumnIndex_(map, ['data_consolidacao', 'data consolidação', 'data consolidacao']);
+  var idxModalidadeInscricao = getOptionalColumnIndex_(map, [
+    'modalidade_esportiva', 'modalidade esportiva', 'modalidade'
+  ]);
 
   if (idxId === -1) return periodos;
 
@@ -1641,6 +1644,12 @@ function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb, contextoLista
 
     var statusUsuarioDesafio = idxStatusUsuarioDesafio > -1 ? normalizeText_(row[idxStatusUsuarioDesafio]) : '';
     var statusDgmb = {
+      modalidade_esportiva: meuGiroModalidadeCanonica_(
+        idxModalidadeInscricao > -1 && normalizeText_(row[idxModalidadeInscricao])
+          ? row[idxModalidadeInscricao]
+          : ((contextoListaDesafios.modalidade &&
+              contextoListaDesafios.modalidade.byId[idDesafio]) || '')
+      ),
       status_usuario_desafio: statusUsuarioDesafio,
       status_validacao_certificado: idxStatusValidacaoCertificado > -1 ? normalizeText_(row[idxStatusValidacaoCertificado]).toUpperCase() : '',
       status_desafio: idxStatusDesafio > -1 ? normalizeText_(row[idxStatusDesafio]) : '',
@@ -1832,7 +1841,9 @@ function obterMeuGiroResumoAtualizadoLeve_(idDgmb, opcoes) {
       percentual_concluido: Math.round((parseLocalizedNumber_(row[idxPercentualResumo]) + Number.EPSILON) * 10) / 10,
       status_apuracao: normalizeText_(row[idxStatusResumo]),
       modalidade_esportiva: meuGiroModalidadeCanonica_(
-        (contextoListaDesafios.modalidade && contextoListaDesafios.modalidade.byId[idDesafioResumo]) || ''),
+        statusDgmbResumo.modalidade_esportiva ||
+        ((contextoListaDesafios.modalidade && contextoListaDesafios.modalidade.byId[idDesafioResumo]) || '')
+      ),
       status_validacao_certificado: normalizeText_(statusDgmbResumo.status_validacao_certificado).toUpperCase(),
       status_desafio: normalizeText_(statusDgmbResumo.status_desafio),
       status_usuario_desafio: normalizeText_(statusDgmbResumo.status_usuario_desafio),
@@ -2120,6 +2131,7 @@ function atualizarMeuGiroResumoComLockAdquirido_(idDgmb, opcoes) {
       distancia_realizada: distanciaArredondada,
       percentual_concluido: percentualArredondado,
       status_apuracao: status,
+      modalidade_esportiva: meuGiroModalidadeCanonica_(vinculo.modalidade_esportiva),
       status_validacao_certificado: normalizeText_(vinculo.status_validacao_certificado).toUpperCase(),
       status_desafio: normalizeText_(vinculo.status_desafio),
       status_usuario_desafio: normalizeText_(vinculo.status_usuario_desafio),
