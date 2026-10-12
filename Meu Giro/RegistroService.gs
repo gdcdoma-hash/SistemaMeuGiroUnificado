@@ -1,4 +1,4 @@
-function registrarAtividade(idDgmb, dataAtividade, km, force) {
+function registrarAtividade(idDgmb, dataAtividade, km, force, modalidadeEsportiva) {
   var perfTotalInicio = meuGiroPerfNow_();
   var perfOperacaoAnterior = MEU_GIRO_PERF_OPERACAO_ATUAL_;
   MEU_GIRO_PERF_OPERACAO_ATUAL_ = 'registrarAtividade';
@@ -11,6 +11,7 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
     idDgmb = String(idDgmb || '').trim();
     dataAtividade = normalizarDataISO_(dataAtividade);
     km = parseKmInputSeguro_(km);
+    var modalidadeRegistro = meuGiroModalidadeCanonica_(modalidadeEsportiva);
 
     if (!idDgmb) {
       return { ok:false, code:'ID_OBRIGATORIO', msg:'ID do atleta é obrigatório.' };
@@ -37,6 +38,7 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
     cols = ensureRegistroKmActivityIdColumn_(sheet, dados, cols);
     if (!dados[0]) dados[0] = [];
     dados[0][cols.idxActivityId] = dados[0][cols.idxActivityId] || 'activity_id';
+    cols = ensureRegistroKmModalidadeColumn_(sheet, dados, cols);
     var activityId = gerarActivityId_();
 
     var perfBuscaDuplicidadeInicio = meuGiroPerfNow_();
@@ -55,6 +57,7 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
       var rowId = String(dados[i][cols.idxId] || '').trim();
       var rowData = normalizarDataISO_(dados[i][cols.idxData]);
       var rowKm = normalizarKmEdicao_(dados[i][cols.idxKm]);
+      var modalidadeLinha = meuGiroModalidadeCanonica_(dados[i][cols.idxModalidade]);
       duracaoNormalizacaoMs += meuGiroPerfNow_() - perfNormalizacaoDuplicidadeInicio;
 
       var perfComparacaoInicio = meuGiroPerfNow_();
@@ -72,7 +75,7 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
       }
       duracaoComparacoesMs += meuGiroPerfNow_() - perfComparacaoInicio;
 
-      if (mesmoId && mesmaData && mesmoKm) {
+      if (mesmoId && mesmaData && mesmoKm && modalidadeLinha === modalidadeRegistro) {
         duplicidadeEncontrada = true;
         meuGiroPerfLog_('registrar-atividade', 'duplicidade_encontrada', perfBuscaDuplicidadeInicio, {
           linha_encontrada: i + 1
@@ -138,7 +141,8 @@ function registrarAtividade(idDgmb, dataAtividade, km, force) {
       origem_registro: 'MANUAL',
       observacao: 'Lançamento manual Meu Giro',
       status_validacao: 'PENDENTE',
-      activity_id: activityId
+      activity_id: activityId,
+      modalidade_esportiva: modalidadeRegistro
     });
 
     var linhaInserida = sheet.getLastRow() + 1;
@@ -205,6 +209,16 @@ function ensureRegistroKmActivityIdColumn_(sheet, dados, cols) {
   return cols;
 }
 
+function ensureRegistroKmModalidadeColumn_(sheet, dados, cols) {
+  if (cols && cols.idxModalidade > -1) return cols;
+  var novoIndice = Math.max(sheet.getLastColumn(), (dados && dados[0] && dados[0].length) || 0);
+  sheet.getRange(1, novoIndice + 1).setValue('Modalidade_Esportiva');
+  if (!dados[0]) dados[0] = [];
+  dados[0][novoIndice] = 'Modalidade_Esportiva';
+  cols.idxModalidade = novoIndice;
+  return cols;
+}
+
 function maiorIndiceRegistroKm_(cols) {
   var maior = -1;
   Object.keys(cols || {}).forEach(function(chave) {
@@ -228,6 +242,7 @@ function preencherLinhaRegistroKmBruto_(rowLength, cols, registro) {
   if (cols.idxOrigemRegistro > -1) row[cols.idxOrigemRegistro] = registro.origem_registro || '';
   if (cols.idxObservacao > -1) row[cols.idxObservacao] = registro.observacao || '';
   if (cols.idxStatusValidacao > -1) row[cols.idxStatusValidacao] = registro.status_validacao || '';
+  if (cols.idxModalidade > -1) row[cols.idxModalidade] = meuGiroModalidadeCanonica_(registro.modalidade_esportiva);
   row[cols.idxActivityId] = registro.activity_id;
 
   return row;
@@ -635,6 +650,7 @@ function getRegistroKmColumnIndexes_(dados) {
     idxOrigemRegistro: -1,
     idxObservacao: -1,
     idxStatusValidacao: -1,
+    idxModalidade: -1,
     idxActivityId: -1
   };
 
@@ -658,6 +674,7 @@ function getRegistroKmColumnIndexes_(dados) {
     idxOrigemRegistro: indice(['origem_registro', 'origem registro'], -1),
     idxObservacao: indice(['observacao', 'observação'], -1),
     idxStatusValidacao: indice(['status_validacao', 'status validação', 'status validacao'], -1),
+    idxModalidade: indice(['modalidade_esportiva', 'modalidade esportiva', 'modalidade'], -1),
     idxActivityId: indice(['activity_id', 'activity id', 'id_atividade', 'id atividade'], -1)
   };
 }
