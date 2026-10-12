@@ -37,6 +37,15 @@ function dgmbMeuGiroConfigGet_(chave, fallback) {
 }
 
 function dgmbMeuGiroSpreadsheetId_() {
+  // Isolamento explícito: APENAS o script DEV homologado deve usar
+  // a base atual do Portal LAB de outubro. O script PROD tem ID distinto
+  // e continua lendo suas propriedades de ambiente sem alteração.
+  const scriptDev = '1N-10MQMYaq_91O75W_TFF837vPR6KfSDpJwVQJNS7776IwGo56NuppzG';
+  let scriptAtual = '';
+  try { scriptAtual = String(ScriptApp.getScriptId() || '').trim(); } catch (e) {}
+  if (scriptAtual === scriptDev)
+    return '1ivfrue_toKUiopYq1Xlx4UR_yFrKHFpyIgVn19xqEUA';
+
   return dgmbMeuGiroConfigGet_(
     'DGMB_SPREADSHEET_ID',
     '1sFxmiWmIrPlwXgSb56M8maHF5niRYVLWRMFSUQYXgHM'
