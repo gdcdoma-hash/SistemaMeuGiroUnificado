@@ -61,3 +61,49 @@ test('regra de pontuação, gravação e histórico estão conectados às modali
   assert.match(ui, /var chaveFoco = String/);
   assert.match(formulario, /id="modalidade-atividade"/);
 });
+
+test('modalidade com janela individual que atravessa dois meses', () => {
+  const valido = v => /^\d{4}-\d{2}-\d{2}$/.test(v) &&
+    !Number.isNaN(new Date(v+'T12:00:00Z').getTime()) &&
+    new Date(v+'T12:00:00Z').toISOString().slice(0,10)===v;
+  const fn = new Function('normalizarDataISO_','isDataIsoValida_',
+    'atividadeDentroPeriodoOficial_',src('ModalidadeEsportivaService.gs') +
+    '\nreturn meuGiroValidarDataModalidadeInscricao_;')(
+      v=>String(v||''), valido,
+      (d,i,f)=>valido(d)&&valido(i)&&valido(f)&&d>=i&&d<=f
+    );
+  const vinculos=[
+    {apto:true,modalidade_esportiva:'CICLISMO',periodo_inicio:'2026-10-01',periodo_fim:'2026-10-31'},
+    {apto:true,modalidade_esportiva:'CAMINHADA_CORRIDA',periodo_inicio:'2026-09-20',periodo_fim:'2026-11-03'},
+    {apto:true,modalidade_esportiva:'CICLISMO',periodo_inicio:'2026-10-10',periodo_fim:'2026-11-10'}
+  ];
+  assert.equal(fn('2026-09-30','CAMINHADA_CORRIDA',vinculos).ok,true);
+  assert.equal(fn('2026-10-01','CAMINHADA_CORRIDA',vinculos).ok,true);
+  assert.equal(fn('2026-11-03','CAMINHADA_CORRIDA',vinculos).ok,true);
+  assert.equal(fn('2026-11-04','CAMINHADA_CORRIDA',vinculos).code,'DATA_FORA_DO_PRAZO');
+  assert.equal(fn('2026-09-30','CICLISMO',vinculos).code,'DATA_FORA_DO_PRAZO');
+  assert.equal(fn('2026-11-01','CICLISMO',vinculos).ok,true);
+  assert.equal(fn('2026-11-11','CICLISMO',vinculos).code,'DATA_FORA_DO_PRAZO');
+  assert.equal(fn('2026-02-30','CICLISMO',vinculos).code,'DATA_INVALIDA');
+});
+
+test('histórico de desafio separa atividades por modalidade além das datas', () => {
+  const script=src('Script.html');
+  const a=script.indexOf('function filtrarAtividadesPorPeriodoDesafio(');
+  const b=script.indexOf('\nfunction getDesafioPainelPorChave',a);
+  assert.ok(a>0&&b>a);
+  const filtrar=new Function(script.slice(a,b)+'\nreturn filtrarAtividadesPorPeriodoDesafio;')();
+  const atividades=[
+    {data:'2026-09-30',km:3,modalidade_esportiva:'CAMINHADA_CORRIDA'},
+    {data:'2026-10-12',km:20},
+    {data:'2026-10-12',km:5.5,modalidade_esportiva:'CAMINHADA_CORRIDA'},
+    {data:'2026-11-01',km:7,modalidade_esportiva:'CAMINHADA_CORRIDA'}
+  ];
+  assert.equal(filtrar(atividades,{periodo_inicio:'2026-09-20',periodo_fim:'2026-11-03',
+    modalidade_esportiva:'CAMINHADA_CORRIDA'}).items.length,3);
+  assert.equal(filtrar(atividades,{periodo_inicio:'2026-10-01',periodo_fim:'2026-10-31',
+    modalidade_esportiva:'CICLISMO'}).items.length,1);
+  const backend=src('RegistroService.gs');
+  assert.ok(backend.includes('var dataPermitida = meuGiroValidarDataModalidadeInscricao_'));
+  assert.ok(backend.includes('var dataPermitidaEdicao = meuGiroValidarDataModalidadeInscricao_'));
+});
