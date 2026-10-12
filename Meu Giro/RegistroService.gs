@@ -568,6 +568,19 @@ function excluirAtividade(payload) {
     if (!linhasEncontradas.length) {
       return { ok: false, code: 'ATIVIDADE_NAO_ENCONTRADA', msg: 'Atividade não encontrada para exclusão com a chave e ID informados.' };
     }
+    // Registros legados sem activity_id podem compartilhar timestamp;
+    // nunca apagar em conjunto modalidades diferentes silenciosamente.
+    var modalidadeDeExclusao = meuGiroModalidadeCanonica_(
+      cols.idxModalidade > -1 ? dados[linhasEncontradas[0]-1][cols.idxModalidade] : ''
+    );
+    if (linhasEncontradas.some(function(linha) {
+      return meuGiroModalidadeCanonica_(
+        cols.idxModalidade > -1 ? dados[linha-1][cols.idxModalidade] : ''
+      ) !== modalidadeDeExclusao;
+    })) {
+      return { ok:false, code:'MODALIDADES_MISTURADAS',
+        msg:'Atividades de modalidades diferentes não podem ser excluídas juntas.' };
+    }
 
     var linhasOriginais = linhasEncontradas.map(function(linha) {
       return { numero: linha, valores: dados[linha - 1].slice() };
