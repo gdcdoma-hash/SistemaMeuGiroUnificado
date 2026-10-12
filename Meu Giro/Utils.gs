@@ -746,7 +746,8 @@ function buildListaDesafiosContexto_(ss) {
   var contexto = {
     periodos: { byAba: {}, byId: {}, byIdPeriodo: {} },
     status: { byId: {}, byIdPeriodo: {}, possuiColunaId: false },
-    tipoMeta: { byId: {}, byIdPeriodo: {} }
+    tipoMeta: { byId: {}, byIdPeriodo: {} },
+    modalidade: { byId: {}, byIdPeriodo: {} }
   };
   var lista = ss.getSheetByName(SHEETS.LISTA_DESAFIOS || 'ListaDesafios');
   if (!lista) {
@@ -815,6 +816,9 @@ function buildListaDesafiosContexto_(ss) {
     'tipo meta',
     'tipometa'
   ]);
+  var idxModalidadeLista = getOptionalColumnIndex_(map, [
+    'modalidade_esportiva', 'modalidade esportiva', 'modalidade'
+  ]);
 
   if (idxAba === -1) idxAba = 1;
   if (idxIdStatus > -1 && idxStatus > -1) contexto.status.possuiColunaId = true;
@@ -829,6 +833,7 @@ function buildListaDesafiosContexto_(ss) {
       ? normalizarPeriodoMensal_(row[idxPeriodo])
       : { inicio: '', fim: '' };
     var tipoMeta = idxTipoMeta > -1 ? normalizeText_(row[idxTipoMeta]).toUpperCase() : '';
+    var modalidadeLista = meuGiroModalidadeCanonica_(idxModalidadeLista > -1 ? row[idxModalidadeLista] : '');
     var periodo = {
       inicio: periodoMensal.inicio,
       fim: periodoMensal.fim,
@@ -844,11 +849,13 @@ function buildListaDesafiosContexto_(ss) {
     if (idDesafioPeriodo) {
       contexto.periodos.byId[idDesafioPeriodo] = periodo;
       contexto.tipoMeta.byId[idDesafioPeriodo] = tipoMeta;
+      contexto.modalidade.byId[idDesafioPeriodo] = modalidadeLista;
 
       var chaveIdPeriodo = chaveListaDesafioIdPeriodo_(idDesafioPeriodo, periodoTexto, periodo.inicio);
       if (chaveIdPeriodo) {
         contexto.periodos.byIdPeriodo[chaveIdPeriodo] = periodo;
         contexto.tipoMeta.byIdPeriodo[chaveIdPeriodo] = tipoMeta;
+        contexto.modalidade.byIdPeriodo[chaveIdPeriodo] = modalidadeLista;
       }
     }
 
@@ -1136,6 +1143,9 @@ function obterVinculosDesafioUsuario_(idDgmb) {
   var idxInicioHistorico = getOptionalColumnIndex_(map, ['data_inicio_desafio', 'data inicio desafio', 'data início desafio']);
   var idxFimHistorico = getOptionalColumnIndex_(map, ['data_fim_desafio', 'data fim desafio']);
   var idxPrazoDias = getOptionalColumnIndex_(map, ['prazo_dias', 'prazo dias']);
+  var idxModalidadeInscricao = getOptionalColumnIndex_(map, [
+    'modalidade_esportiva', 'modalidade esportiva', 'modalidade'
+  ]);
 
   var vinculos = [];
   var chaves = {};
@@ -1192,6 +1202,13 @@ function obterVinculosDesafioUsuario_(idDgmb) {
     var periodoTextoHistorico = idxPeriodoHistorico > -1 ? normalizeText_(row[idxPeriodoHistorico]) : '';
     var inicioHistorico = idxInicioHistorico > -1 ? row[idxInicioHistorico] : '';
     var periodoLista = (idDesafio && periodos.byId[idDesafio]) || (!ehNormal && periodos.byAba[abaDesafio]) || { inicio: '', fim: '', nome_desafio: '' };
+    // A modalidade gravada na inscrição é a fonte primária. A lista é fallback;
+    // dados legados anteriores à coluna permanecem classificados como Ciclismo.
+    var modalidadeVinculo = meuGiroModalidadeCanonica_(
+      idxModalidadeInscricao > -1 && normalizeText_(row[idxModalidadeInscricao])
+        ? row[idxModalidadeInscricao]
+        : ((contextoLista.modalidade && contextoLista.modalidade.byId[idDesafio]) || '')
+    );
     periodoLista.nome_desafio = obterNomeDesafioListaPorId_(periodos, idDesafio, periodoLista.nome_desafio);
 
     var tipoMeta = resolverTipoMetaListaDesafio_(tipoMetaListaDesafios, idDesafio, periodoTextoHistorico, inicioHistorico) ||
@@ -1233,6 +1250,7 @@ function obterVinculosDesafioUsuario_(idDgmb) {
       id_desafio: idDesafio,
       id_item_estoque: idItem,
       meta_km: metaKm,
+      modalidade_esportiva: modalidadeVinculo,
       status_desafio: statusDesafio,
       status_usuario_desafio: statusUsuarioDesafio,
       status_pagamento: statusPagamento,
@@ -1299,7 +1317,8 @@ function obterRegistrosKmUsuario_(idDgmb, opcoes) {
 
     out.push({
       data_atividade: normalizarDataISO_(firstFilledValue_(r, ['Data_Atividade', 'Data', 'data_atividade', 'data'])),
-      km: parseLocalizedNumber_(firstFilledValue_(r, ['KM', 'km']))
+      km: parseLocalizedNumber_(firstFilledValue_(r, ['KM', 'km'])),
+      modalidade_esportiva: meuGiroModalidadeRegistro_(r)
     });
   }
 
@@ -1475,6 +1494,7 @@ function obterMeuGiroResumoAtualizado_(idDgmb) {
       distancia_realizada: Math.round((parseLocalizedNumber_(row[idxDistanciaResumo]) + Number.EPSILON) * 10) / 10,
       percentual_concluido: Math.round((parseLocalizedNumber_(row[idxPercentualResumo]) + Number.EPSILON) * 10) / 10,
       status_apuracao: normalizeText_(row[idxStatusResumo]),
+      modalidade_esportiva: meuGiroModalidadeCanonica_(vinculoAtual.modalidade_esportiva || ''),
       status_validacao_certificado: normalizeText_(vinculoAtual.status_validacao_certificado).toUpperCase(),
       status_desafio: normalizeText_(vinculoAtual.status_desafio),
       status_usuario_desafio: normalizeText_(vinculoAtual.status_usuario_desafio),
@@ -1810,6 +1830,8 @@ function obterMeuGiroResumoAtualizadoLeve_(idDgmb, opcoes) {
       distancia_realizada: Math.round((parseLocalizedNumber_(row[idxDistanciaResumo]) + Number.EPSILON) * 10) / 10,
       percentual_concluido: Math.round((parseLocalizedNumber_(row[idxPercentualResumo]) + Number.EPSILON) * 10) / 10,
       status_apuracao: normalizeText_(row[idxStatusResumo]),
+      modalidade_esportiva: meuGiroModalidadeCanonica_(
+        (contextoListaDesafios.modalidade && contextoListaDesafios.modalidade.byId[idDesafioResumo]) || ''),
       status_validacao_certificado: normalizeText_(statusDgmbResumo.status_validacao_certificado).toUpperCase(),
       status_desafio: normalizeText_(statusDgmbResumo.status_desafio),
       status_usuario_desafio: normalizeText_(statusDgmbResumo.status_usuario_desafio),
@@ -2024,7 +2046,7 @@ function atualizarMeuGiroResumoComLockAdquirido_(idDgmb, opcoes) {
     if (apto) {
       for (var r = 0; r < registros.length; r++) {
         var reg = registros[r];
-        if (atividadeDentroPeriodoOficial_(reg.data_atividade, inicio, fim)) {
+        if (meuGiroAtividadeNoVinculo_(reg, vinculo)) {
           distancia += Number(reg.km || 0);
         }
       }
