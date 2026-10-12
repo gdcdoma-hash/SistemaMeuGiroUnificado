@@ -241,7 +241,16 @@
 
     <section id="screen-registrar" class="screen">
       <div id="registro-card" class="card card-registro-atividade">
-        <p class="field-helper field-helper-intro">Preencha só o dia e os km do pedal.</p>
+        <p class="field-helper field-helper-intro">Informe o dia e a distância da sua atividade.</p>
+
+        <div id="registro-modalidade-box" class="registro-modalidade-box" hidden>
+          <label for="modalidade-atividade">Modalidade desta atividade</label>
+          <select id="modalidade-atividade" aria-label="Modalidade desta atividade">
+            <option value="CICLISMO">🚴 Ciclismo</option>
+            <option value="CAMINHADA_CORRIDA">🚶 Caminhada/Corrida</option>
+          </select>
+          <small>Os quilômetros contam somente nos desafios desta modalidade.</small>
+        </div>
 
         <div class="registro-campos-grid">
           <div class="registro-campo">
@@ -250,7 +259,7 @@
           </div>
 
           <div class="registro-campo">
-            <label for="km-atividade">KM pedalados</label>
+            <label for="km-atividade">KM realizados</label>
             <input id="km-atividade" type="text" inputmode="decimal" placeholder="Ex.: 25,5">
           </div>
         </div>
