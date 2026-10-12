@@ -24,6 +24,11 @@ function registrarAtividade(idDgmb, dataAtividade, km, force, modalidadeEsportiv
     if (!km || km <= 0) {
       return { ok:false, code:'KM_INVALIDO', msg:'Informe um valor de KM maior que zero.' };
     }
+    // Validar no servidor antes de gravar a atividade, usando a janela
+    // individual da inscrição e a modalidade registrada.
+    var dataPermitida = meuGiroValidarDataModalidadeInscricao_(
+      dataAtividade, modalidadeRegistro, obterVinculosDesafioUsuario_(idDgmb));
+    if (!dataPermitida.ok) return dataPermitida;
 
     perfEtapaInicio = meuGiroPerfNow_();
     var sheet = getSpreadsheet_()
@@ -336,6 +341,9 @@ function editarAtividade(payload) {
       return meuGiroModalidadeCanonica_(dados[linha-1][cols.idxModalidade]) !== modalidadeOriginal;
     })) return {ok:false,code:'MODALIDADES_MISTURADAS',msg:'Não é possível editar esportes diferentes juntos.'};
     var modalidadeEdicao = meuGiroModalidadeCanonica_(payload.modalidade_esportiva || modalidadeOriginal);
+    var dataPermitidaEdicao = meuGiroValidarDataModalidadeInscricao_(
+      novaDataAtividade, modalidadeEdicao, obterVinculosDesafioUsuario_(idDgmb));
+    if (!dataPermitidaEdicao.ok) return dataPermitidaEdicao;
 
     var perfBuscaDuplicidadeInicio = meuGiroPerfNow_();
     var perfNormalizacaoDuplicidadeInicio = meuGiroPerfNow_();
