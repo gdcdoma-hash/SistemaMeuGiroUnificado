@@ -44,12 +44,20 @@ test('regra de pontuação, gravação e histórico estão conectados às modali
   assert.match(utils, /meuGiroAtividadeNoVinculo_\(reg, vinculo\)/);
   assert.match(utils, /modalidade_esportiva: modalidadeVinculo/);
   assert.match(utils, /modalidade_esportiva: meuGiroModalidadeRegistro_\(r\)/);
+  // Tanto o caminho de leitura rápida quanto a reconstrução completa do
+  // painel devem recuperar a modalidade da inscrição.
+  assert.match(utils, /statusDgmbResumo\.modalidade_esportiva/);
+  assert.match(utils, /modalidade_esportiva: meuGiroModalidadeCanonica_\(vinculo\.modalidade_esportiva\)/);
+  assert.match(utils, /idxModalidadeInscricao > -1 && normalizeText_\(row\[idxModalidadeInscricao\]\)/);
+
   assert.match(registro, /ensureRegistroKmModalidadeColumn_/);
   assert.match(registro, /checkModalidade === modalidadeEdicao/);
   assert.match(registro, /modalidadeLinha === modalidadeRegistro/);
   assert.match(registro, /meuGiroSomarKmPorVinculo_\(registros, vinculo\)/);
+  assert.match(registro, /MODALIDADES_MISTURADAS/);
   assert.match(painel, /modalidade_esportiva: meuGiroModalidadeRegistro_\(row\)/);
   assert.match(ui, /registrarAtividade\(idDgmb, data, km, !!forcarDuplicidade, meuGiroModalidadeFormularioAtividade_\(\)\)/);
   assert.match(ui, /modos\.CAMINHADA_CORRIDA/);
+  assert.match(ui, /var chaveFoco = String/);
   assert.match(formulario, /id="modalidade-atividade"/);
 });
