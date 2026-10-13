@@ -3843,6 +3843,19 @@ function renderDesafiosPainel(painel) {
     }
   }
 
+  // A tela Início e a tela Desafios devem enxergar a mesma inscrição.
+  // Incluir também as inscrições classificadas como em andamento na
+  // listagem unificada, mesmo quando não vierem em desafios_ativos.
+  // A elegibilidade estrita para foco continua impedindo status finais.
+  var chavesAtuaisInicio = mapearChavesDesafiosBase_(desafiosAtivos);
+  obterTodosDesafiosPainelV2_(painel).forEach(function(item) {
+    var chave = getDesafioBaseKey_(item);
+    if (!chave || chavesAtuaisInicio[chave]) return;
+    if (classificarDesafioV2_(item).grupo !== 'andamento' || !isDesafioAtivo_(item)) return;
+    desafiosAtivos.push(item);
+    chavesAtuaisInicio[chave] = true;
+  });
+
   if (desafiosAtivos.length && desafiosHistorico.length) {
     var ativosMap = mapearChavesDesafiosBase_(desafiosAtivos);
     desafiosHistorico = desafiosHistorico.filter(function(item) {
