@@ -195,10 +195,11 @@ function fecharModalMeuGiro(resolverPendente) {
   if (document.body) document.body.classList.remove('modal-meu-giro-aberto');
 }
 
-function mostrarErroAcaoAtividade() {
+function mostrarErroAcaoAtividade(erro) {
+  var dataFutura = erro && erro.code === 'DATA_FUTURA';
   return mostrarModalMeuGiro({
-    titulo: 'Não foi possível concluir a ação',
-    mensagem: 'Tente novamente em alguns instantes.',
+    titulo: dataFutura ? 'Data futura não permitida' : 'Não foi possível concluir a ação',
+    mensagem: erro && erro.msg ? String(erro.msg) : 'Tente novamente em alguns instantes.',
     tipo: 'erro',
     processando: false,
     origem: 'decisao',
@@ -4785,6 +4786,7 @@ function meuGiroModalidadesDoPainel_() {
 function sincronizarModalidadeFormularioAtividade_(modalidadePreferida) {
   var seletor = document.getElementById('modalidade-atividade');
   var box = document.getElementById('registro-modalidade-box');
+  meuGiroConfigurarLimiteDataRegistro_();
   if (!seletor || !box) return 'CICLISMO';
   var opcoes = meuGiroModalidadesDoPainel_();
   var foco = getDesafioEmFocoAtual();
@@ -5015,6 +5017,22 @@ function toFiniteNumber(value, fallback) {
   return Number.isFinite(n) ? n : Number(fallback || 0);
 }
 
+function meuGiroHojeBrasilISOCliente_() {
+  var partes = new Intl.DateTimeFormat('en-US', {
+    timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'
+  }).formatToParts(new Date());
+  var valores={};
+  partes.forEach(function(p) { valores[p.type]=p.value; });
+  return valores.year+'-'+valores.month+'-'+valores.day;
+}
+function meuGiroConfigurarLimiteDataRegistro_() {
+  var campo=document.getElementById('data-atividade');
+  if(campo)campo.max=meuGiroHojeBrasilISOCliente_();
+}
+function meuGiroAvisoDataFutura_() {
+  return 'Data futura não permitida. Registre uma atividade realizada hoje ou em uma data anterior.';
+}
+
 function isValidActivityDate(value) {
   const parsed = parseIsoDateLocal(value);
   if (!parsed) return false;
@@ -5118,6 +5136,12 @@ async function salvarAtividade(forcarDuplicidade) {
     return;
   }
 
+  if (data > meuGiroHojeBrasilISOCliente_()) {
+    releaseRegistroSubmitGuard();
+    setRegistroMsg(meuGiroAvisoDataFutura_(), 'error');
+    return;
+  }
+
   activityMutationInProgress = true;
   mostrarModalMeuGiro({
     titulo: 'Salvando atividade...',
@@ -5163,7 +5187,7 @@ async function salvarAtividade(forcarDuplicidade) {
       }
 
       setRegistroMsg(getGoogleScriptErrorMessage(res, 'Não foi possível registrar a atividade.'), 'error');
-      await mostrarErroAcaoAtividade();
+      await mostrarErroAcaoAtividade(res);
       return;
     }
 
@@ -5272,6 +5296,12 @@ async function salvarEdicaoAtividade(forcarDuplicidade) {
     return;
   }
 
+  if (data > meuGiroHojeBrasilISOCliente_()) {
+    releaseRegistroSubmitGuard();
+    setRegistroMsg(meuGiroAvisoDataFutura_(), 'error');
+    return;
+  }
+
   pendingEditSaveKey = editKey;
   activityMutationInProgress = true;
   mostrarModalMeuGiro({
@@ -5325,7 +5355,7 @@ async function salvarEdicaoAtividade(forcarDuplicidade) {
         return;
       }
       setRegistroMsg(getGoogleScriptErrorMessage(res, 'Não foi possível salvar a edição.'), 'error');
-      await mostrarErroAcaoAtividade();
+      await mostrarErroAcaoAtividade(res);
       return;
     }
 

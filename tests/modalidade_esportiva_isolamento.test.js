@@ -7,8 +7,16 @@ const test = require('node:test');
 const raiz = path.resolve(__dirname, '..');
 const src = nome => fs.readFileSync(path.join(raiz, 'Meu Giro', nome), 'utf8');
 const periodo = (dia, inicio, fim) => dia >= inicio && dia <= fim;
-const helpers = new Function('atividadeDentroPeriodoOficial_', src('ModalidadeEsportivaService.gs') +
-  '\nreturn {canon:meuGiroModalidadeCanonica_, sum:meuGiroSomarKmPorVinculo_, registro:meuGiroModalidadeRegistro_}')(periodo);
+const dataValida = v => /^\d{4}-\d{2}-\d{2}$/.test(v) &&
+  !Number.isNaN(new Date(v+'T12:00:00Z').getTime()) &&
+  new Date(v+'T12:00:00Z').toISOString().slice(0,10)===v;
+const meuGiroSimulado = hoje => new Function(
+  'atividadeDentroPeriodoOficial_', 'normalizarDataISO_', 'isDataIsoValida_', 'Utilities',
+  src('ModalidadeEsportivaService.gs') +
+  '\nreturn {canon:meuGiroModalidadeCanonica_, sum:meuGiroSomarKmPorVinculo_,' +
+  'registro:meuGiroModalidadeRegistro_, validar:meuGiroValidarDataModalidadeInscricao_};'
+)(periodo, v=>String(v||''),dataValida,{formatDate:()=>hoje});
+const helpers = meuGiroSimulado('2026-11-15');
 
 test('atividade legada sem modalidade permanece Ciclismo', () => {
   assert.equal(helpers.registro({}), 'CICLISMO');
@@ -62,29 +70,29 @@ test('regra de pontuação, gravação e histórico estão conectados às modali
   assert.match(formulario, /id="modalidade-atividade"/);
 });
 
-test('modalidade com janela individual que atravessa dois meses', () => {
-  const valido = v => /^\d{4}-\d{2}-\d{2}$/.test(v) &&
-    !Number.isNaN(new Date(v+'T12:00:00Z').getTime()) &&
-    new Date(v+'T12:00:00Z').toISOString().slice(0,10)===v;
-  const fn = new Function('normalizarDataISO_','isDataIsoValida_',
-    'atividadeDentroPeriodoOficial_',src('ModalidadeEsportivaService.gs') +
-    '\nreturn meuGiroValidarDataModalidadeInscricao_;')(
-      v=>String(v||''), valido,
-      (d,i,f)=>valido(d)&&valido(i)&&valido(f)&&d>=i&&d<=f
-    );
+test('histórico retroativo livre e proibição de data futura em ambos os esportes', () => {
+  const fixed = meuGiroSimulado('2026-10-13');
   const vinculos=[
     {apto:true,modalidade_esportiva:'CICLISMO',periodo_inicio:'2026-10-01',periodo_fim:'2026-10-31'},
-    {apto:true,modalidade_esportiva:'CAMINHADA_CORRIDA',periodo_inicio:'2026-09-20',periodo_fim:'2026-11-03'},
-    {apto:true,modalidade_esportiva:'CICLISMO',periodo_inicio:'2026-10-10',periodo_fim:'2026-11-10'}
+    {apto:true,modalidade_esportiva:'CAMINHADA_CORRIDA',periodo_inicio:'2026-10-01',periodo_fim:'2026-10-31'}
   ];
-  assert.equal(fn('2026-09-30','CAMINHADA_CORRIDA',vinculos).ok,true);
-  assert.equal(fn('2026-10-01','CAMINHADA_CORRIDA',vinculos).ok,true);
-  assert.equal(fn('2026-11-03','CAMINHADA_CORRIDA',vinculos).ok,true);
-  assert.equal(fn('2026-11-04','CAMINHADA_CORRIDA',vinculos).code,'DATA_FORA_DO_PRAZO');
-  assert.equal(fn('2026-09-30','CICLISMO',vinculos).code,'DATA_FORA_DO_PRAZO');
-  assert.equal(fn('2026-11-01','CICLISMO',vinculos).ok,true);
-  assert.equal(fn('2026-11-11','CICLISMO',vinculos).code,'DATA_FORA_DO_PRAZO');
-  assert.equal(fn('2026-02-30','CICLISMO',vinculos).code,'DATA_INVALIDA');
+  assert.equal(fixed.validar('2026-09-30','CICLISMO',vinculos).ok,true);
+  assert.equal(fixed.validar('2026-09-30','CAMINHADA_CORRIDA',[]).ok,true);
+  assert.equal(fixed.validar('2026-10-13','CICLISMO',vinculos).ok,true);
+  assert.equal(fixed.validar('2026-10-13','CAMINHADA_CORRIDA',vinculos).ok,true);
+  assert.equal(fixed.validar('2026-10-14','CICLISMO',vinculos).code,'DATA_FUTURA');
+  assert.equal(fixed.validar('2026-10-14','CAMINHADA_CORRIDA',vinculos).code,'DATA_FUTURA');
+  assert.equal(fixed.validar('2026-11-01','CICLISMO',vinculos).code,'DATA_FUTURA');
+  assert.equal(fixed.validar('2026-02-30','CICLISMO',vinculos).code,'DATA_INVALIDA');
+  assert.equal(fixed.sum([
+    {data_atividade:'2026-09-30',km:4,modalidade_esportiva:'CICLISMO'},
+    {data_atividade:'2026-10-13',km:5,modalidade_esportiva:'CICLISMO'},
+    {data_atividade:'2026-10-14',km:1,modalidade_esportiva:'CICLISMO'},
+    {data_atividade:'2026-10-13',km:3,modalidade_esportiva:'CAMINHADA_CORRIDA'}
+  ],vinculos[0]),5);
+  assert.equal(fixed.sum([
+    {data_atividade:'2026-10-13',km:3,modalidade_esportiva:'CAMINHADA_CORRIDA'}
+  ],vinculos[1]),3);
 });
 
 test('histórico de desafio separa atividades por modalidade além das datas', () => {
@@ -106,4 +114,7 @@ test('histórico de desafio separa atividades por modalidade além das datas', (
   const backend=src('RegistroService.gs');
   assert.ok(backend.includes('var dataPermitida = meuGiroValidarDataModalidadeInscricao_'));
   assert.ok(backend.includes('var dataPermitidaEdicao = meuGiroValidarDataModalidadeInscricao_'));
+  assert.ok(!backend.includes('modalidadeRegistro, obterVinculosDesafioUsuario_(idDgmb)'));
+  assert.ok(script.includes('meuGiroAvisoDataFutura_'));
+  assert.ok(script.includes('await mostrarErroAcaoAtividade(res)'));
 });
