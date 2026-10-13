@@ -1505,6 +1505,8 @@ function renderRitmoAgora(p) {
   var titulo = '✅ Você está no ritmo.';
   var mensagem = 'Continue pedalando para manter sua evolução.';
   var statusClass = 'painel-status-bom';
+  var identidadeVisual = meuGiroIdentidadeModalidade_(getDesafioEmFocoAtual());
+  mensagem = identidadeVisual.incentivo;
 
   if (variant === 'alerta-ritmo-concluido') {
     titulo = '🏆 Desafio concluído!';
@@ -1515,7 +1517,7 @@ function renderRitmoAgora(p) {
     mensagem = 'Seu progresso está acima do ritmo esperado.';
     statusClass = 'painel-status-bom';
   } else if (variant === 'alerta-ritmo-atencao' || variant === 'alerta-ritmo-neutro') {
-    titulo = '🚴 Hora de reagir.';
+    titulo = identidadeVisual.icone + ' Hora de reagir.';
     mensagem = 'Sua meta está ficando distante.';
     statusClass = 'painel-status-reagir';
   }
@@ -2289,6 +2291,36 @@ function renderPainel(p) {
   sincronizarPainelComDesafioEmFoco();
 }
 
+/**
+ * Identidade apenas visual: sempre determinada pela modalidade da inscrição,
+ * nunca pelo nome da medalha ou pelo período. Legado permanece Ciclismo.
+ */
+function meuGiroIdentidadeModalidade_(desafio) {
+  var bruto = String((desafio && (desafio.modalidade_esportiva || desafio.modalidade)) || 'CICLISMO')
+    .trim().toUpperCase();
+  if (bruto === 'CAMINHADA_CORRIDA') {
+    return {
+      classe: 'mg-modalidade-caminhada',
+      nome: 'Caminhada/Corrida',
+      icone: '🚶🏃',
+      lema: 'Cada Passo, Uma Conquista.',
+      incentivo: 'Continue em movimento para manter sua evolução.'
+    };
+  }
+  return {
+    classe: 'mg-modalidade-ciclismo',
+    nome: 'Ciclismo',
+    icone: '🚴',
+    lema: 'Paixão por pedalar',
+    incentivo: 'Continue pedalando para manter sua evolução.'
+  };
+}
+function aplicarIdentidadeModalidadeElemento_(elemento, identidade) {
+  if (!elemento || !identidade) return;
+  elemento.classList.remove('mg-modalidade-caminhada', 'mg-modalidade-ciclismo');
+  elemento.classList.add(identidade.classe);
+}
+
 function renderDesafiosV2() {
   var mensagem = document.getElementById('desafios-v2-msg');
   var secoes = {
@@ -2725,13 +2757,16 @@ function buildDesafioCardV2_(desafio, grupo) {
   var percentual = calcularPercentualDesafio_(meta, realizado);
   var chave = getDesafioKey(desafio);
   var prazoCard = getDesafioPrazoCardInfo_(desafio);
+  var modalidadeVisual = meuGiroIdentidadeModalidade_(desafio);
 
-  card.className = 'desafio-v2-card desafio-v2-card-' + grupo;
+  card.className = 'desafio-v2-card desafio-v2-card-' + grupo + ' ' + modalidadeVisual.classe;
   card.tabIndex = 0;
   card.setAttribute('role', 'button');
   card.setAttribute('aria-label', 'Abrir detalhes de ' + getDesafioTitulo(desafio));
   card.innerHTML =
     '<div class="desafio-v2-card-conteudo">' +
+      '<span class="mg-modalidade-tag"><span aria-hidden="true">' + modalidadeVisual.icone +
+      '</span><span>' + escapeHtml(modalidadeVisual.nome) + '</span></span>' +
       '<strong class="desafio-v2-card-titulo">' + escapeHtml(getDesafioTitulo(desafio)) + '</strong>' +
       '<div class="desafio-v2-metricas">' +
         '<p><span>Meta</span><strong>' + formatNumber(meta) + ' km</strong></p>' +
@@ -2778,6 +2813,13 @@ function renderDetalheDesafioV2_(desafio) {
   var realizado = toFiniteNumber(desafio.distancia_realizada, 0);
   var falta = Math.max(0, meta - realizado);
   var percentual = calcularPercentualDesafio_(meta, realizado);
+  var identidade = meuGiroIdentidadeModalidade_(desafio);
+  aplicarIdentidadeModalidadeElemento_(document.getElementById('screen-desafio-detalhe'), identidade);
+  var badge = document.getElementById('desafio-detalhe-modalidade');
+  if (badge) {
+    badge.textContent = identidade.icone + ' ' + identidade.nome;
+    badge.setAttribute('aria-label', 'Modalidade: ' + identidade.nome);
+  }
   setTextById('desafio-detalhe-titulo', getDesafioTitulo(desafio));
   setTextById('desafio-detalhe-periodo', getDesafioPeriodoCardLabel_(desafio));
   setTextById('desafio-detalhe-meta', formatNumber(meta) + ' km');
@@ -3595,7 +3637,8 @@ async function compartilharCardPainel() {
   }
 }
 
-function obterStatusMotivacionalFeed_(contexto) {
+function obterStatusMotivacionalFeed_(contexto, desafio) {
+  var identidadeVisual = meuGiroIdentidadeModalidade_(desafio);
   var statusText = normalizeRitmoText(contexto && contexto.ritmo_status, '');
   var variant = painelMetaConcluida_(contexto) ? 'alerta-ritmo-concluido' : getRitmoAgoraVariant(statusText);
 
@@ -3618,7 +3661,7 @@ function obterStatusMotivacionalFeed_(contexto) {
   if (variant === 'alerta-ritmo-atencao' || variant === 'alerta-ritmo-neutro') {
     return {
       classe: 'painel-status-reagir',
-      titulo: '🚴 Hora de reagir.',
+      titulo: identidadeVisual.icone + ' Hora de reagir.',
       mensagem: 'Sua meta está ficando distante.'
     };
   }
@@ -3626,7 +3669,7 @@ function obterStatusMotivacionalFeed_(contexto) {
   return {
     classe: 'painel-status-bom',
     titulo: '✅ Você está no ritmo.',
-    mensagem: 'Continue pedalando para manter sua evolução.'
+    mensagem: identidadeVisual.incentivo
   };
 }
 
@@ -3636,7 +3679,8 @@ function criarCardFeedDesafioPainel_(painel, desafio) {
   var percentual = Math.max(0, Math.min(100, toFiniteNumber(contexto.percentual, 0)));
   var circunferencia = 301.593;
   var dashOffset = circunferencia * (1 - percentual / 100);
-  var status = obterStatusMotivacionalFeed_(contexto);
+  var status = obterStatusMotivacionalFeed_(contexto, desafio);
+  var identidadeVisual = meuGiroIdentidadeModalidade_(desafio);
   var inicio = formatarDataDesafioPainel_(contexto.periodo_inicio) || '-';
   var fim = formatarDataDesafioPainel_(contexto.periodo_fim) || '-';
   var prazo = obterPrazoDesafioPainel_(desafio, contexto);
@@ -3644,7 +3688,7 @@ function criarCardFeedDesafioPainel_(painel, desafio) {
   var atleta = String((painel && painel.nome) || '').trim().toUpperCase() || 'ATLETA';
   var chave = getDesafioKey(desafio);
 
-  card.className = 'card painel-inicio-card painel-inicio-card-feed';
+  card.className = 'card painel-inicio-card painel-inicio-card-feed ' + identidadeVisual.classe;
   card.tabIndex = 0;
   card.setAttribute('role', 'button');
   card.setAttribute('aria-label', 'Ver ' + getDesafioTitulo(desafio) + ' como desafio em foco');
@@ -3655,6 +3699,8 @@ function criarCardFeedDesafioPainel_(painel, desafio) {
         '<p class="painel-desafio-label">Desafio em andamento</p>' +
         '<span class="painel-card-brand">MEU GIRO</span>' +
       '</div>' +
+      '<span class="mg-modalidade-tag"><span aria-hidden="true">' + identidadeVisual.icone +
+        '</span><span>' + escapeHtml(identidadeVisual.nome) + '</span></span>' +
       '<h2>' + escapeHtml(getDesafioTitulo(desafio)) + '</h2>' +
       '<p class="painel-card-atleta">' + escapeHtml(atleta) + '</p>' +
       '<div class="painel-desafio-detalhes" aria-label="Prazo do desafio">' +
@@ -3688,7 +3734,7 @@ function criarCardFeedDesafioPainel_(painel, desafio) {
     '</div>' +
     '<div class="painel-card-assinatura" aria-hidden="true">' +
       '<span>DESAFIO GIRO</span>' +
-      '<small>paixão por pedalar</small>' +
+      '<small>' + escapeHtml(identidadeVisual.lema) + '</small>' +
     '</div>';
 
   function ativar() {
@@ -3757,6 +3803,15 @@ function sincronizarPainelComDesafioEmFoco() {
   }
 
   var contexto = montarPainelContextual(painel, desafioAtual);
+  var identidadeVisual = meuGiroIdentidadeModalidade_(desafioAtual);
+  aplicarIdentidadeModalidadeElemento_(document.getElementById('painel-share-card'), identidadeVisual);
+  var badgeModalidade = document.getElementById('painel-modalidade');
+  if (badgeModalidade) {
+    badgeModalidade.textContent = identidadeVisual.icone + ' ' + identidadeVisual.nome;
+    badgeModalidade.setAttribute('aria-label', 'Modalidade: ' + identidadeVisual.nome);
+  }
+  setTextById('painel-card-lema', identidadeVisual.lema);
+  setTextById('painel-acao-registrar-icone', identidadeVisual.icone);
   debugPeriodoDesafioFrontend_('sincronizarPainelComDesafioEmFoco', getPeriodoDesafioVisual_(desafioAtual, contexto), contexto.periodo_desafio, desafioAtual || {});
   atualizarContextoVisualRanking(desafioAtual);
 
