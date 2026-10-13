@@ -98,9 +98,13 @@
         <div id="painel-feed-header" class="painel-feed-header" hidden>
           <div>
             <p class="painel-feed-kicker">Seus desafios em andamento</p>
-            <p class="painel-feed-hint">Deslize para acompanhar cada desafio.</p>
+            <p class="painel-feed-hint">Escolha o desafio com as setas.</p>
           </div>
-          <div id="painel-feed-indicador" class="painel-feed-indicador" aria-live="polite"></div>
+          <div class="painel-feed-navegacao" role="group" aria-label="Navegar pelos desafios">
+            <button id="painel-feed-anterior" type="button" onclick="navegarFeedPainel_(-1)" aria-label="Desafio anterior">← Anterior</button>
+            <span id="painel-feed-indicador" class="painel-feed-indicador" aria-live="polite">1 de 1</span>
+            <button id="painel-feed-proximo" type="button" onclick="navegarFeedPainel_(1)" aria-label="Próximo desafio">Próximo →</button>
+          </div>
         </div>
         <div id="painel-desafios-feed" class="painel-desafios-feed">
       <div id="painel-share-card" class="card painel-inicio-card">
