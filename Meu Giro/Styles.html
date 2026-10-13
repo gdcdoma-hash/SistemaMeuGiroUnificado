@@ -4907,4 +4907,124 @@
   border:1px solid #94a3b8; border-radius:9px; background:#fff; color:#0f172a;
   font-size:15px; font-weight:700; }
 .registro-modalidade-box small { font-size:12px; line-height:1.35; color:#475569; }
+
+/* Meu Giro DEV: duas modalidades identificadas por ícone + texto + cor.
+   NUNCA usar apenas a cor como identificador; CSS restrito aos cartões
+   do participante e ao detalhe do desafio. */
+.mg-modalidade-ciclismo {
+  --mg-modalidade-cor: #c2410c;
+  --mg-modalidade-fundo: #fff7ed;
+  --mg-modalidade-borda: #fdba74;
+  --mg-modalidade-luz: #ffedd5;
+  --mg-modalidade-progresso: #ea580c;
+}
+.mg-modalidade-caminhada {
+  --mg-modalidade-cor: #0f766e;
+  --mg-modalidade-fundo: #f0fdfa;
+  --mg-modalidade-borda: #5eead4;
+  --mg-modalidade-luz: #ccfbf1;
+  --mg-modalidade-progresso: #0d9488;
+}
+.mg-modalidade-tag {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 7px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 6px 11px;
+  border: 1px solid var(--mg-modalidade-borda, #fdba74);
+  border-radius: 999px;
+  background: var(--mg-modalidade-fundo, #fff7ed);
+  color: var(--mg-modalidade-cor, #c2410c);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.35;
+  letter-spacing: 0.015em;
+}
+.painel-inicio-card .mg-modalidade-tag {
+  margin: 8px 0 2px;
+}
+.desafio-v2-card .mg-modalidade-tag {
+  margin: 0;
+}
+.desafio-v2-card.mg-modalidade-caminhada {
+  border-color: var(--mg-modalidade-borda);
+  background: radial-gradient(circle at top right, rgba(13,148,136,.13), transparent 42%),
+              linear-gradient(180deg, #fff 0%, #f0fdfa 100%);
+}
+.desafio-v2-card.mg-modalidade-caminhada::before {
+  color: var(--mg-modalidade-cor);
+  background: var(--mg-modalidade-luz);
+  box-shadow: inset 0 0 0 1px var(--mg-modalidade-borda);
+}
+.desafio-v2-card.mg-modalidade-caminhada:hover,
+.desafio-v2-card.mg-modalidade-caminhada:focus-visible {
+  border-color: var(--mg-modalidade-cor);
+  box-shadow: 0 14px 30px rgba(13,148,136,.13);
+}
+.desafio-v2-card.mg-modalidade-caminhada .desafio-v2-progress-track {
+  background: var(--mg-modalidade-luz);
+}
+.desafio-v2-card.mg-modalidade-caminhada .desafio-v2-progress-fill {
+  background: linear-gradient(90deg, #0f766e, #2dd4bf);
+}
+.desafio-v2-card.mg-modalidade-caminhada .desafio-v2-percentual {
+  color: var(--mg-modalidade-cor);
+}
+.desafio-v2-card.mg-modalidade-caminhada.desafio-v2-card-concluidos {
+  /* Prioridade ao estado concluído no fundo; a modalidade continua no selo */
+  background: radial-gradient(circle at top right, rgba(13,148,136,.08), transparent 40%),
+              linear-gradient(180deg, #fff 0%, #f0fdf4 100%);
+}
+.painel-inicio-card.mg-modalidade-caminhada {
+  border-color: var(--mg-modalidade-borda);
+  background: radial-gradient(circle at 92% 0%, rgba(13,148,136,.10), transparent 36%),
+              linear-gradient(145deg, #f0fdfa 0%, #fff 75%);
+  box-shadow: 0 20px 48px rgba(13,148,136,.11);
+}
+.painel-inicio-card.mg-modalidade-caminhada .painel-desafio-label {
+  color: var(--mg-modalidade-cor);
+}
+.painel-inicio-card.mg-modalidade-caminhada .painel-card-brand,
+.painel-inicio-card.mg-modalidade-caminhada .painel-desafio-detalhes .painel-desafio-restante {
+  border-color: var(--mg-modalidade-borda);
+  background: var(--mg-modalidade-fundo);
+  color: var(--mg-modalidade-cor);
+}
+.painel-inicio-card.mg-modalidade-caminhada .painel-desafio-restante strong,
+.painel-inicio-card.mg-modalidade-caminhada .painel-card-assinatura {
+  color: var(--mg-modalidade-cor);
+}
+.painel-inicio-card.mg-modalidade-caminhada .painel-desafio-detalhes p,
+.painel-inicio-card.mg-modalidade-caminhada .painel-metricas-emocionais p {
+  border-color: #ccfbf1;
+}
+.painel-inicio-card.mg-modalidade-caminhada .painel-progress-donut-track {
+  stroke: #ccfbf1;
+}
+.painel-inicio-card.mg-modalidade-caminhada .painel-progress-donut-bar {
+  stroke: var(--mg-modalidade-progresso);
+}
+.painel-inicio-card.mg-modalidade-ciclismo .painel-progress-donut-bar {
+  stroke: var(--mg-modalidade-progresso);
+}
+.desafio-detalhe-screen.mg-modalidade-caminhada .desafio-detalhe-topo,
+.desafio-detalhe-screen.mg-modalidade-caminhada .desafio-detalhe-card {
+  border-color: var(--mg-modalidade-borda);
+  background: linear-gradient(140deg,#f0fdfa,#fff 70%);
+}
+.desafio-detalhe-screen.mg-modalidade-caminhada .desafio-detalhe-progress-track {
+  background: var(--mg-modalidade-luz);
+}
+.desafio-detalhe-screen.mg-modalidade-caminhada .desafio-detalhe-progress-fill {
+  background: linear-gradient(90deg,#0f766e,#2dd4bf);
+}
+.desafio-detalhe-topo .mg-modalidade-tag {
+  margin: 8px 0 4px;
+}
+@media (max-width: 420px) {
+  .mg-modalidade-tag { font-size: 11px; padding: 5px 9px; }
+  .desafio-v2-card-conteudo { padding-right: 46px; }
+}
 </style>
