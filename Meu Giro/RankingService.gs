@@ -306,9 +306,13 @@ function rankingMG_criarIndiceCompetitivo_() {
       id_dgmb: idDgmb,
       id_desafio: idDesafio,
       tipo_desafio: tipo,
-      modalidade_esportiva: meuGiroModalidadeCanonica_(rankingMG_firstFilled_(row, [
-        'Modalidade_Esportiva', 'modalidade_esportiva', 'Modalidade', 'modalidade'
-      ])),
+      // dgmbDesafios histórico não possui coluna de modalidade em todas
+      // as bases: fallback pelo catálogo do desafio mantém CAMINHADA_CORRIDA.
+      modalidade_esportiva: meuGiroModalidadeCanonica_(
+        rankingMG_firstFilled_(row, [
+          'Modalidade_Esportiva', 'modalidade_esportiva', 'Modalidade', 'modalidade'
+        ]) || ((contextoLista.modalidade && contextoLista.modalidade.byId[idDesafio]) || '')
+      ),
       periodo_inicio: periodo.inicio,
       periodo_fim: periodo.fim,
       meta_km: rankingMG_toNumber_(rankingMG_firstFilled_(row, [
