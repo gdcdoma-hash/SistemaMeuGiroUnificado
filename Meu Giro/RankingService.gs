@@ -251,6 +251,7 @@ function rankingMG_montarChaveCompetitiva_(atributos) {
     rankingMG_normalizarDataCompetitiva_(src.periodo_inicio),
     rankingMG_normalizarDataCompetitiva_(src.periodo_fim),
     rankingMG_formatarMetaCompetitiva_(src.meta_km),
+    meuGiroModalidadeCanonica_(src.modalidade_esportiva || ''),
     rankingMG_obterItemCompetitivo_(src)
   ].join('|');
 }
@@ -260,7 +261,9 @@ function rankingMG_criarIndiceCompetitivo_() {
     painelMG_incrementarAuditoriaCarregamentoInicial_('leituras_dgmbDesafios');
   }
   var rows = getAllObjects_(SHEETS.DESAFIO) || [];
-  var periodos = buildPeriodoOficialPorAbaEId_(getSpreadsheet_());
+  var contextoLista = buildListaDesafiosContexto_(getSpreadsheet_());
+  var periodos = contextoLista.periodos;
+  var tipoMetaLista = contextoLista.tipoMeta;
   var porInscricao = {};
 
   for (var i = 0; i < rows.length; i++) {
@@ -286,13 +289,26 @@ function rankingMG_criarIndiceCompetitivo_() {
     var periodoLista = (idDesafio && periodos.byId[idDesafio]) ||
       (!ehNormal && periodos.byAba[abaDesafio]) ||
       { inicio: '', fim: '', nome_desafio: '' };
-    var periodo = rankingMG_resolverPeriodoCompetitivo_(row, periodoLista);
+    var periodoTextoInscricao = rankingMG_firstFilled_(row, [
+      'periodo_desafio', 'Periodo_Desafio', 'período_desafio',
+      'periodo desafio', 'período desafio'
+    ]);
+    var inicioIndividual = rankingMG_firstFilled_(row, [
+      'data_inicio_desafio', 'Data_Inicio_Desafio', 'data inicio desafio'
+    ]);
+    var tipoMeta = resolverTipoMetaListaDesafio_(
+      tipoMetaLista, idDesafio, periodoTextoInscricao, inicioIndividual
+    );
+    var periodo = rankingMG_resolverPeriodoCompetitivo_(row, periodoLista, tipoMeta);
 
     porInscricao[rankingMG_chaveInscricao_(idDgmb, idInscricao)] = {
       id_inscricao: idInscricao,
       id_dgmb: idDgmb,
       id_desafio: idDesafio,
       tipo_desafio: tipo,
+      modalidade_esportiva: meuGiroModalidadeCanonica_(rankingMG_firstFilled_(row, [
+        'Modalidade_Esportiva', 'modalidade_esportiva', 'Modalidade', 'modalidade'
+      ])),
       periodo_inicio: periodo.inicio,
       periodo_fim: periodo.fim,
       meta_km: rankingMG_toNumber_(rankingMG_firstFilled_(row, [
@@ -307,7 +323,7 @@ function rankingMG_criarIndiceCompetitivo_() {
   return { por_inscricao: porInscricao };
 }
 
-function rankingMG_resolverPeriodoCompetitivo_(row, periodoLista) {
+function rankingMG_resolverPeriodoCompetitivo_(row, periodoLista, tipoMeta) {
   var periodoDatas = {
     inicio: normalizarDataISO_(rankingMG_firstFilled_(row, [
       'data_inicio_desafio', 'Data_Inicio_Desafio', 'data inicio desafio', 'data início desafio'
@@ -319,6 +335,12 @@ function rankingMG_resolverPeriodoCompetitivo_(row, periodoLista) {
   var periodoTexto = rankingMG_firstFilled_(row, [
     'periodo_desafio', 'Periodo_Desafio', 'período_desafio', 'periodo desafio', 'período desafio'
   ]);
+  // Desafio de PRAZO_DIAS tem datas únicas por inscrição. Usar o mês
+  // em texto excluiria atividades válidas ao atravessar setembro/outubro.
+  // Sem datas individuais válidas, não inventar uma janela pelo catálogo.
+  if (ehTipoMetaPrazoDias_(tipoMeta)) {
+    return periodoCompletoValido_(periodoDatas) ? periodoDatas : { inicio:'', fim:'' };
+  }
   var periodoHistorico = extrairPeriodoDesafioTexto_(periodoTexto);
   if (periodoCompletoValido_(periodoHistorico)) return periodoHistorico;
   if (periodoCompletoValido_(periodoLista)) {
@@ -341,6 +363,7 @@ function rankingMG_resolverAtributosCompetitivos_(rowResumo, indice) {
     id_dgmb: idDgmb,
     id_desafio: rankingMG_norm_(rankingMG_firstFilled_(rowResumo, ['ID_DESAFIO', 'id_desafio'])) || vinculo.id_desafio,
     tipo_desafio: vinculo.tipo_desafio,
+    modalidade_esportiva: vinculo.modalidade_esportiva,
     periodo_inicio: vinculo.periodo_inicio,
     periodo_fim: vinculo.periodo_fim,
     meta_km: rankingMG_obterMeta_(rowResumo),
