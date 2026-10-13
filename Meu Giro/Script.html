@@ -3707,65 +3707,45 @@ function criarCardFeedDesafioPainel_(painel, desafio) {
 }
 
 function atualizarIndicadorFeedPainel_() {
-  var feed = document.getElementById('painel-desafios-feed');
+  var ativos = Array.isArray(desafiosAtivosCarouselItems) ? desafiosAtivosCarouselItems : [];
+  var atual = getDesafioKey(getDesafioEmFocoAtual());
+  var indice = ativos.findIndex(function(item) { return getDesafioKey(item) === atual; });
+  if (indice < 0) indice = 0;
+  var total = ativos.length;
   var indicador = document.getElementById('painel-feed-indicador');
-  if (!feed || !indicador) return;
-
-  var cards = Array.prototype.slice.call(feed.querySelectorAll('.painel-inicio-card'));
-  if (cards.length <= 1) {
-    indicador.innerHTML = '';
-    return;
-  }
-
-  var centro = feed.scrollLeft + feed.clientWidth / 2;
-  var melhor = 0;
-  var menorDistancia = Infinity;
-  cards.forEach(function(card, index) {
-    var meio = card.offsetLeft + card.offsetWidth / 2;
-    var distancia = Math.abs(meio - centro);
-    if (distancia < menorDistancia) {
-      menorDistancia = distancia;
-      melhor = index;
-    }
-  });
-
-  indicador.innerHTML = cards.map(function(_, index) {
-    return '<span class="painel-feed-dot' + (index === melhor ? ' is-active' : '') + '" aria-hidden="true"></span>';
-  }).join('');
+  var anterior = document.getElementById('painel-feed-anterior');
+  var proximo = document.getElementById('painel-feed-proximo');
+  if (indicador) indicador.textContent = total ? (indice + 1) + ' de ' + total : '0 de 0';
+  if (anterior) anterior.disabled = total <= 1 || indice === 0;
+  if (proximo) proximo.disabled = total <= 1 || indice >= total - 1;
 }
-
+function navegarFeedPainel_(delta) {
+  var ativos = Array.isArray(desafiosAtivosCarouselItems) ? desafiosAtivosCarouselItems : [];
+  if (ativos.length <= 1) return;
+  var atual = getDesafioKey(getDesafioEmFocoAtual());
+  var indice = ativos.findIndex(function(item) { return getDesafioKey(item) === atual; });
+  if (indice < 0) indice = 0;
+  var seguinte = Math.max(0, Math.min(ativos.length - 1, indice + Number(delta || 0)));
+  if (seguinte === indice) return;
+  aplicarDesafioEmFoco(getDesafioKey(ativos[seguinte]), {silent:true});
+}
 function renderFeedDesafiosPainel_(painel, desafioAtual) {
   var feed = document.getElementById('painel-desafios-feed');
   var header = document.getElementById('painel-feed-header');
   var principal = document.getElementById('painel-share-card');
   if (!feed || !principal) return;
 
+  // Mostrar somente o cartão em foco: elimina o pedaço do próximo cartão
+  // e evita esconder a terceira inscrição fora da área visível.
   Array.prototype.slice.call(feed.querySelectorAll('.painel-inicio-card-feed')).forEach(function(card) {
     card.remove();
   });
-
-  var ativos = Array.isArray(desafiosAtivosCarouselItems) ? desafiosAtivosCarouselItems.slice() : [];
-  var chaveAtual = getDesafioKey(desafioAtual);
-  var adicionais = ativos.filter(function(item) {
-    return getDesafioKey(item) !== chaveAtual;
-  });
-
-  adicionais.forEach(function(item) {
-    feed.appendChild(criarCardFeedDesafioPainel_(painel, item));
-  });
-
-  var totalCards = 1 + adicionais.length;
-  if (header) header.hidden = totalCards <= 1;
-
-  feed.classList.toggle('painel-desafios-feed-multiplo', totalCards > 1);
-  feed.onscroll = totalCards > 1 ? function() {
-    window.requestAnimationFrame(atualizarIndicadorFeedPainel_);
-  } : null;
-
-  window.requestAnimationFrame(function() {
-    feed.scrollLeft = 0;
-    atualizarIndicadorFeedPainel_();
-  });
+  var quantidade = Array.isArray(desafiosAtivosCarouselItems) ? desafiosAtivosCarouselItems.length : 0;
+  if (header) header.hidden = quantidade <= 1;
+  feed.classList.remove('painel-desafios-feed-multiplo');
+  feed.onscroll = null;
+  feed.scrollLeft = 0;
+  atualizarIndicadorFeedPainel_();
 }
 
 function sincronizarPainelComDesafioEmFoco() {
