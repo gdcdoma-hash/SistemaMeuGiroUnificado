@@ -27,7 +27,7 @@ function registrarAtividade(idDgmb, dataAtividade, km, force, modalidadeEsportiv
     // Validar no servidor antes de gravar a atividade, usando a janela
     // individual da inscrição e a modalidade registrada.
     var dataPermitida = meuGiroValidarDataModalidadeInscricao_(
-      dataAtividade, modalidadeRegistro, obterVinculosDesafioUsuario_(idDgmb));
+      dataAtividade, modalidadeRegistro);
     if (!dataPermitida.ok) return dataPermitida;
 
     perfEtapaInicio = meuGiroPerfNow_();
@@ -342,7 +342,7 @@ function editarAtividade(payload) {
     })) return {ok:false,code:'MODALIDADES_MISTURADAS',msg:'Não é possível editar esportes diferentes juntos.'};
     var modalidadeEdicao = meuGiroModalidadeCanonica_(payload.modalidade_esportiva || modalidadeOriginal);
     var dataPermitidaEdicao = meuGiroValidarDataModalidadeInscricao_(
-      novaDataAtividade, modalidadeEdicao, obterVinculosDesafioUsuario_(idDgmb));
+      novaDataAtividade, modalidadeEdicao);
     if (!dataPermitidaEdicao.ok) return dataPermitidaEdicao;
 
     var perfBuscaDuplicidadeInicio = meuGiroPerfNow_();
