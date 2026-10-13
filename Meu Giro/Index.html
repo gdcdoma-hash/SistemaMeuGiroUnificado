@@ -116,6 +116,9 @@
             <p class="painel-desafio-label">Desafio em foco</p>
             <span class="painel-card-brand">MEU GIRO</span>
           </div>
+          <span id="painel-modalidade" class="mg-modalidade-tag" aria-label="Modalidade: Ciclismo">
+            <span aria-hidden="true">🚴</span> Ciclismo
+          </span>
           <h2 id="painel-desafio-nome">DESAFIO VOCÊ NA MEDALHA</h2>
           <p id="painel-card-atleta" class="painel-card-atleta">ATLETA</p>
           <div class="painel-desafio-detalhes" aria-label="Prazo do desafio em foco">
@@ -161,7 +164,7 @@
 
         <div class="painel-card-assinatura" aria-hidden="true">
           <span>DESAFIO GIRO</span>
-          <small>paixão por pedalar</small>
+          <small id="painel-card-lema">Paixão por pedalar</small>
         </div>
       </div>
         </div>
@@ -182,7 +185,7 @@
       <div id="desafio-selecionado-card" class="desafio-selecionado-container" hidden aria-live="polite"></div>
 
       <div class="painel-acoes-rapidas" aria-label="Ações rápidas">
-        <button type="button" class="painel-acao-card" onclick="navigateV2('register')"><span>🚴</span><strong>Registrar atividade</strong></button>
+        <button type="button" class="painel-acao-card" onclick="navigateV2('register')"><span id="painel-acao-registrar-icone" aria-hidden="true">🚴</span><strong>Registrar atividade</strong></button>
         <button type="button" class="painel-acao-card" onclick="navigateV2('challenges')"><span>🏆</span><strong>Desafios</strong></button>
         <button type="button" class="painel-acao-card" onclick="navigateV2('achievements')"><span>🥇</span><strong>Conquistas</strong></button>
         <button type="button" class="painel-acao-card" onclick="markRankingTrigger(this); carregarRanking('manual')"><span>📊</span><strong>Ranking</strong></button>
@@ -222,6 +225,7 @@
         <header class="card desafio-detalhe-topo">
           <div>
             <p class="desafio-detalhe-label">Detalhes do desafio</p>
+            <span id="desafio-detalhe-modalidade" class="mg-modalidade-tag" aria-label="Modalidade: Ciclismo">🚴 Ciclismo</span>
             <h2 id="desafio-detalhe-titulo">Desafio</h2>
             <p class="desafio-detalhe-periodo">Período: <strong id="desafio-detalhe-periodo">-</strong></p>
           </div>
