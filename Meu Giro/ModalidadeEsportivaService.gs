@@ -23,7 +23,10 @@ function meuGiroModalidadeRegistro_(registro) {
 }
 function meuGiroAtividadeNoVinculo_(registro, vinculo) {
   var atividade = registro || {}, desafio = vinculo || {};
-  return meuGiroModalidadeRegistro_(atividade) ===
+  // Registros futuros legados/testes não entram no progresso antes do dia.
+  var dataAtividade = normalizarDataISO_(atividade.data_atividade || atividade.data);
+  return dataAtividade <= meuGiroHojeBrasilISO_() &&
+    meuGiroModalidadeRegistro_(atividade) ===
     meuGiroModalidadeCanonica_(desafio.modalidade_esportiva || desafio.modalidade || '') &&
     atividadeDentroPeriodoOficial_(
       atividade.data_atividade || atividade.data,
@@ -40,36 +43,26 @@ function meuGiroSomarKmPorVinculo_(atividades, vinculo) {
 }
 
 /**
- * Validação autoritativa de data na gravação/edição.
- * O atleta pode registrar uma atividade se E SOMENTE SE houver pelo menos
- * uma inscrição elegível da mesma modalidade cuja janela contenha a data.
- * Janelas podem atravessar meses, sem agrupamento por competência mensal.
+ * Política de histórico: registro manual pode ser feito em qualquer data
+ * passada ou em hoje, mesmo fora do prazo de uma inscrição.
+ * A contagem para metas é independente: só entra quando modalidade e janela
+ * da inscrição correspondem. Proíbe datas futuras no servidor.
  */
+function meuGiroHojeBrasilISO_() {
+  return Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'yyyy-MM-dd');
+}
 function meuGiroValidarDataModalidadeInscricao_(dataAtividade, modalidade, vinculos) {
   var data = normalizarDataISO_(dataAtividade);
   if (!isDataIsoValida_(data)) {
-    return {ok:false,code:'DATA_INVALIDA',msg:'Informe uma data válida.'};
+    return {ok:false,code:'DATA_INVALIDA',msg:'Informe uma data válida para a atividade.'};
   }
   var esporte = meuGiroModalidadeCanonica_(modalidade);
-  var elegiveis = (vinculos || []).filter(function(v) {
-    if (!v || !v.apto) return false;
-    if (meuGiroModalidadeCanonica_(v.modalidade_esportiva || v.modalidade || '') !== esporte)
-      return false;
-    var inicio = normalizarDataISO_(v.periodo_inicio);
-    var fim = normalizarDataISO_(v.periodo_fim);
-    return isDataIsoValida_(inicio) && isDataIsoValida_(fim) && inicio <= fim;
-  });
-  if (!elegiveis.length) {
-    return {ok:false,code:'SEM_DESAFIO_MODALIDADE',
-      msg:'Não há desafio disponível nesta modalidade com período válido para registrar atividades.'};
+  var hoje = meuGiroHojeBrasilISO_();
+  if (data > hoje) {
+    return {ok:false,code:'DATA_FUTURA',
+      msg:'Não é permitido registrar atividades com data futura. Informe hoje ou uma data anterior.'};
   }
-  var aceito = elegiveis.some(function(v) {
-    return atividadeDentroPeriodoOficial_(
-      data, normalizarDataISO_(v.periodo_inicio), normalizarDataISO_(v.periodo_fim));
-  });
-  if (!aceito) {
-    return {ok:false,code:'DATA_FORA_DO_PRAZO',
-      msg:'Esta data está fora do período dos seus desafios desta modalidade. Confira o início e a data limite.'};
-  }
+  // Não exigir desafio aberto ou dentro do prazo: histórico pessoal pertence
+  // ao atleta e pode ser preenchido depois do encerramento do desafio.
   return {ok:true,modalidade_esportiva:esporte,data_atividade:data};
 }
