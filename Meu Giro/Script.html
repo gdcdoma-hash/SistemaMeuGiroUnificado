@@ -409,6 +409,9 @@ function navigateV2(destino) {
     return;
   }
 
+  if (destinoNormalizado === 'register' && !activeEditKey) {
+    sincronizarModalidadeFormularioAtividade_('', true);
+  }
   if (destinoNormalizado === 'challenges') {
     renderDesafiosV2();
   } else if (destinoNormalizado === 'achievements') {
@@ -4860,35 +4863,44 @@ function meuGiroModalidadesDoPainel_() {
   var lista = Object.keys(encontrados);
   return lista.length ? lista : ['CICLISMO'];
 }
-function sincronizarModalidadeFormularioAtividade_(modalidadePreferida) {
+function sincronizarModalidadeFormularioAtividade_(modalidadePreferida, novaEscolha) {
   var seletor = document.getElementById('modalidade-atividade');
   var box = document.getElementById('registro-modalidade-box');
   meuGiroConfigurarLimiteDataRegistro_();
   if (!seletor || !box) return 'CICLISMO';
   var opcoes = meuGiroModalidadesDoPainel_();
-  var foco = getDesafioEmFocoAtual();
-  var focoModalidade = String((foco && (foco.modalidade_esportiva || foco.modalidade)) || '').trim().toUpperCase();
+  var maisDeUma = opcoes.length > 1;
   var preferida = String(modalidadePreferida || '').trim().toUpperCase();
-  // Preservar escolha existente quando o painel é atualizado.
   var atual = String(seletor.value || '').trim().toUpperCase();
-  var chaveFoco = String((foco && (foco.id_inscricao || foco.id_desafio || foco.nome_desafio)) || '');
-  var contextoAtual = String((currentPainel && currentPainel.id_dgmb) || '')+'|'+
-    opcoes.join('|')+'|'+chaveFoco;
-  var contextoMudou = contextoAtual !== meuGiroContextoModalidadeFormulario_;
-  // Ao trocar o desafio em foco, a modalidade acompanha esse desafio.
-  // Se o atleta escolher outro esporte manualmente, preservar a seleção
-  // enquanto o foco continuar o mesmo.
-  var escolhido = opcoes.indexOf(preferida) >= 0 ? preferida :
-    (!contextoMudou && opcoes.indexOf(atual) >= 0 ? atual :
-      (opcoes.indexOf(focoModalidade) >= 0 ? focoModalidade : opcoes[0]));
+  // Com duas modalidades não herdar automaticamente o desafio em foco.
+  // Na edição, a chamada explícita traz o esporte do registro original.
+  var contextoAtual = String((currentPainel && currentPainel.id_dgmb) || '')+'|'+opcoes.join('|');
+  var mesmoContexto = contextoAtual === meuGiroContextoModalidadeFormulario_;
+  var escolhido = !maisDeUma ? opcoes[0] :
+    (novaEscolha ? '' :
+      (opcoes.indexOf(preferida) >= 0 ? preferida :
+        ((mesmoContexto || !!activeEditKey) && opcoes.indexOf(atual) >= 0 ? atual : '')));
   meuGiroContextoModalidadeFormulario_ = contextoAtual;
   seletor.value = escolhido;
-  box.hidden = opcoes.length < 2;
+  seletor.required = maisDeUma;
+  box.hidden = !maisDeUma;
   return escolhido;
 }
 function meuGiroModalidadeFormularioAtividade_() {
-  var select = document.getElementById('modalidade-atividade');
-  return String(select && select.value || 'CICLISMO').trim().toUpperCase();
+  var seletor = document.getElementById('modalidade-atividade');
+  var valor = String(seletor && seletor.value || '').trim().toUpperCase();
+  if (meuGiroModalidadesDoPainel_().length > 1) {
+    return valor === 'CICLISMO' || valor === 'CAMINHADA_CORRIDA' ? valor : '';
+  }
+  return valor || 'CICLISMO';
+}
+function meuGiroValidarModalidadeRegistro_() {
+  if (meuGiroModalidadeFormularioAtividade_()) return true;
+  releaseRegistroSubmitGuard();
+  setRegistroMsg('Escolha Ciclismo ou Caminhada/Corrida para registrar sua atividade.', 'error');
+  var seletor = document.getElementById('modalidade-atividade');
+  if (seletor && typeof seletor.focus === 'function') seletor.focus();
+  return false;
 }
 
 function renderAtividades(lista) {
@@ -5189,6 +5201,7 @@ async function salvarAtividade(forcarDuplicidade) {
     return;
   }
 
+  if (!meuGiroValidarModalidadeRegistro_()) return;
   if (activityMutationInProgress || btn.disabled) {
     setRegistroPressedState(false);
     setRegistroMsg('Aguarde, concluindo a ação atual...', 'loading');
@@ -5349,6 +5362,7 @@ async function salvarEdicaoAtividade(forcarDuplicidade) {
     return;
   }
 
+  if (!meuGiroValidarModalidadeRegistro_()) return;
   if (activityMutationInProgress || pendingEditSaveKey === editKey || btn.disabled) {
     setRegistroPressedState(false);
     setRegistroMsg('Salvando edição...', 'loading');
@@ -6432,7 +6446,7 @@ function cancelarEdicaoAtividadeUI() {
 
   const kmInput = document.getElementById('km-atividade');
   if (kmInput) kmInput.value = '';
-  sincronizarModalidadeFormularioAtividade_();
+  sincronizarModalidadeFormularioAtividade_('', true);
 
   const cancelBtn = document.getElementById('btn-cancelar-edicao');
   if (cancelBtn) cancelBtn.style.display = 'none';
