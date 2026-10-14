@@ -3,11 +3,15 @@
 O código operacional ativo está na pasta `Meu Giro/`.
 
 ## Estado atual
-A referência principal de continuidade é:
+A referência mais recente de continuidade é:
+
+`docs/ESTADO_ATUAL_2026-10-14.md`
+
+O histórico técnico de configuração, autenticação, integração e infraestrutura permanece em:
 
 `docs/ESTADO_ATUAL_2026-09-24.md`
 
-Antes de alterar sessão, período, PRAZO_DIAS, integração com Portal Giro ou deployment, leia esse documento.
+**Homologado em 14/10:** na tela Registrar, preservar `Modalidade | Data da atividade | KM realizados` alinhados na mesma linha, com dropdown obrigatório para atleta multimodal, popup padrão e espaço para o histórico. Antes de alterar sessão, período, PRAZO_DIAS, integração com Portal Giro ou deployment, leia ambos os documentos.
 
 ## Ambiente DEV
 - Branch operacional: `main`
