@@ -4921,6 +4921,71 @@
   font-size:15px; font-weight:700; }
 .registro-modalidade-box small { font-size:12px; line-height:1.35; color:#475569; }
 
+/* Meu Giro DEV/LAB — formulário compacto: Modalidade | Data | KM.
+   Com uma só modalidade, o campo oculto deixa 2 colunas equilibradas.
+   O botão e a lista de atividades ficam mais acima, sem scroll horizontal. */
+#screen-registrar .registro-campos-grid:has(> .registro-modalidade-box:not([hidden])) {
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1.13fr) minmax(0, .86fr);
+}
+#screen-registrar .registro-campos-grid {
+  align-items: end;
+  column-gap: 8px;
+}
+#screen-registrar .registro-campos-grid > .registro-modalidade-box {
+  min-width: 0;
+  margin: 0;
+  gap: 0;
+}
+#screen-registrar .registro-campos-grid .registro-campo label {
+  min-height: 16px;
+  margin: 0 0 5px;
+  font-size: 12px;
+  line-height: 1.2;
+}
+#screen-registrar .registro-campos-grid .registro-modalidade-box select,
+#screen-registrar .registro-campos-grid .registro-campo input {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  min-height: 44px;
+  font-size: 14px;
+}
+#screen-registrar .registro-campos-grid .registro-modalidade-box select {
+  padding: 7px 5px;
+  text-overflow: ellipsis;
+}
+#screen-registrar .registro-campos-grid .registro-campo input {
+  padding-inline: 7px;
+}
+#screen-registrar .field-helper-intro {
+  margin-bottom: 7px;
+  font-size: 13px;
+}
+#screen-registrar .registro-km-helper {
+  margin: 6px 0 7px;
+  font-size: 11px;
+  line-height: 1.3;
+}
+@media (max-width: 420px) {
+  #screen-registrar .registro-campos-grid:has(> .registro-modalidade-box:not([hidden])) {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1.1fr) minmax(0, .72fr);
+    column-gap: 5px;
+  }
+  #screen-registrar .registro-campos-grid .registro-campo label {
+    font-size: 11px;
+  }
+  #screen-registrar .registro-campos-grid .registro-modalidade-box select {
+    padding-inline: 3px;
+    font-size: 12px;
+  }
+  #screen-registrar .registro-campos-grid .registro-campo input {
+    padding-inline: 4px;
+    font-size: 13px;
+  }
+}
+
 /* Meu Giro DEV: duas modalidades identificadas por ícone + texto + cor.
    NUNCA usar apenas a cor como identificador; CSS restrito aos cartões
    do participante e ao detalhe do desafio. */
