@@ -110,3 +110,18 @@ Quatro prints do Meu Giro DEV/LAB enviados pelo organizador **após editar 3→4
 | LAB TESTE CAMINHADA/CORRIDA 2, 75 km | 5,5 km | 5,5 km | não afetado; mesma atividade de Caminhada/Corrida elegível compartilha progresso em duas metas |
 
 **Homologado:** edição de uma atividade de Ciclismo atualizou os dois desafios compatíveis, mantendo inalteradas as duas metas de Caminhada/Corrida. **Não homologado ainda:** reversão de 4→3 km e confirmação de integridade do histórico (sem duplicatas). Issue [#294](https://github.com/gdcdoma-hash/SistemaMeuGiroUnificado/issues/294) permanece aberta. Solicitar restauração do mesmo registro a 3 km e capturas ou confirmação dos quatro totais originais 18 / 6 / 5,5 / 5,5. Nenhum deploy, banco ou PROD alterado pela documentação.
+
+## 11. Regressão de restauração 4→3 km — diagnóstico LAB (14/10/2026)
+
+Na missão #294, após editar uma atividade de Ciclismo de 3→4 km, o usuário tentou restaurá-la para 3 km. O popup exibiu "Já existe uma atividade com esta mesma data e KM", sem aplicar a restauração.
+
+**Causa raiz confirmada por leitura exclusiva da base LAB e do código:**
+- A execução DEV do Meu Giro resolve sua planilha pela função `dgmbMeuGiroSpreadsheetId_` em `Meu Giro/EnvironmentConfig.gs`. Para o Script ID DEV em uso, a base atual é `1ivfrue_toKUiopYq1Xlx4UR_yFrKHFpyIgVn19xqEUA` (Portal Giro HOMOLOGACAO - REFRESH 2026-10-08 1159). A planilha `1sFxmi...`, presente no README histórico, é um fallback legado, **não a base atualmente selecionada pelo DEV**.
+- Para o atleta sintético 1603, a aba `REGISTRO_KM` continha **duas atividades independentes de Ciclismo em 01/10/2026**, com `activity_id` diferentes e KM 4 e 3. A reversão legítima geraria 3 + 3 km, mantendo duas atividades.
+- A interface `salvarEdicaoAtividade` já tratava `DUPLICIDADE_EDICAO`: pedia confirmação em popup padrão e reenviava `force: true`. O backend `editarAtividade` **ignorava** esse parâmetro e retornava novamente `DUPLICIDADE_EDICAO`, gerando o erro final após a confirmação.
+
+**Correção DEV/LAB:** no `RegistroService.gs`, respeitar `payload.force === true` somente se a edição for identificada por **um `activity_id` existente e único**. Confirmar não cria linhas, altera somente a atividade identificada e atualiza o progresso normalmente. Sem confirmação, com IDs inconsistentes, com múltiplas linhas ou em registros legados sem `activity_id`, a proteção de duplicidade permanece. A interface/popup homologados não foram redesenhados.
+
+**Teste automatizado acrescentado:** `tests/edicao_duplicidade_confirmada.test.js` executa o `editarAtividade` verdadeiro com planilha simulada, verificando cinco cenários: sem confirmação bloqueia, com confirmação edita somente a linha correta, ID incorreto bloqueia, legado sem ID bloqueia, confirmação não booleana bloqueia. Todos PASS em simulação sem escrita real.
+
+**Homologação real ainda pendente:** após sincronizar e publicar o DEV, o organizador deve repetir 4→3 km no mesmo registro de Ciclismo de 01/10. O popup de atividade semelhante é esperado; confirmar consciente e conferir 1000 KM 18 km, Outubro Rosa 6 km, os dois desafios Caminhada/Corrida 5,5 km cada, e histórico de outubro com **duas atividades de Ciclismo de 3 km**, totalizando 6 km. Não apagar nem criar atividades adicionais. Ranking/PROD fora do escopo.
