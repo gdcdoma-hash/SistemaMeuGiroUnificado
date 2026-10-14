@@ -2295,6 +2295,20 @@ function renderPainel(p) {
  * Identidade apenas visual: sempre determinada pela modalidade da inscrição,
  * nunca pelo nome da medalha ou pelo período. Legado permanece Ciclismo.
  */
+// Ícones vetoriais em uma única cor (currentColor), sem emojis do sistema.
+function meuGiroIconeModalidade_(modalidade) {
+  if (modalidade === 'CAMINHADA_CORRIDA') {
+    return '<svg class="mg-modalidade-icon mg-modalidade-icon-duo" viewBox="0 0 42 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' +
+      '<circle cx="9" cy="4" r="2"/><path d="M9 7l-1.5 6-4.5 5M7.5 13l4.5 3 1.5 5M9 9l5 2M9 9l-4 3"/>' +
+      '<circle cx="29" cy="4" r="2"/><path d="M28 7l-3 6 7 2 5-2M25 13l-5 6M32 15l2 6M28 9l5 1 4-3"/>' +
+      '</svg>';
+  }
+  return '<svg class="mg-modalidade-icon" viewBox="0 0 32 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' +
+    '<circle cx="6" cy="18" r="4"/><circle cx="26" cy="18" r="4"/>' +
+    '<path d="M6 18l6-8 6 8H6l6-8h7l7 8"/><circle cx="17" cy="4" r="2"/>' +
+    '<path d="M16 7l-3 4 2 4M16 8l4 3 4-2"/>' +
+    '</svg>';
+}
 function meuGiroIdentidadeModalidade_(desafio) {
   var bruto = String((desafio && (desafio.modalidade_esportiva || desafio.modalidade)) || 'CICLISMO')
     .trim().toUpperCase();
@@ -2302,7 +2316,7 @@ function meuGiroIdentidadeModalidade_(desafio) {
     return {
       classe: 'mg-modalidade-caminhada',
       nome: 'Caminhada/Corrida',
-      icone: '🚶🏃',
+      icone: meuGiroIconeModalidade_('CAMINHADA_CORRIDA'),
       lema: 'Cada Passo, Uma Conquista.',
       incentivo: 'Continue em movimento para manter sua evolução.'
     };
@@ -2310,7 +2324,7 @@ function meuGiroIdentidadeModalidade_(desafio) {
   return {
     classe: 'mg-modalidade-ciclismo',
     nome: 'Ciclismo',
-    icone: '🚴',
+    icone: meuGiroIconeModalidade_('CICLISMO'),
     lema: 'Paixão por pedalar',
     incentivo: 'Continue pedalando para manter sua evolução.'
   };
@@ -2817,7 +2831,7 @@ function renderDetalheDesafioV2_(desafio) {
   aplicarIdentidadeModalidadeElemento_(document.getElementById('screen-desafio-detalhe'), identidade);
   var badge = document.getElementById('desafio-detalhe-modalidade');
   if (badge) {
-    badge.textContent = identidade.icone + ' ' + identidade.nome;
+    badge.innerHTML = '<span aria-hidden="true">' + identidade.icone + '</span><span>' + escapeHtml(identidade.nome) + '</span>';
     badge.setAttribute('aria-label', 'Modalidade: ' + identidade.nome);
   }
   setTextById('desafio-detalhe-titulo', getDesafioTitulo(desafio));
@@ -3807,11 +3821,12 @@ function sincronizarPainelComDesafioEmFoco() {
   aplicarIdentidadeModalidadeElemento_(document.getElementById('painel-share-card'), identidadeVisual);
   var badgeModalidade = document.getElementById('painel-modalidade');
   if (badgeModalidade) {
-    badgeModalidade.textContent = identidadeVisual.icone + ' ' + identidadeVisual.nome;
+    badgeModalidade.innerHTML = '<span aria-hidden="true">' + identidadeVisual.icone + '</span><span>' + escapeHtml(identidadeVisual.nome) + '</span>';
     badgeModalidade.setAttribute('aria-label', 'Modalidade: ' + identidadeVisual.nome);
   }
   setTextById('painel-card-lema', identidadeVisual.lema);
-  setTextById('painel-acao-registrar-icone', identidadeVisual.icone);
+  var iconeRegistrar = document.getElementById('painel-acao-registrar-icone');
+  if (iconeRegistrar) iconeRegistrar.innerHTML = identidadeVisual.icone;
   debugPeriodoDesafioFrontend_('sincronizarPainelComDesafioEmFoco', getPeriodoDesafioVisual_(desafioAtual, contexto), contexto.periodo_desafio, desafioAtual || {});
   atualizarContextoVisualRanking(desafioAtual);
 

@@ -13,7 +13,8 @@ function extrair(nome) {
   assert.ok(inicio>=0,'Função ausente: '+nome);
   return script.slice(inicio,fim<0?undefined:fim);
 }
-const identidade=new Function(extrair('meuGiroIdentidadeModalidade_')+
+const identidade=new Function(extrair('meuGiroIconeModalidade_')+
+  '\n'+extrair('meuGiroIdentidadeModalidade_')+
   '\nreturn meuGiroIdentidadeModalidade_;')();
 test('modalidade vem da inscrição e ciclismo legado é preservado',()=>{
   assert.equal(identidade({modalidade_esportiva:'CAMINHADA_CORRIDA'}).nome,'Caminhada/Corrida');
@@ -23,8 +24,13 @@ test('modalidade vem da inscrição e ciclismo legado é preservado',()=>{
 test('ícones e lemas são independentes por esporte',()=>{
   const c=identidade({modalidade_esportiva:'CICLISMO'});
   const p=identidade({modalidade_esportiva:'CAMINHADA_CORRIDA'});
-  assert.equal(c.icone,'🚴');
-  assert.equal(p.icone,'🚶🏃');
+  assert.match(c.icone,/^<svg/);
+  assert.match(p.icone,/^<svg/);
+  assert.match(c.icone,/stroke="currentColor"/);
+  assert.match(p.icone,/stroke="currentColor"/);
+  assert.match(p.icone,/mg-modalidade-icon-duo/);
+  assert.equal((p.icone.match(/<circle/g)||[]).length,2);
+  assert.doesNotMatch(c.icone + p.icone,/🚴|🚶|🏃/);
   assert.notEqual(c.classe,p.classe);
   assert.equal(c.lema,'Paixão por pedalar');
   assert.equal(p.lema,'Cada Passo, Uma Conquista.');
@@ -50,10 +56,17 @@ test('Início, Desafios e Detalhes exibem identificação visível e não só co
   assert.match(script, /setTextById\('painel-card-lema', identidadeVisual\.lema\)/);
   assert.match(script, /modalidadeVisual\.nome/);
   assert.match(script, /badge\.setAttribute\('aria-label', 'Modalidade: '/);
+  assert.match(script, /badge\.innerHTML = '<span aria-hidden="true">'/);
+  assert.match(script, /badgeModalidade\.innerHTML = '<span aria-hidden="true">'/);
+  assert.match(html, /id="painel-modalidade"[\s\S]*?mg-modalidade-icon/);
+  assert.match(html, /<option value="CICLISMO">Ciclismo<\/option>/);
+  assert.match(html, /<option value="CAMINHADA_CORRIDA">Caminhada\/Corrida<\/option>/);
 });
 test('cores distintas, contraste legível e largura móvel',()=>{
   assert.match(css, /--mg-modalidade-cor: #c2410c/);
   assert.match(css, /--mg-modalidade-cor: #0f766e/);
+  assert.match(css, /\.mg-modalidade-icon \{/);
+  assert.match(css, /color: inherit/);
   assert.match(css, /\.desafio-v2-card\.mg-modalidade-caminhada/);
   assert.match(css, /\.painel-inicio-card\.mg-modalidade-caminhada/);
   assert.match(css, /@media \(max-width: 420px\) \{\s*\.mg-modalidade-tag/);
