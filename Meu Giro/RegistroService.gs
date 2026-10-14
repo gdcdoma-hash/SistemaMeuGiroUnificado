@@ -300,6 +300,21 @@ function atualizarDistanciaRealizada_(idDgmb, opcoes) {
   });
 }
 
+/**
+ * Edição com colisão de data/KM: a confirmação de duplicidade só permite
+ * alterar uma atividade com activity_id individual comprovado na planilha.
+ * Ela NÃO autoriza edições ambíguas por timestamp nem cria outra atividade.
+ */
+function meuGiroPodeConfirmarDuplicidadeEdicao_(payload, activityId, linhasEncontradas, dados, cols) {
+  if (!payload || payload.force !== true || !activityId) return false;
+  if (!cols || cols.idxActivityId < 0 || !Array.isArray(linhasEncontradas) ||
+      linhasEncontradas.length !== 1 || !dados) return false;
+  var indiceLinha = linhasEncontradas[0] - 1;
+  if (indiceLinha < 1 || !dados[indiceLinha]) return false;
+  return String(dados[indiceLinha][cols.idxActivityId] || '').trim() ===
+    String(activityId).trim();
+}
+
 function editarAtividade(payload) {
   var perfTotalInicio = meuGiroPerfNow_();
   var perfOperacaoAnterior = MEU_GIRO_PERF_OPERACAO_ATUAL_;
@@ -401,6 +416,16 @@ function editarAtividade(payload) {
       duracaoComparacoesMs += meuGiroPerfNow_() - perfComparacaoInicio;
 
       if (foraDoLancamento && mesmoId && mesmaData && mesmoKm && checkModalidade === modalidadeEdicao) {
+        // A interface já pede confirmação e reenvia force=true; respeitar
+        // somente quando a atividade editada é identificada sem ambiguidade.
+        // Sem confirmação, manter a proteção contra duplicatas acidentais.
+        if (meuGiroPodeConfirmarDuplicidadeEdicao_(payload, activityId, linhasEncontradas, dados, cols)) {
+          meuGiroPerfLog_('editar-atividade', 'duplicidade_confirmada', perfBuscaDuplicidadeInicio, {
+            linha_editada: linhasEncontradas[0],
+            linha_semelhante: linhaAtual
+          });
+          continue;
+        }
         duplicidadeEncontrada = true;
         meuGiroPerfLog_('editar-atividade', 'duplicidade_encontrada', perfBuscaDuplicidadeInicio, {
           linha_encontrada: linhaAtual
