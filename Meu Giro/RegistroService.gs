@@ -11,11 +11,26 @@ function registrarAtividade(idDgmb, dataAtividade, km, force, modalidadeEsportiv
     idDgmb = String(idDgmb || '').trim();
     dataAtividade = normalizarDataISO_(dataAtividade);
     km = parseKmInputSeguro_(km);
-    var modalidadeRegistro = meuGiroModalidadeCanonica_(modalidadeEsportiva);
 
     if (!idDgmb) {
       return { ok:false, code:'ID_OBRIGATORIO', msg:'ID do atleta é obrigatório.' };
     }
+
+    // Chamadas antigas sem modalidade seguem válidas com apenas um esporte.
+    // Se houver dois, recusar a gravação em vez de presumir Ciclismo.
+    if (!String(modalidadeEsportiva || '').trim()) {
+      var modalidadesAtleta = {};
+      (obterVinculosDesafioUsuario_(idDgmb) || []).forEach(function(vinculo) {
+        var esporte = meuGiroModalidadeCanonica_(
+          vinculo && vinculo.modalidade_esportiva || '');
+        modalidadesAtleta[esporte] = true;
+      });
+      if (Object.keys(modalidadesAtleta).length > 1) {
+        return {ok:false,code:'MODALIDADE_OBRIGATORIA',
+          msg:'Escolha Ciclismo ou Caminhada/Corrida para registrar sua atividade.'};
+      }
+    }
+    var modalidadeRegistro = meuGiroModalidadeCanonica_(modalidadeEsportiva);
 
     if (!dataAtividade) {
       return { ok:false, code:'DATA_OBRIGATORIA', msg:'Informe o dia da atividade.' };
