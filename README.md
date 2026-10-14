@@ -17,7 +17,8 @@ O histórico técnico de configuração, autenticação, integração e infraest
 - Branch operacional: `main`
 - Script ID GAS: `1N-10MQMYaq_91O75W_TFF837vPR6KfSDpJwVQJNS7776IwGo56NuppzG`
 - Deployment DEV: `AKfycbxCV-6fDri2y2ppdPC1JPLqCTxEOwXLuSameujgVkoYokm-sfQgPtDY4oQQ0Z_uVCmRKg`
-- Planilha oficial: `1sFxmiWmIrPlwXgSb56M8maHF5niRYVLWRMFSUQYXgHM`
+- Planilha LAB em uso pelo Meu Giro DEV (resolvida por `EnvironmentConfig.gs`): `1ivfrue_toKUiopYq1Xlx4UR_yFrKHFpyIgVn19xqEUA`
+- ID histórico de fallback DEV: `1sFxmiWmIrPlwXgSb56M8maHF5niRYVLWRMFSUQYXgHM` (não assumir como base atualmente em execução)
 
 O GitHub Actions sincroniza o código e atualiza o deployment DEV automaticamente.
 
