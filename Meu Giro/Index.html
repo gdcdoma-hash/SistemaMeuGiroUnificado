@@ -117,7 +117,7 @@
             <span class="painel-card-brand">MEU GIRO</span>
           </div>
           <span id="painel-modalidade" class="mg-modalidade-tag" aria-label="Modalidade: Ciclismo">
-            <span aria-hidden="true">🚴</span> Ciclismo
+            <span aria-hidden="true"><svg class="mg-modalidade-icon" viewBox="0 0 32 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="6" cy="18" r="4"/><circle cx="26" cy="18" r="4"/><path d="M6 18l6-8 6 8H6l6-8h7l7 8"/><circle cx="17" cy="4" r="2"/><path d="M16 7l-3 4 2 4M16 8l4 3 4-2"/></svg></span><span>Ciclismo</span>
           </span>
           <h2 id="painel-desafio-nome">DESAFIO VOCÊ NA MEDALHA</h2>
           <p id="painel-card-atleta" class="painel-card-atleta">ATLETA</p>
@@ -185,7 +185,7 @@
       <div id="desafio-selecionado-card" class="desafio-selecionado-container" hidden aria-live="polite"></div>
 
       <div class="painel-acoes-rapidas" aria-label="Ações rápidas">
-        <button type="button" class="painel-acao-card" onclick="navigateV2('register')"><span id="painel-acao-registrar-icone" aria-hidden="true">🚴</span><strong>Registrar atividade</strong></button>
+        <button type="button" class="painel-acao-card" onclick="navigateV2('register')"><span id="painel-acao-registrar-icone" aria-hidden="true"><svg class="mg-modalidade-icon" viewBox="0 0 32 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="6" cy="18" r="4"/><circle cx="26" cy="18" r="4"/><path d="M6 18l6-8 6 8H6l6-8h7l7 8"/><circle cx="17" cy="4" r="2"/><path d="M16 7l-3 4 2 4M16 8l4 3 4-2"/></svg></span><strong>Registrar atividade</strong></button>
         <button type="button" class="painel-acao-card" onclick="navigateV2('challenges')"><span>🏆</span><strong>Desafios</strong></button>
         <button type="button" class="painel-acao-card" onclick="navigateV2('achievements')"><span>🥇</span><strong>Conquistas</strong></button>
         <button type="button" class="painel-acao-card" onclick="markRankingTrigger(this); carregarRanking('manual')"><span>📊</span><strong>Ranking</strong></button>
@@ -225,7 +225,7 @@
         <header class="card desafio-detalhe-topo">
           <div>
             <p class="desafio-detalhe-label">Detalhes do desafio</p>
-            <span id="desafio-detalhe-modalidade" class="mg-modalidade-tag" aria-label="Modalidade: Ciclismo">🚴 Ciclismo</span>
+            <span id="desafio-detalhe-modalidade" class="mg-modalidade-tag" aria-label="Modalidade: Ciclismo"><span aria-hidden="true"><svg class="mg-modalidade-icon" viewBox="0 0 32 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="6" cy="18" r="4"/><circle cx="26" cy="18" r="4"/><path d="M6 18l6-8 6 8H6l6-8h7l7 8"/><circle cx="17" cy="4" r="2"/><path d="M16 7l-3 4 2 4M16 8l4 3 4-2"/></svg></span><span>Ciclismo</span></span>
             <h2 id="desafio-detalhe-titulo">Desafio</h2>
             <p class="desafio-detalhe-periodo">Período: <strong id="desafio-detalhe-periodo">-</strong></p>
           </div>
@@ -254,8 +254,8 @@
         <div id="registro-modalidade-box" class="registro-modalidade-box" hidden>
           <label for="modalidade-atividade">Modalidade desta atividade</label>
           <select id="modalidade-atividade" aria-label="Modalidade desta atividade">
-            <option value="CICLISMO">🚴 Ciclismo</option>
-            <option value="CAMINHADA_CORRIDA">🚶 Caminhada/Corrida</option>
+            <option value="CICLISMO">Ciclismo</option>
+            <option value="CAMINHADA_CORRIDA">Caminhada/Corrida</option>
           </select>
           <small>Você pode registrar atividades anteriores para manter seu histórico. As metas contam apenas atividades do período e da modalidade do desafio. Datas futuras não são permitidas.</small>
         </div>
