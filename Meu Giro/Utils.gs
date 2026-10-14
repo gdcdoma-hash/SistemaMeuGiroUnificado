@@ -1647,8 +1647,8 @@ function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb, contextoLista
       modalidade_esportiva: meuGiroModalidadeCanonica_(
         idxModalidadeInscricao > -1 && normalizeText_(row[idxModalidadeInscricao])
           ? row[idxModalidadeInscricao]
-          : ((contextoListaDesafios.modalidade &&
-              contextoListaDesafios.modalidade.byId[idDesafio]) || '')
+          : ((contextoLista.modalidade &&
+              contextoLista.modalidade.byId[idDesafio]) || '')
       ),
       status_usuario_desafio: statusUsuarioDesafio,
       status_validacao_certificado: idxStatusValidacaoCertificado > -1 ? normalizeText_(row[idxStatusValidacaoCertificado]).toUpperCase() : '',
