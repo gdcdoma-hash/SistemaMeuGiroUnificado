@@ -71,3 +71,42 @@ test('cores distintas, contraste legível e largura móvel',()=>{
   assert.match(css, /\.painel-inicio-card\.mg-modalidade-caminhada/);
   assert.match(css, /@media \(max-width: 420px\) \{\s*\.mg-modalidade-tag/);
 });
+
+test('aviso motivacional separa o texto do SVG em ambas as modalidades',()=>{
+  const montarStatus=new Function(
+    'meuGiroIdentidadeModalidade_','normalizeRitmoText','painelMetaConcluida_','getRitmoAgoraVariant',
+    extrair('obterStatusMotivacionalFeed_')+'\nreturn obterStatusMotivacionalFeed_;'
+  )(identidade,x=>x,()=>false,()=> 'alerta-ritmo-atencao');
+  for (const modalidade of ['CICLISMO','CAMINHADA_CORRIDA']) {
+    const status=montarStatus({ritmo_status:'abaixo'}, {modalidade_esportiva:modalidade});
+    assert.equal(status.titulo,'Hora de reagir.');
+    assert.match(status.icone,/^<svg/);
+    assert.doesNotMatch(status.titulo,/<svg/);
+  }
+  // A arte vai para um elemento próprio; somente o título textual é escapado.
+  assert.match(script,/status\.icone \? '<span class="mg-status-modalidade-icon"/);
+  assert.match(script,/escapeHtml\(status\.titulo\)/);
+  assert.doesNotMatch(script,/titulo:\s*identidadeVisual\.icone\s*\+/);
+});
+
+test('aviso do painel insere o ícone como elemento e não mostra a marcação SVG',()=>{
+  const elems={
+    'alerta-ritmo-titulo':{textContent:'',inserido:'',insertAdjacentHTML(pos,html){this.inserido+=html;}},
+    'alerta-ritmo-texto':{textContent:''},
+    'alerta-ritmo':{classList:{remove(){},add(){}}}
+  };
+  const mockDoc={getElementById(id){return elems[id]||null;}};
+  const setTexto=(id,txt)=>{elems[id].textContent=txt;};
+  const render=new Function(
+    'document','normalizeRitmoText','painelMetaConcluida_','getRitmoAgoraVariant',
+    'meuGiroIdentidadeModalidade_','getDesafioEmFocoAtual','setTextById',
+    extrair('renderRitmoAgora')+'\nreturn renderRitmoAgora;'
+  )(mockDoc,x=>x,()=>false,()=> 'alerta-ritmo-atencao',
+    identidade,()=>({modalidade_esportiva:'CAMINHADA_CORRIDA'}),setTexto);
+  render({ritmo_status:'abaixo'});
+  assert.equal(elems['alerta-ritmo-titulo'].textContent,'Hora de reagir.');
+  assert.match(elems['alerta-ritmo-titulo'].inserido,/^<span class="mg-status-modalidade-icon"/);
+  assert.match(elems['alerta-ritmo-titulo'].inserido,/<svg/);
+  assert.doesNotMatch(elems['alerta-ritmo-titulo'].textContent,/<svg/);
+  assert.equal(elems['alerta-ritmo-texto'].textContent,'Sua meta está ficando distante.');
+});
