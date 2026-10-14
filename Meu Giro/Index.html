@@ -251,17 +251,15 @@
       <div id="registro-card" class="card card-registro-atividade">
         <p class="field-helper field-helper-intro">Informe o dia e a distância da sua atividade.</p>
 
-        <div id="registro-modalidade-box" class="registro-modalidade-box" hidden>
-          <label for="modalidade-atividade">Modalidade desta atividade</label>
-          <select id="modalidade-atividade" aria-label="Modalidade desta atividade" required>
-            <option value="" disabled selected>Escolha a modalidade</option>
-            <option value="CICLISMO">Ciclismo</option>
-            <option value="CAMINHADA_CORRIDA">Caminhada/Corrida</option>
-          </select>
-          <small>Você pode registrar atividades anteriores para manter seu histórico. As metas contam apenas atividades do período e da modalidade do desafio. Datas futuras não são permitidas.</small>
-        </div>
-
         <div class="registro-campos-grid">
+          <div id="registro-modalidade-box" class="registro-campo registro-modalidade-box" hidden>
+            <label for="modalidade-atividade">Modalidade</label>
+            <select id="modalidade-atividade" aria-label="Modalidade desta atividade" required>
+              <option value="" disabled selected>Escolha a modalidade</option>
+              <option value="CICLISMO">Ciclismo</option>
+              <option value="CAMINHADA_CORRIDA">Caminhada/Corrida</option>
+            </select>
+          </div>
           <div class="registro-campo">
             <label for="data-atividade">Data da atividade</label>
             <input id="data-atividade" type="date">
@@ -273,7 +271,7 @@
           </div>
         </div>
 
-        <p class="field-helper registro-km-helper">Use vírgula ou ponto.</p>
+        <p class="field-helper registro-km-helper">KM: vírgula ou ponto. Atividades anteriores ficam no histórico; metas seguem o prazo e a modalidade. Datas futuras não são permitidas.</p>
 
         <input id="atividade-id" type="hidden" value="">
         <input id="atividade-activity-id" type="hidden" value="">
