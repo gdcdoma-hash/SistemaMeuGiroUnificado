@@ -4925,6 +4925,19 @@
   --mg-modalidade-luz: #ccfbf1;
   --mg-modalidade-progresso: #0d9488;
 }
+/* Pictogramas da modalidade usam uma única cor herdada do texto. */
+.mg-modalidade-icon {
+  display: inline-block;
+  width: 25px;
+  height: 20px;
+  vertical-align: middle;
+  flex-shrink: 0;
+  color: inherit;
+}
+.mg-modalidade-icon-duo { width: 35px; }
+.mg-modalidade-tag > span[aria-hidden="true"] { display: inline-flex; align-items: center; }
+#painel-acao-registrar-icone .mg-modalidade-icon { width: 30px; height: 28px; }
+#painel-acao-registrar-icone .mg-modalidade-icon-duo { width: 40px; }
 .mg-modalidade-tag {
   display: inline-flex;
   align-items: center;
