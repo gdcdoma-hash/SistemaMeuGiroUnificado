@@ -96,3 +96,17 @@
 **Conclusão:** aprovado na interface LAB o compartilhamento por modalidade e por período, com PRAZO_DIAS atravessando setembro/outubro e separação entre atividades dos esportes. Isto não constitui teste de regressão PROD.
 
 **Próxima missão lógica:** verificar atualização em ambos os desafios de Ciclismo quando UMA atividade de outubro é editada, com restauração posterior. Base antes da edição: 1000 KM **18 km**, Outubro Rosa **6 km**, Caminhada/Corrida de outubro **5,5 km**. Preferir um registro de Ciclismo de **3 km em outubro**, alterar **somente KM para 4 km**, e esperar **19 / 7 / 5,5 km** nos três cards. Restaurar **4→3 km** no mesmo registro e esperar **18 / 6 / 5,5 km** novamente. Não tocar nas atividades de setembro ou excluir registros nesta fase. Se a base inicial mudar por outros registros, comparar a diferença +1/-1, sem fixar totais absolutos.
+
+
+## 10. Teste de edição compartilhada — etapa 1 (14/10/2026)
+
+Quatro prints do Meu Giro DEV/LAB enviados pelo organizador **após editar 3→4 km uma atividade de Ciclismo de outubro**:
+
+| Desafio no Início | Antes | Depois | Verificação |
+|---|---:|---:|---|
+| DESAFIO 1000 KM, Ciclismo, 45 dias | 18 km | 19 km | +1 km correto; 981 km faltantes; 1,9% |
+| MEDALHA OUTUBRO ROSA, Ciclismo | 6 km | 7 km | +1 km correto; 43 km faltantes; 14% |
+| LAB TESTE CAMINHADA/CORRIDA (SEM MEDALHA), 50 km | 5,5 km | 5,5 km | não afetado |
+| LAB TESTE CAMINHADA/CORRIDA 2, 75 km | 5,5 km | 5,5 km | não afetado; mesma atividade de Caminhada/Corrida elegível compartilha progresso em duas metas |
+
+**Homologado:** edição de uma atividade de Ciclismo atualizou os dois desafios compatíveis, mantendo inalteradas as duas metas de Caminhada/Corrida. **Não homologado ainda:** reversão de 4→3 km e confirmação de integridade do histórico (sem duplicatas). Issue [#294](https://github.com/gdcdoma-hash/SistemaMeuGiroUnificado/issues/294) permanece aberta. Solicitar restauração do mesmo registro a 3 km e capturas ou confirmação dos quatro totais originais 18 / 6 / 5,5 / 5,5. Nenhum deploy, banco ou PROD alterado pela documentação.
