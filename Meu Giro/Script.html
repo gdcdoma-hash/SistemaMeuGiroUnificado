@@ -1517,13 +1517,24 @@ function renderRitmoAgora(p) {
     mensagem = 'Seu progresso está acima do ritmo esperado.';
     statusClass = 'painel-status-bom';
   } else if (variant === 'alerta-ritmo-atencao' || variant === 'alerta-ritmo-neutro') {
-    titulo = identidadeVisual.icone + ' Hora de reagir.';
+    titulo = 'Hora de reagir.';
     mensagem = 'Sua meta está ficando distante.';
     statusClass = 'painel-status-reagir';
   }
 
   setTextById('alerta-ritmo-titulo', titulo);
   setTextById('alerta-ritmo-texto', mensagem);
+  // A identidade.icone contém SVG, nunca texto. Inserir o pictograma como
+  // elemento visual apenas no aviso de reação, sem mostrar as tags na tela.
+  if (variant === 'alerta-ritmo-atencao' || variant === 'alerta-ritmo-neutro') {
+    var tituloAlerta = document.getElementById('alerta-ritmo-titulo');
+    if (tituloAlerta) {
+      tituloAlerta.insertAdjacentHTML(
+        'afterbegin',
+        '<span class="mg-status-modalidade-icon" aria-hidden="true">' + identidadeVisual.icone + '</span>'
+      );
+    }
+  }
 
   if (!alerta) return;
 
@@ -3675,7 +3686,8 @@ function obterStatusMotivacionalFeed_(contexto, desafio) {
   if (variant === 'alerta-ritmo-atencao' || variant === 'alerta-ritmo-neutro') {
     return {
       classe: 'painel-status-reagir',
-      titulo: identidadeVisual.icone + ' Hora de reagir.',
+      titulo: 'Hora de reagir.',
+      icone: identidadeVisual.icone,
       mensagem: 'Sua meta está ficando distante.'
     };
   }
@@ -3743,7 +3755,9 @@ function criarCardFeedDesafioPainel_(painel, desafio) {
     '</div>' +
     '<p class="painel-progress-text">' + escapeHtml(formatNumber(contexto.realizado)) + ' km de ' + escapeHtml(formatNumber(contexto.meta)) + ' km</p>' +
     '<div class="painel-status-motivacional ' + status.classe + '">' +
-      '<p class="painel-status-titulo">' + escapeHtml(status.titulo) + '</p>' +
+      '<p class="painel-status-titulo">' +
+        (status.icone ? '<span class="mg-status-modalidade-icon" aria-hidden="true">' + status.icone + '</span>' : '') +
+        escapeHtml(status.titulo) + '</p>' +
       '<p class="painel-status-texto">' + escapeHtml(status.mensagem) + '</p>' +
     '</div>' +
     '<div class="painel-card-assinatura" aria-hidden="true">' +
