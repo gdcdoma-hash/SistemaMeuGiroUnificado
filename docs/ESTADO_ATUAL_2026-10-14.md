@@ -81,3 +81,18 @@
 - Não duplicar atividades por inscrição; progredir cada meta usando data + modalidade + janela.
 - Não avançar alterações visuais já homologadas enquanto pendências lógicas estiverem em teste.
 - Não declarar homologação funcional por apenas um teste automatizado; distinguir teste unitário, deploy e confirmação na interface.
+
+
+## 9. Homologação visual do atleta 1603 — 14/10/2026 (após checkpoint)
+
+**Evidência:** quatro capturas do Meu Giro DEV/LAB enviadas pelo organizador no chat; não foram utilizadas leituras nem gravações diretas em planilhas nesta conferência.
+
+- Histórico **Setembro/2026**: Ciclismo **12 km** (dia 30: **10 km** + **2 km**); Caminhada/Corrida **44 km** (dia 29).
+- Card **DESAFIO 1000 KM**, modalidade Ciclismo, início 01/09/2026, término 15/10/2026, prazo 45 dias: **18 km realizados**, 982 km faltantes e 1,8% concluído. A soma corresponde a 12 km em setembro + 6 km em outubro.
+- Card **MEDALHA OUTUBRO ROSA**, Ciclismo, 01/10/2026 a 31/10/2026, meta 50 km: **6 km realizados**, 44 km faltantes e 12% concluído. Os 12 km do Ciclismo de setembro não entraram nessa meta.
+- Card **LAB TESTE CAMINHADA/CORRIDA (SEM MEDALHA)**, outubro, meta 50 km: **5,5 km realizados**, 44,5 km faltantes e 11% concluído. Os 44 km registrados em setembro ficaram no histórico e não entraram na meta mensal de outubro. Tampouco houve transferência dos 6 km de Ciclismo de outubro para a meta de Caminhada/Corrida.
+- Formulário com Modalidade | Data da atividade | KM realizados permanece visualmente alinhado e compacto conforme homologação anterior.
+
+**Conclusão:** aprovado na interface LAB o compartilhamento por modalidade e por período, com PRAZO_DIAS atravessando setembro/outubro e separação entre atividades dos esportes. Isto não constitui teste de regressão PROD.
+
+**Próxima missão lógica:** verificar atualização em ambos os desafios de Ciclismo quando UMA atividade de outubro é editada, com restauração posterior. Base antes da edição: 1000 KM **18 km**, Outubro Rosa **6 km**, Caminhada/Corrida de outubro **5,5 km**. Preferir um registro de Ciclismo de **3 km em outubro**, alterar **somente KM para 4 km**, e esperar **19 / 7 / 5,5 km** nos três cards. Restaurar **4→3 km** no mesmo registro e esperar **18 / 6 / 5,5 km** novamente. Não tocar nas atividades de setembro ou excluir registros nesta fase. Se a base inicial mudar por outros registros, comparar a diferença +1/-1, sem fixar totais absolutos.
