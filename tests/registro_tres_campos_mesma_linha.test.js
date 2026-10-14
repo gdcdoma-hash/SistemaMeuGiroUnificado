@@ -57,3 +57,14 @@ test('mensagens úteis continuam abaixo da grade, sem bloco longo acima da data'
   assert.match(registrar,/Datas futuras não são permitidas/);
   assert.match(registrar,/id="btn-salvar"/);
 });
+
+
+test('rótulos e controles possuem faixas iguais para as três colunas',()=>{
+  // Protege o layout contra o seletor Modalidade voltar a ficar mais baixo.
+  assert.match(css,/#screen-registrar \.registro-campos-grid > \.registro-campo,[\s\S]*?#screen-registrar \.registro-campos-grid > \.registro-modalidade-box\s*\{[\s\S]*?display:\s*grid;[\s\S]*?grid-template-rows:\s*18px 44px/);
+  assert.match(css,/#screen-registrar \.registro-campos-grid\s*\{\s*align-items:\s*start;/);
+  assert.match(css,/#screen-registrar \.registro-campos-grid \.registro-campo label\s*\{[\s\S]*?height:\s*18px;[\s\S]*?line-height:\s*18px;[\s\S]*?margin:\s*0;/);
+  assert.match(css,/#screen-registrar \.registro-campos-grid \.registro-modalidade-box select,[\s\S]*?\.registro-campos-grid \.registro-campo input\s*\{[\s\S]*?height:\s*44px;/);
+  assert.match(css,/@media\s*\(max-width:\s*420px\)[\s\S]*?grid-template-rows:\s*28px 44px/);
+  assert.match(css,/\.registro-modalidade-box\[hidden\]\s*\{\s*display:\s*none!important/);
+});
