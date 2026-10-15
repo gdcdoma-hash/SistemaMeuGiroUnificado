@@ -1258,7 +1258,8 @@ function obterVinculosDesafioUsuario_(idDgmb) {
       status_pagamento: statusPagamento,
       status_lista_desafios: statusLista,
       status_validacao_certificado: statusValidacaoCertificado,
-      certificado_emitido: idxLinkCertificado > -1 && /^https?:\/\/\S+/i.test(normalizeText_(row[idxLinkCertificado])),
+      certificado_emitido: idxLinkCertificado > -1 && /^https?:\/\/\S+/i.test(normalizeText_(row[idxLinkCertificado])) &&
+        (idxStatusValidacaoCertificado < 0 || normalizeText_(row[idxStatusValidacaoCertificado]).toUpperCase() !== 'REPROVADO'),
       apto: apto,
       periodo_inicio: periodo.inicio || '',
       periodo_fim: periodo.fim || '',
@@ -1655,7 +1656,8 @@ function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb, contextoLista
       ),
       status_usuario_desafio: statusUsuarioDesafio,
       status_validacao_certificado: idxStatusValidacaoCertificado > -1 ? normalizeText_(row[idxStatusValidacaoCertificado]).toUpperCase() : '',
-      certificado_emitido: idxLinkCertificado > -1 && /^https?:\/\/\S+/i.test(normalizeText_(row[idxLinkCertificado])),
+      certificado_emitido: idxLinkCertificado > -1 && /^https?:\/\/\S+/i.test(normalizeText_(row[idxLinkCertificado])) &&
+        (idxStatusValidacaoCertificado < 0 || normalizeText_(row[idxStatusValidacaoCertificado]).toUpperCase() !== 'REPROVADO'),
       status_desafio: idxStatusDesafio > -1 ? normalizeText_(row[idxStatusDesafio]) : '',
       status_pagamento: idxStatusPag > -1 ? normalizeText_(row[idxStatusPag]) : '',
       tipo_meta: tipoMeta || '',
@@ -1849,7 +1851,8 @@ function obterMeuGiroResumoAtualizadoLeve_(idDgmb, opcoes) {
         ((contextoListaDesafios.modalidade && contextoListaDesafios.modalidade.byId[idDesafioResumo]) || '')
       ),
       status_validacao_certificado: normalizeText_(statusDgmbResumo.status_validacao_certificado).toUpperCase(),
-      certificado_emitido: statusDgmbResumo.certificado_emitido === true,
+      certificado_emitido: statusDgmbResumo.certificado_emitido === true &&
+        normalizeText_(statusDgmbResumo.status_validacao_certificado).toUpperCase() !== 'REPROVADO',
       status_desafio: normalizeText_(statusDgmbResumo.status_desafio),
       status_usuario_desafio: normalizeText_(statusDgmbResumo.status_usuario_desafio),
       status_pagamento: normalizeText_(statusDgmbResumo.status_pagamento),
@@ -2138,7 +2141,8 @@ function atualizarMeuGiroResumoComLockAdquirido_(idDgmb, opcoes) {
       status_apuracao: status,
       modalidade_esportiva: meuGiroModalidadeCanonica_(vinculo.modalidade_esportiva),
       status_validacao_certificado: normalizeText_(vinculo.status_validacao_certificado).toUpperCase(),
-      certificado_emitido: vinculo.certificado_emitido === true,
+      certificado_emitido: vinculo.certificado_emitido === true &&
+        normalizeText_(vinculo.status_validacao_certificado).toUpperCase() !== 'REPROVADO',
       status_desafio: normalizeText_(vinculo.status_desafio),
       status_usuario_desafio: normalizeText_(vinculo.status_usuario_desafio),
       status_pagamento: normalizeText_(vinculo.status_pagamento),
