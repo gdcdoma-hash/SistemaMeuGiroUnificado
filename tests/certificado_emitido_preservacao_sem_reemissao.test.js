@@ -21,12 +21,13 @@ const uiCode=['isDesafioElegivelCertificado_','getMensagemCertificado_']
   .map(n=>extract(frontend,n)).join('\n');
 const ui=new Function(uiCode+'\nreturn {eligible:isDesafioElegivelCertificado_,message:getMensagemCertificado_};')();
 
-function scenario({admin='CONCLUIDO',status='CONCLUIDO',url='',rowValid=true}={}) {
+function scenario({admin='CONCLUIDO',status='CONCLUIDO',url='',rowValid=true,validacao=''}={}) {
   let writes=0,recalculations=0,generated=0,reusedCalls=0,read=0;
   const ctx={
     ok:true, sheet_name:'dgmbDesafios', rowNumber:100,idx_link_certificado:22,
     id_inscricao:'fake-A', id_dgmb:'fake-user',
     status_usuario_desafio:admin,status_apuracao:status,
+    status_validacao_certificado:validacao,
     link_certificado_existente:url
   };
   const fakeSheet={};
@@ -127,4 +128,18 @@ test('o backend diferencia a disponibilidade do documento do status percentual',
   assert.match(utils,/certificado_emitido: statusDgmbResumo\.certificado_emitido === true/);
   assert.match(utils,/certificado_emitido: vinculo\.certificado_emitido === true/);
   assert.match(utils,/idxLinkCertificado > -1/);
+});
+
+
+test('certificado explicitamente REPROVADO não é recuperado pela exceção',()=>{
+  const result=scenario({url:validUrl,status:'STATUS_EM_ANALISE',validacao:'REPROVADO'});
+  assert.equal(result.response.ok,false);
+  assert.equal(result.response.code,'DESAFIO_NAO_ELEGIVEL_CERTIFICADO');
+  assert.equal(result.state.generated,0);
+});
+
+test('campo certificado_emitido propagado apenas quando validação não foi reprovada',()=>{
+  assert.match(utils,/idxStatusValidacaoCertificado < 0 \|\| normalizeText_\(row\[idxStatusValidacaoCertificado\]\)/);
+  assert.match(utils,/certificado_emitido: vinculo\.certificado_emitido === true &&/);
+  assert.match(utils,/certificado_emitido: statusDgmbResumo\.certificado_emitido === true &&/);
 });
