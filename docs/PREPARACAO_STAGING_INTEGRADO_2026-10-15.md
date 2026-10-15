@@ -1,6 +1,6 @@
 # Preparo isolado — Meu Giro — 15/10/2026
 
-**Status: NAO PUBLICAR.** Branch derivada de `release/staging-meugiro-modalidades-2026-10-15`. Arquivo `.clasp.json` usa Script ID invalido propositalmente para evitar sincronizacao com GAS DEV atual. O codigo de atividades/certificado nao foi modificado nesta preparacao.
+**Status: projeto Apps Script STAGING NOVO criado, com codigo enviado, mas SEM DEPLOYMENT WEB.** As linhas de preparacao sao independentes dos fluxos normais de DEV, LAB e PROD. As propriedades ainda precisam ser ativadas.
 
 ## Destino obrigatorio
 - Criar projeto Google Apps Script **Meu Giro — STAGING INTEGRADO**, diferente do Meu Giro DEV e PROD.
@@ -19,3 +19,13 @@
 - Proibido deployment PROD ate homologacao integrada aprovada e autorizacao especifica.
 
 **Controle interno:** issue #398 do repositorio Portal Giro.
+
+## Atualizacao de infraestrutura (15/10/2026) — prevalece sobre placeholders acima
+
+- Projeto Apps Script STAGING exclusivamente novo criado: `https://script.google.com/d/1Qkn_ko5Wv6fNwvVfC9lIQOMWZdncArqdWntHtspBEVyp8X1CC9gSsGs4/edit`.
+- `.clasp.json` alterado somente neste ramo para o ID do projeto novo; o placeholder propositalmente invalido foi substituido com seguranca.
+- Codigo enviado para esse projeto via [workflow restrito de preparacao](https://github.com/gdcdoma-hash/SistemaMeuGiroUnificado/actions/runs/38790299722), **sem deployment**.
+- Trava adicionada a `EnvironmentConfig.gs`: rejeita Script ID incorreto e impede fallback de propriedades antigas.
+- Funcao disponivel no novo projeto: `STAGING_CONFIGURAR_MEU_GIRO_20261015()`, criada no arquivo `Meu Giro/StagingBootstrapService.gs`. Executar **uma vez no editor Apps Script novo**, autorizando Google Drive/Sheets. Ela valida projeto, planilha e pasta e grava somente Script Properties do staging, sem alterar dados das planilhas.
+- `DGMB_MEU_GIRO_WEBAPP_URL` e `DGMB_PORTAL_WEBAPP_URL` **nao podem ser apontadas ate existir o par de deployments WEB stagings**; ainda bloqueado.
+- Sem acionar workflows antigos, sem promover PROD, sem transacao bancaria.
