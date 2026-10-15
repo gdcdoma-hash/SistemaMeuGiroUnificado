@@ -1,0 +1,9 @@
+# Permitidos somente arquivos Apps Script do diretório Meu Giro (rootDir).
+# Impede upload de testes Node.js e arquivos de apoio.
+**/**
+!*.gs
+!*.html
+!appsscript.json
+**/tests/**
+**/node_modules/**
+.git/**
