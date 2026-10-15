@@ -62,3 +62,5 @@ jobs:
           clasp show-file-status
           clasp push --force
           echo "::notice::Codigo enviado apenas a projeto STAGING; nenhum deployment foi criado ou atualizado."
+
+# Inclusao de bootstrap STAGING (sem deployment) - 15/10/2026
