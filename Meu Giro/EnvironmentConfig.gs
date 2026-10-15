@@ -22,6 +22,17 @@ function dgmbMeuGiroConfigGet_(chave, fallback) {
     throw new Error('[STAGING_MEU_GIRO_PLANILHA_DIVERGENTE]');
   }
   if (nome === 'DGMB_ENVIRONMENT') return 'STAGING';
+  // Somente neste projeto STAGING: URL do Portal implantado e restrito.
+  // Recusar propriedades divergentes para nunca encaminhar o atleta ao DEV/PROD.
+  if (nome === 'DGMB_PORTAL_WEBAPP_URL') {
+    var destinoStaging = 'https://script.google.com/macros/s/AKfycbzkI5HpnfLpMjfokvZGj7lAj5sQGA_CYAz7UQhOp4UPcxlgX-tuAFUxBTIu1QF5dfjs/exec';
+    var existente = String(propsStaging.getProperty(nome) || '').trim();
+    if (existente && existente !== destinoStaging) {
+      throw new Error('[STAGING_MEU_GIRO_URL_PORTAL_DIVERGENTE]');
+    }
+    return destinoStaging;
+  }
+
   var configuradoStaging = String(propsStaging.getProperty(nome) || '').trim();
   if (!configuradoStaging) throw new Error('[STAGING_MEU_GIRO_CONFIG_OBRIGATORIA_AUSENTE] ' + nome);
   return configuradoStaging;
