@@ -232,3 +232,17 @@ Após a restauração, a inspeção de `excluirAtividade` identificou um risco a
 **Limites expressos:** o risco de `atualizarMeuGiroResumoComLockAdquirido_` rebaixar `status_apuracao` quando chamado por registro/edição/exclusão de atividade **ainda não foi corrigido**. Um certificado previamente emitido pode também ficar indisponível se seu status já tiver sido alterado antes da consulta; sua restauração requer política de aprovação/revisão da organização. Não usar conclusão administrativa isoladamente para forçar emissão de novo certificado, nem congelar KM divergentes silenciosamente. Definir revisão explícita e rastreável antes de corrigir essa camada.
 
 **Escopo:** implementação e publicação somente DEV/LAB; sem edição das planilhas, dados de pessoas reais, PROD, Ranking, layouts ou regras de inscrição.
+
+
+## 19. Proteção de certificado já emitido após reapuração divergente — DEV/LAB
+
+**Escopo da próxima etapa #304:** preservar a **recuperação de documento comprovadamente emitido** sem conceder nova emissão a desafios administrativamente não concluídos ou sem meta comprovada. Não alterar automaticamente `MEU_GIRO_RESUMO`, `dgmbDesafios` nem documentos reais.
+
+**Comportamento implementado no DEV:**
+- `CertificadoService.gs`: quando `status_apuracao` deixou de ser `CONCLUIDO`, mas a **mesma inscrição** continua `status_usuario_desafio=CONCLUIDO`, o sistema pode reutilizar **somente** o `LINK_CERTIFICADO` já salvo. Exige revalidação do identificador da linha e link válido. Nunca gera um novo PDF neste ramo. Status `CANCELADO` e validação do certificado `REPROVADO` bloqueiam a exceção.
+- `Utils.gs`: propaga somente o booleano `certificado_emitido` quando há link válido em `dgmbDesafios` e validação não reprovada. Não expõe URL nem outras informações privadas nas respostas de resumo; o próprio backend resolve o link na solicitação. Funciona tanto na leitura leve quanto no caminho de resumo atualizado.
+- `Script.html`: mantém a opção de download do arquivo já emitido quando a inscrição é administrativamente concluída e `certificado_emitido=true`, ainda que o status de apuração esteja divergente. Sem arquivo existente, mantém a exigência usual de **dupla conclusão** para nova emissão. O layout homologado de registro de atividades não muda.
+
+**Testes:** `tests/certificado_emitido_preservacao_sem_reemissao.test.js` (**13 PASS**), `tests/certificado_status_somente_leitura.test.js` (**9 PASS**) e `tests/conclusao_administrativa_vs_recalculo_diagnostico.test.js` (**5 PASS**). **27 PASS**, incluindo inscrição errada, validação reprovada, cancelamento, link inválido, geração legítima, download de arquivo existente e impossibilidade de emissão nova com apuração insuficiente; nenhum PDF real ou dado LAB foi alterado pelos testes.
+
+**Limite essencial:** uma inscrição **sem arquivo previamente emitido** não é automaticamente elegível se os KM calculados forem insuficientes. A divergência entre histórico e resumo, causada por registros de data anterior à janela individual, ainda depende de revisão administrativa. O recálculo de outras operações ainda pode alterar `status_apuracao`; esta proteção não restaura apurações nem resolve as causas históricas. A issue #304 permanece aberta até auditoria de como esses recálculos devem ser tratados. Sem mudanças PROD ou Ranking.
