@@ -59,7 +59,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          clasp show-file-status
+          STATUS="$(clasp show-file-status)"
+          printf '%s\n' "$STATUS"
+          if printf '%s\n' "$STATUS" | grep -Eq '(^|[/[:space:]])tests/|\.test\.(js|gs)|_BACKUP_PIX_LOTES_MISSAO_A/'; then
+            echo "::error::Testes Node.js ou arquivos de backup no pacote GAS: envio BLOQUEADO."
+            exit 1
+          fi
+          if ! printf '%s\n' "$STATUS" | grep -Fq 'StagingBootstrapService.gs'; then
+            echo "::error::Rotina de configuracao STAGING ausente: envio BLOQUEADO."
+            exit 1
+          fi
+          if ! printf '%s\n' "$STATUS" | grep -Fq 'EnvironmentConfig.gs'; then
+            echo "::error::Guarda de configuracao STAGING ausente: envio BLOQUEADO."
+            exit 1
+          fi
           clasp push --force
           echo "::notice::Codigo enviado apenas a projeto STAGING; nenhum deployment foi criado ou atualizado."
 
