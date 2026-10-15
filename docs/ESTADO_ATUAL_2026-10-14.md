@@ -125,3 +125,22 @@ Na missão #294, após editar uma atividade de Ciclismo de 3→4 km, o usuário 
 **Teste automatizado acrescentado:** `tests/edicao_duplicidade_confirmada.test.js` executa o `editarAtividade` verdadeiro com planilha simulada, verificando cinco cenários: sem confirmação bloqueia, com confirmação edita somente a linha correta, ID incorreto bloqueia, legado sem ID bloqueia, confirmação não booleana bloqueia. Todos PASS em simulação sem escrita real.
 
 **Homologação real ainda pendente:** após sincronizar e publicar o DEV, o organizador deve repetir 4→3 km no mesmo registro de Ciclismo de 01/10. O popup de atividade semelhante é esperado; confirmar consciente e conferir 1000 KM 18 km, Outubro Rosa 6 km, os dois desafios Caminhada/Corrida 5,5 km cada, e histórico de outubro com **duas atividades de Ciclismo de 3 km**, totalizando 6 km. Não apagar nem criar atividades adicionais. Ranking/PROD fora do escopo.
+
+## 12. Homologação da restauração 4→3 km e encerramento #294
+
+**Evidência:** captura enviada pelo organizador após edição com confirmação no DEV/LAB; mostra em Outubro/2026 **Dia 1 — 3 km — Ciclismo** duas vezes, mais **Dia 12 — 5,5 km — Caminhada/Corrida**.
+
+**Base efetiva LAB, conferência somente leitura:**
+- `REGISTRO_KM`: duas linhas 01/10 Ciclismo 3 km com `activity_id` independentes e preservados; 7 linhas do atleta 1603, sem registro adicional.
+- `MEU_GIRO_RESUMO`: desafio 1000 KM **18 km**; Outubro Rosa **6 km**; Caminhada/Corrida meta 50 **5,5 km**; Caminhada/Corrida meta 75 **5,5 km**.
+- A edição 3→4→3 foi concluída e calculada sem mesclar nem duplicar atividades. Correção da PR #296 homologada. [Issue #294](https://github.com/gdcdoma-hash/SistemaMeuGiroUnificado/issues/294) **encerrada com sucesso**.
+
+## 13. Auditoria de exclusão individual — próxima missão #297
+
+Após a restauração, a inspeção de `excluirAtividade` identificou um risco anterior à homologação destrutiva: `localizarLinhasAtividade_` tenta `chave_edicao`/timestamp quando um `activity_id` fornecido não é localizado. Em exclusões isso pode apontar para registro errado ou múltiplas linhas.
+
+**Proteção DEV/LAB:** exigir que o `activity_id` presente identifique exatamente uma linha. Para registros legados sem ID, permitir timestamp somente quando corresponder a uma única linha. Se houver ID inconsistente ou ambiguidade, bloquear com mensagem de erro. Não mudar a rotina de edição nem o layout. Não descartar a confirmação de exclusão já presente no frontend.
+
+**Testes em memória:** `tests/exclusao_id_atividade_seguro.test.js` usa `excluirAtividade` e localizador reais, com planilha em memória. Sete casos PASS: exclusão única, dois registros iguais com IDs distintos, ID inexistente sem fallback perigoso, legado inequívoco, legado ambíguo, modalidades diferentes no mesmo timestamp e rollback da linha se falhar a atualização do resumo. Nenhum dado LAB/PROD foi alterado nesses testes.
+
+**Plano de homologação #297 (somente após sucesso do workflow DEV):** não excluir os dois registros originais de 3 km. Na conta sintética 1603, criar atividade temporária de **Ciclismo de 2 km em 02/10/2026**, desde que não haja registro nessa data. Confirmação de +2 km nos dois desafios Ciclismo: 1000 KM 18→20; Outubro Rosa 6→8. Ambos os desafios Caminhada/Corrida devem continuar 5,5. Excluir somente a atividade temporária e verificar retorno 18/6/5,5/5,5 e preservação das duas atividades de 3 km. Registrar evidência e encerrar issue #297 apenas após validação visual e do resumo, com PROD intocado.

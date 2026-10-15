@@ -616,6 +616,24 @@ function excluirAtividade(payload) {
     if (!linhasEncontradas.length) {
       return { ok: false, code: 'ATIVIDADE_NAO_ENCONTRADA', msg: 'Atividade não encontrada para exclusão com a chave e ID informados.' };
     }
+
+    // Operação destrutiva: NUNCA usar o timestamp como substituto de um
+    // activity_id fornecido e não localizado (UI desatualizada/ID incorreto).
+    // Excluir exige exatamente um lançamento individual bem identificado.
+    if (activityId) {
+      var linhasComIdExato = cols.idxActivityId < 0 ? [] : linhasEncontradas.filter(function(linha) {
+        return String(dados[linha - 1][cols.idxActivityId] || '').trim() === activityId;
+      });
+      if (linhasComIdExato.length !== 1 || linhasEncontradas.length !== 1) {
+        return { ok: false, code: 'IDENTIFICADOR_ATIVIDADE_INCONSISTENTE',
+          msg: 'Não foi possível identificar essa atividade com segurança. Atualize a lista e tente novamente. Nenhum registro foi excluído.' };
+      }
+    } else if (linhasEncontradas.length !== 1) {
+      // Legado sem activity_id: timestamps repetidos não autorizam exclusão
+      // em lote. Interromper em vez de remover atividades independentes.
+      return { ok: false, code: 'ATIVIDADE_AMBIGUA',
+        msg: 'Mais de uma atividade corresponde a esse registro antigo. Nenhuma foi excluída. Solicite uma conferência ao atendimento.' };
+    }
     // Registros legados sem activity_id podem compartilhar timestamp;
     // nunca apagar em conjunto modalidades diferentes silenciosamente.
     var modalidadeDeExclusao = meuGiroModalidadeCanonica_(
