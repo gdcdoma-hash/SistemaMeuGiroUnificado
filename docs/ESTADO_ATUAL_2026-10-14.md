@@ -179,3 +179,24 @@ Após a restauração, a inspeção de `excluirAtividade` identificou um risco a
 **Atenção: classificação do desafio após o prazo.** `obterTempoRestanteDesafioPainel_` informa `Encerrado` após 15/10, mas `isDesafioAtivo_` e `classificarDesafioV2_` usam principalmente os status de origem, e não a data final. Enquanto a inscrição 1603 continuar `EM_ANDAMENTO` e o resumo `STATUS_EM_ANALISE`, o card poderá ficar em "Seus desafios em andamento" com "Encerrado". **Não transformar automaticamente a situação administrativa em CONCLUIDO, EXPIRADO ou NAO_CONCLUIDO**; o tratamento visual e o fluxo de apuração de encerramento precisam ser definidos e homologados separadamente.
 
 **Pendência operacional da #300:** simulação em memória não equivale a chamada autenticada ao Web App. Não houve registro/exclusão direta na planilha, para não contornar o código real ou alterar a base de homologação de modo artificial. A verificação end-to-end de registrar/excluir 1 km em 15/10 (ou test harness integrado usando a execução real do GAS DEV) permanece pendente. Depois da virada para 16/10 (Brasil), conferir novamente somente leitura o comportamento do limite e o status visual; eventual registro de 16/10 precisa respeitar a data efetiva, sem retroagir o relógio em produção.
+
+
+## 16. Teste de integração do registro no corte de 15/16 outubro — 15/10/2026
+
+**Avanço da missão [#300](https://github.com/gdcdoma-hash/SistemaMeuGiroUnificado/issues/300).** Criado `tests/registro_servico_real_prazo_1603.test.js`: executa a implementação real de `registrarAtividade`, `atualizarDistanciaRealizada_` e a classificação do vínculo por modalidade/data do código GAS. As chamadas a `LockService`, `Utilities`, `getSpreadsheet_`, `MEU_GIRO_RESUMO` e às funções de acesso a planilhas são simuladas **em memória**, sem sessões autenticadas nem gravações reais. O resumo simulado aplica as mesmas regras de data/modalidade, mas **não** executa a persistência completa do serviço de resumo em planilha.
+
+**Oito cenários passaram em teste isolado**:
+1. Hoje 15/10: registrar **1 km Ciclismo em 15/10** ⇒ 1000 KM **18→19**; Outubro Rosa **6→7**; Caminhada/Corrida **5,5** nas duas metas.
+2. Hoje 15/10: tentar **16/10** ⇒ `DATA_FUTURA`, nenhum registro nem recálculo.
+3. Hoje 16/10: registrar **1 km Ciclismo em 16/10** ⇒ 1000 KM mantém **18**, Outubro Rosa vai **6→7**; histórico recebe o registro.
+4. Hoje 16/10: registrar retroativamente em **15/10** ⇒ 1000 KM **19**, Outubro Rosa **7**.
+5. Atleta multimodal sem seleção explícita ⇒ `MODALIDADE_OBRIGATORIA`, sem gravar.
+6. Mesmo atleta/data/modalidade/KM já existentes ⇒ `DUPLICIDADE`, sem gravar.
+7. Registrar 1 km Caminhada/Corrida em 15/10 ⇒ ambas metas dessa modalidade **5,5→6,5**, Ciclismo inalterado.
+8. Atividade de Ciclismo anterior à janela do 1000 KM ⇒ permanece no histórico, sem somar às metas.
+
+**Resultado:** camada de registro e recálculo exercitada com serviço real + mocks, sem divergências. Não declarar homologação da interface e persistência GAS/Sheets somente por esse teste. A base LAB permanece intacta. Auditoria automática em modo somente leitura já programada para 16/10.
+
+**Risco separado:** após a data final, `obterTempoRestanteDesafioPainel_` sinaliza "Encerrado", porém `isDesafioAtivo_` e `classificarDesafioV2_` seguem status administrativos, podendo manter o card em "Em andamento". Aberta a [issue #302](https://github.com/gdcdoma-hash/SistemaMeuGiroUnificado/issues/302) para tratamento visual seguro **sem mutação de status na planilha**. Não alterar o layout aprovado, inscrições, Ranking ou PROD inadvertidamente.
+
+**Outros limites não cobertos:** falha intermediária no recálculo pode deixar `dgmbDesafios` parcialmente sincronizada antes de um rollback da linha de `REGISTRO_KM`; isso exige uma auditoria transacional independente, não faz parte da regressão de datas.
