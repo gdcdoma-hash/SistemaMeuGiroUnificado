@@ -1,145 +1,122 @@
 'use strict';
-const test=require('node:test');
-const assert=require('node:assert/strict');
-const fs=require('node:fs');
-const path=require('node:path');
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 
+// Regressão da exceção antiga da PR #307: link já emitido NUNCA
+// substitui 100% dos KM nem CONCLUIDO manual do administrador.
 const root=path.resolve(__dirname,'..','Meu Giro');
 const backend=fs.readFileSync(path.join(root,'CertificadoService.gs'),'utf8');
-const frontend=fs.readFileSync(path.join(root,'Script.html'),'utf8');
-const utils=fs.readFileSync(path.join(root,'Utils.gs'),'utf8');
-function extract(source,name) {
-  const start=source.indexOf('function '+name+'(');
-  assert.ok(start>=0,'missing '+name);
-  const end=source.indexOf('\nfunction ',start+10);
-  return source.slice(start,end<0?source.length:end);
+const uiSource=fs.readFileSync(path.join(root,'Script.html'),'utf8');
+
+function extract(text,fn) {
+  const start=text.indexOf('function '+fn+'(');
+  assert.ok(start>=0,'missing function '+fn);
+  const end=text.indexOf('\nfunction ',start+11);
+  return text.slice(start,end<0?text.length:end);
 }
 
-const backendCode=['gerarOuObterCertificadoDesafio','certificadoRespostaLinkExistente_']
-  .map(n=>extract(backend,n)).join('\n');
-const uiCode=['isDesafioElegivelCertificado_','getMensagemCertificado_']
-  .map(n=>extract(frontend,n)).join('\n');
-const ui=new Function(uiCode+'\nreturn {eligible:isDesafioElegivelCertificado_,message:getMensagemCertificado_};')();
+const uiFns=['isDesafioElegivelCertificado_','getMensagemCertificado_']
+  .map(n=>extract(uiSource,n)).join('\n');
+const ui=new Function('toFiniteNumber',uiFns+
+  '\nreturn {eligible:isDesafioElegivelCertificado_,message:getMensagemCertificado_};')(
+    (v,fallback=0)=>{
+      const n=Number(String(v==null?'':v).replace(',','.'));
+      return Number.isFinite(n)?n:fallback;
+    });
 
-function scenario({admin='CONCLUIDO',status='CONCLUIDO',url='',rowValid=true,validacao=''}={}) {
-  let writes=0,recalculations=0,generated=0,reusedCalls=0,read=0;
-  const ctx={
-    ok:true, sheet_name:'dgmbDesafios', rowNumber:100,idx_link_certificado:22,
-    id_inscricao:'fake-A', id_dgmb:'fake-user',
-    status_usuario_desafio:admin,status_apuracao:status,
-    status_validacao_certificado:validacao,
-    link_certificado_existente:url
-  };
-  const fakeSheet={};
+const backendFn=extract(backend,'gerarOuObterCertificadoDesafio');
+function check({km=100,meta=100,admin='CONCLUIDO',status='CONCLUIDO',url='',reprovado=false}={}) {
+  let generated=0,read=0;
   const deps={
-    certificadoBuscarContextoDesafio_:()=>ctx,
-    getSpreadsheet_:()=>({getSheetByName:()=>fakeSheet}),
-    certificadoRevalidarLinhaInscricao_:()=>({ok:rowValid}),
+    certificadoBuscarContextoDesafio_:()=>({
+      ok:true,status_usuario_desafio:admin,status_apuracao:status,
+      meta_atingida:meta>0 && km>=meta,
+      link_certificado_existente:url,
+      status_validacao_certificado:reprovado?'REPROVADO':''
+    }),
     certificadoLerLinkPlanilha_:()=>{read++;return url;},
-    certLinkValido_:link=>/^https?:\/\/\S+$/i.test(String(link||'')),
+    certLinkValido_:x=>/^https?:\/\/\S+/i.test(String(x||'')),
     certificadoMontarExtrasImagem_:()=>({}),
-    montarUrlDownloadPdfCertificado_:link=>link,
-    gerarCertificadoDesafio_:()=>{
-      generated++;
-      return {ok:true,url:'https://drive.google.com/new.pdf',pdfDownloadUrl:'https://drive.google.com/new.pdf'};
-    },
-    atualizarMeuGiroResumo_:()=>{recalculations++;throw Error('unexpected recomputation');},
-    certificadoSalvarLinkPlanilha_:()=>{writes++;throw Error('unexpected write');}
+    montarUrlDownloadPdfCertificado_:x=>x,
+    gerarCertificadoDesafio_:()=>{generated++;return {ok:true,url:'https://example.test/new.pdf',pdfDownloadUrl:'https://example.test/new.pdf'};}
   };
-  const fn=new Function(...Object.keys(deps),backendCode+
+  const fn=new Function(...Object.keys(deps),backendFn+
     '\nreturn gerarOuObterCertificadoDesafio;')(...Object.values(deps));
-  return {response:fn({id_dgmb:'fake-user',id_inscricao:'fake-A'}),
-    state:{writes,recalculations,generated,reusedCalls,read}};
+  const response=fn({});
+  return {response,generated,read};
 }
+const existing='https://example.test/issued.pdf';
 
-const validUrl='https://drive.google.com/file/d/issued/view';
-
-test('certificado emitido e conclusão administrativa: re-download permitido apesar da divergência de KM',()=>{
-  const result=scenario({url:validUrl,status:'STATUS_EM_ANALISE'});
-  assert.equal(result.response.ok,true);
-  assert.equal(result.response.reused,true);
-  assert.equal(result.response.url,validUrl);
-  assert.equal(result.state.generated,0);
-  assert.equal(result.state.writes,0);
-  assert.equal(result.state.recalculations,0);
+test('meta inferior a 100% + EM_ANDAMENTO = nenhum certificado',()=>{
+  assert.equal(check({km:99,admin:'EM_ANDAMENTO'}).response.code,'META_NAO_ATINGIDA_CERTIFICADO');
+  assert.equal(ui.eligible({meta_km:100,distancia_realizada:99,status_apuracao:'STATUS_EM_ANALISE',status_usuario_desafio:'EM_ANDAMENTO'}),false);
 });
 
-test('documento não emitido: não gerar certificado novo quando KM divergirem',()=>{
-  const result=scenario({url:'',status:'STATUS_EM_ANALISE'});
-  assert.equal(result.response.ok,false);
-  assert.equal(result.response.code,'DESAFIO_NAO_ELEGIVEL_CERTIFICADO');
-  assert.equal(result.state.generated,0);
+test('100% da meta + EM_ANDAMENTO = aguardando admin',()=>{
+  assert.equal(check({km:100,admin:'EM_ANDAMENTO'}).response.code,'CONCLUSAO_ADMINISTRATIVA_PENDENTE');
+  assert.equal(ui.eligible({meta_km:100,distancia_realizada:100,status_apuracao:'CONCLUIDO',status_usuario_desafio:'EM_ANDAMENTO'}),false);
 });
 
-test('conclusão administrativa não validada: link antigo não deve liberar documento',()=>{
-  const result=scenario({url:validUrl,status:'STATUS_EM_ANALISE',admin:'EM_ANDAMENTO'});
-  assert.equal(result.response.ok,false);
-  assert.equal(result.state.generated,0);
+test('menos de 100% + status manual CONCLUIDO = sem certificado',()=>{
+  const a=check({km:99,admin:'CONCLUIDO'});
+  assert.equal(a.response.code,'META_NAO_ATINGIDA_CERTIFICADO');
+  assert.equal(a.generated,0);
 });
 
-test('inscrição cancelada continua bloqueada mesmo com link',()=>{
-  const result=scenario({url:validUrl,status:'CONCLUIDO',admin:'CANCELADO'});
-  assert.equal(result.response.code,'INSCRICAO_CANCELADA');
+test('100% e CONCLUIDO manual = certificado liberado',()=>{
+  const a=check({km:100,admin:'CONCLUIDO'});
+  assert.equal(a.response.ok,true);
+  assert.equal(a.generated,1);
+  assert.equal(ui.eligible({meta_km:100,distancia_realizada:100,status_apuracao:'CONCLUIDO',status_usuario_desafio:'CONCLUIDO'}),true);
 });
 
-test('identidade alterada impede exceção de re-download de conclusão divergente',()=>{
-  const result=scenario({url:validUrl,status:'STATUS_EM_ANALISE',rowValid:false});
-  assert.equal(result.response.ok,false);
-  assert.equal(result.state.generated,0);
+test('mais de 100% e CONCLUIDO manual também é válido',()=>{
+  assert.equal(check({km:101,admin:'CONCLUIDO'}).response.ok,true);
 });
 
-test('link inválido não é prova de certificado emitido',()=>{
-  const result=scenario({url:'nota interna',status:'STATUS_EM_ANALISE'});
-  assert.equal(result.response.ok,false);
-  assert.equal(result.state.generated,0);
+test('LINK_CERTIFICADO anterior não supera KM insuficientes',()=>{
+  const a=check({km:99,admin:'CONCLUIDO',url:existing});
+  assert.equal(a.response.code,'META_NAO_ATINGIDA_CERTIFICADO');
+  assert.equal(a.generated,0);
+  assert.equal(a.read,0);
+  assert.equal(ui.eligible({meta_km:100,distancia_realizada:99,status_apuracao:'STATUS_EM_ANALISE',status_usuario_desafio:'CONCLUIDO',certificado_emitido:true}),false);
 });
 
-test('com apuração e conclusão administrativas OK, emissão normal permanece funcional',()=>{
-  const result=scenario({url:'',status:'CONCLUIDO'});
-  assert.equal(result.response.ok,true);
-  assert.equal(result.response.reused,false);
-  assert.equal(result.state.generated,1);
+test('LINK_CERTIFICADO anterior não supera status do admin pendente',()=>{
+  const a=check({km:100,admin:'EM_ANDAMENTO',url:existing});
+  assert.equal(a.response.code,'CONCLUSAO_ADMINISTRATIVA_PENDENTE');
+  assert.equal(a.generated,0);
 });
 
-test('com apuração e conclusão OK e link existente, reaproveita normalmente',()=>{
-  const result=scenario({url:validUrl,status:'CONCLUIDO'});
-  assert.equal(result.response.ok,true);
-  assert.equal(result.response.reused,true);
-  assert.equal(result.state.generated,0);
+test('sem meta válida não liberar, mesmo com apuração antiga CONCLUIDO',()=>{
+  const a=check({km:100,meta:0,admin:'CONCLUIDO',status:'CONCLUIDO'});
+  assert.equal(a.response.code,'META_NAO_ATINGIDA_CERTIFICADO');
 });
 
-test('frontend: aviso de documento já emitido apenas para inscrição oficialmente concluída',()=>{
-  const emitted={status_usuario_desafio:'CONCLUIDO',
-    status_apuracao:'STATUS_EM_ANALISE',certificado_emitido:true};
-  assert.equal(ui.eligible(emitted),true);
-  assert.match(ui.message(emitted).texto,/já emitido/);
-  assert.equal(ui.eligible({...emitted,certificado_emitido:false}),false);
-  assert.equal(ui.eligible({...emitted,status_usuario_desafio:'EM_ANDAMENTO'}),false);
-  assert.equal(ui.eligible({...emitted,status_usuario_desafio:'CANCELADO'}),false);
+test('apuração textual desatualizada NÃO cria terceira condição: 100% + Admin CONCLUIDO bastam',()=>{
+  const a=check({km:100,admin:'CONCLUIDO',status:'STATUS_EM_ANALISE'});
+  assert.equal(a.response.ok,true);
+  assert.equal(a.generated,1);
+  assert.equal(ui.eligible({meta_km:100,distancia_realizada:100,status_apuracao:'STATUS_EM_ANALISE',status_usuario_desafio:'CONCLUIDO'}),true);
 });
 
-test('frontend: certificado inexistente preserva regra exigindo as duas conclusões',()=>{
-  const pending={status_usuario_desafio:'CONCLUIDO',status_apuracao:'STATUS_EM_ANALISE'};
-  assert.equal(ui.eligible(pending),false);
-  assert.equal(ui.eligible({...pending,status_apuracao:'CONCLUIDO'}),true);
+test('certificado existente é reutilizado APENAS com ambos os requisitos presentes',()=>{
+  const a=check({km:100,admin:'CONCLUIDO',status:'CONCLUIDO',url:existing});
+  assert.equal(a.response.ok,true);
+  assert.equal(a.response.reused,true);
+  assert.equal(a.response.url,existing);
+  assert.equal(a.generated,0);
 });
 
-test('o backend diferencia a disponibilidade do documento do status percentual',()=>{
-  assert.match(utils,/certificado_emitido: statusDgmbResumo\.certificado_emitido === true/);
-  assert.match(utils,/certificado_emitido: vinculo\.certificado_emitido === true/);
-  assert.match(utils,/idxLinkCertificado > -1/);
+test('CANCELADO nunca libera certificado',()=>{
+  const a=check({km:100,admin:'CANCELADO',status:'CONCLUIDO',url:existing});
+  assert.equal(a.response.code,'INSCRICAO_CANCELADA');
+  assert.equal(a.generated,0);
 });
 
-
-test('certificado explicitamente REPROVADO não é recuperado pela exceção',()=>{
-  const result=scenario({url:validUrl,status:'STATUS_EM_ANALISE',validacao:'REPROVADO'});
-  assert.equal(result.response.ok,false);
-  assert.equal(result.response.code,'DESAFIO_NAO_ELEGIVEL_CERTIFICADO');
-  assert.equal(result.state.generated,0);
-});
-
-test('campo certificado_emitido propagado apenas quando validação não foi reprovada',()=>{
-  assert.match(utils,/idxStatusValidacaoCertificado < 0 \|\| normalizeText_\(row\[idxStatusValidacaoCertificado\]\)/);
-  assert.match(utils,/certificado_emitido: vinculo\.certificado_emitido === true &&/);
-  assert.match(utils,/certificado_emitido: statusDgmbResumo\.certificado_emitido === true &&/);
+test('mensagem da interface exige KM 100% e validação manual',()=>{
+  const msg=ui.message({meta_km:100,distancia_realizada:99,status_usuario_desafio:'CONCLUIDO',status_apuracao:'CONCLUIDO'});
+  assert.match(msg.texto,/100%/);
 });
