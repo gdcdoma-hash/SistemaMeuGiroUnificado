@@ -215,3 +215,20 @@ Após a restauração, a inspeção de `excluirAtividade` identificou um risco a
 **Rastreamento:** [issue #304](https://github.com/gdcdoma-hash/SistemaMeuGiroUnificado/issues/304), separada de [#302](https://github.com/gdcdoma-hash/SistemaMeuGiroUnificado/issues/302) (prazo expirado) e [#300](https://github.com/gdcdoma-hash/SistemaMeuGiroUnificado/issues/300) (auditoria do último dia).
 
 **Guardrails:** não disparar recálculo, não alterar atividades, status administrativos ou certificados dos atletas reais; não utilizar a diferença da apuração como prova de erro do atleta. Definir explicitamente a precedência de aprovação administrativa e a política de preservação/revisão do certificado antes de implementação operacional. Não divulgar identificadores pessoais em issues, documentação ou código público. PROD e Ranking permanecem intocados.
+
+
+## 18. Proteção inicial da consulta ao certificado — missão #304 (15/10/2026)
+
+**Causa técnica adicional, antes não isolada:** `certificadoBuscarStatusApuracaoResumo_` em `CertificadoService.gs` chamava `atualizarMeuGiroResumo_(id)`, que faz lock, recalcula todos os vínculos e grava o resumo. Assim, **clicar para solicitar/obter certificado podia alterar KM e `status_apuracao`** mesmo quando a intenção era apenas consultar elegibilidade. Com uma divergência histórica, isso poderia reduzir o resumo e bloquear o certificado enquanto a inscrição continuava administrativamente concluída.
+
+**Proteção DEV proposta:** substituir somente essa chamada por uma leitura direta de `MEU_GIRO_RESUMO` (`getValues`), sem recalcular ou gravar:
+- `ID_INSCRICAO` é a chave primária de identidade e precisa corresponder a exatamente uma linha do mesmo `ID_DGMB`;
+- Inscrições legadas sem ID podem utilizar `ID_DESAFIO + id_item_estoque` somente quando a correspondência é inequívoca e não possui `ID_INSCRICAO` moderna;
+- Falta de coluna, dado, correspondência, duplicidade ou erro de leitura retorna status vazio e **não concede novo certificado**;
+- A regra de emissão do servidor **permanece** exigindo `status_apuracao=CONCLUIDO` **e** `status_usuario_desafio=CONCLUIDO`. A consulta read-only não cria autorizações e não retrocede status.
+
+**Testes:** `tests/certificado_status_somente_leitura.test.js`, com **9 PASS**: conclusão persistida, status pendente, inscrições distintas, ID de participante incorreto, inscrição duplicada, identificação legada segura, legado ambíguo, resumo ausente e falha de leitura; espionar recálculo e escrita confirmou **zero** chamadas em todos os cenários.
+
+**Limites expressos:** o risco de `atualizarMeuGiroResumoComLockAdquirido_` rebaixar `status_apuracao` quando chamado por registro/edição/exclusão de atividade **ainda não foi corrigido**. Um certificado previamente emitido pode também ficar indisponível se seu status já tiver sido alterado antes da consulta; sua restauração requer política de aprovação/revisão da organização. Não usar conclusão administrativa isoladamente para forçar emissão de novo certificado, nem congelar KM divergentes silenciosamente. Definir revisão explícita e rastreável antes de corrigir essa camada.
+
+**Escopo:** implementação e publicação somente DEV/LAB; sem edição das planilhas, dados de pessoas reais, PROD, Ranking, layouts ou regras de inscrição.
