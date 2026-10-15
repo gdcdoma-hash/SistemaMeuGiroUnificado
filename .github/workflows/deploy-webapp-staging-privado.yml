@@ -1,0 +1,59 @@
+name: Publicar Web App Meu Giro STAGING — restrito (execucao unica)
+
+on:
+  push:
+    branches:
+      - prep/staging-isolado-meugiro-2026-10-15
+    paths:
+      - '.github/workflows/deploy-webapp-staging-privado.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-webapp-staging-meugiro-20261015
+  cancel-in-progress: false
+
+jobs:
+  implantar:
+    if: github.ref == 'refs/heads/prep/staging-isolado-meugiro-2026-10-15' && contains(github.event.head_commit.message, '[DEPLOY_WEBAPP_STAGING_MEU_GIRO_20261015]')
+    name: Deployment novo exclusivamente Meu Giro STAGING (somente implantador)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validacao obrigatoria antes de publicar
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -e --arg id '1Qkn_ko5Wv6fNwvVfC9lIQOMWZdncArqdWntHtspBEVyp8X1CC9gSsGs4' '.scriptId == $id and .rootDir == "Meu Giro"' .clasp.json >/dev/null
+          jq -e '.webapp.access == "MYSELF" and .webapp.executeAs == "USER_DEPLOYING"' 'Meu Giro/appsscript.json' >/dev/null
+          grep -Fq '[STAGING_MEU_GIRO_AMBIENTE_NAO_CONFIGURADO]' 'Meu Giro/EnvironmentConfig.gs'
+          test -f 'Meu Giro/StagingBootstrapService.gs'
+          echo "::notice::Projeto e manifesto MYSELF de STAGING confirmados."
+      - name: Instalar clasp
+        run: npm install --global @google/clasp@3.4.1
+      - name: Configurar autenticacao
+        shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+      - name: Implantar somente Web App privado, sem mexer em PROD
+        shell: bash
+        run: |
+          set -euo pipefail
+          clasp deploy --description "STAGING INTEGRADO PRIVADO — Meu Giro — 2026-10-15" | tee "$RUNNER_TEMP/deploy-staging-meugiro.txt"
+          echo "::notice::Deployment criado SOMENTE para o novo Script ID STAGING."
+      - name: Guardar evidencia da implantacao
+        uses: actions/upload-artifact@v4
+        with:
+          name: meugiro-staging-webapp-20261015
+          path: ${{ runner.temp }}/deploy-staging-meugiro.txt
+          retention-days: 30
