@@ -200,3 +200,18 @@ Após a restauração, a inspeção de `excluirAtividade` identificou um risco a
 **Risco separado:** após a data final, `obterTempoRestanteDesafioPainel_` sinaliza "Encerrado", porém `isDesafioAtivo_` e `classificarDesafioV2_` seguem status administrativos, podendo manter o card em "Em andamento". Aberta a [issue #302](https://github.com/gdcdoma-hash/SistemaMeuGiroUnificado/issues/302) para tratamento visual seguro **sem mutação de status na planilha**. Não alterar o layout aprovado, inscrições, Ranking ou PROD inadvertidamente.
 
 **Outros limites não cobertos:** falha intermediária no recálculo pode deixar `dgmbDesafios` parcialmente sincronizada antes de um rollback da linha de `REGISTRO_KM`; isso exige uma auditoria transacional independente, não faz parte da regressão de datas.
+
+
+## 17. Auditoria de conclusão administrativa versus prazo — 15/10/2026
+
+**Contexto:** para não esperar a virada do dia 15→16/10, foi analisado **em leitura exclusiva** um caso real de `PRAZO_DIAS` marcado `CONCLUIDO` **antes** do encerramento da janela individual. A identidade pessoal e identificadores do participante **não** constam neste arquivo ou nos testes/issue; os valores abaixo ilustram o caso anonimamente.
+
+**Divergência observada em dados já persistidos:** inscrição de **1000 km / 90 dias**, janela **02/09/2026–30/11/2026** e `status_usuario_desafio=CONCLUIDO`; resumo com `1000 km, 100%, status_apuracao=CONCLUIDO`. O único registro de 1000 km verificado tem data de atividade **01/09/2026** (lançamento manual posterior), **um dia antes** da janela individual, e por isso não deveria contribuir para o cálculo atual. O registro de origem da divergência histórica (por exemplo, apuração antiga, migração ou ajuste manual) **não foi identificado**. Não presumir irregularidade da pessoa nem revogar conclusão por inferência.
+
+**Diagnóstico reproduzido em memória com funções reais:** usando um fixture fictício equivalente, `meuGiroSomarKmPorVinculo_` corretamente apura **0 km** para registro anterior ao início; `calcularStatusMeuGiroPorPercentual_` retorna `STATUS_EM_ANALISE`. Apesar disso, `classificarDesafioV2_` conserva o cartão em **Concluídos**, pois o status administrativo continua `CONCLUIDO`, enquanto `isDesafioElegivelCertificado_` passaria de `true` para `false` após recomputação divergente. **Risco:** uma ação futura que recalcula a inscrição pode deixar "Concluído" no histórico, mas desabilitar elegibilidade do certificado. Isso é risco comprovado no código, não ocorrência confirmada na interface real.
+
+**Evidências automatizadas:** `tests/conclusao_administrativa_vs_recalculo_diagnostico.test.js` contém **5 testes diagnósticos PASS**, sem identificadores de atletas, demonstrando regra temporal, conclusão antes do vencimento e inconsistência potencial entre status. Testes documentam o comportamento atual **e não corrigem** essa inconsistência.
+
+**Rastreamento:** [issue #304](https://github.com/gdcdoma-hash/SistemaMeuGiroUnificado/issues/304), separada de [#302](https://github.com/gdcdoma-hash/SistemaMeuGiroUnificado/issues/302) (prazo expirado) e [#300](https://github.com/gdcdoma-hash/SistemaMeuGiroUnificado/issues/300) (auditoria do último dia).
+
+**Guardrails:** não disparar recálculo, não alterar atividades, status administrativos ou certificados dos atletas reais; não utilizar a diferença da apuração como prova de erro do atleta. Definir explicitamente a precedência de aprovação administrativa e a política de preservação/revisão do certificado antes de implementação operacional. Não divulgar identificadores pessoais em issues, documentação ou código público. PROD e Ranking permanecem intocados.
