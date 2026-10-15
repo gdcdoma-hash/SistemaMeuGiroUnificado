@@ -4518,7 +4518,6 @@ function isDesafioElegivelCertificado_(desafio) {
   var meta = toFiniteNumber(desafio.meta_km, 0);
   var realizado = toFiniteNumber(desafio.distancia_realizada, 0);
   return meta > 0 && realizado >= meta &&
-    statusApuracao === 'CONCLUIDO' &&
     statusUsuarioDesafio === 'CONCLUIDO';
 }
 
@@ -4537,9 +4536,6 @@ function getMensagemCertificado_(desafio) {
   var realizado = toFiniteNumber(item.distancia_realizada, 0);
   if (!(meta > 0 && realizado >= meta)) {
     return { texto: 'O certificado exige 100% da meta e conclusão confirmada pelo administrador.', variante: '' };
-  }
-  if (statusApuracao !== 'CONCLUIDO') {
-    return { texto: 'Conclua sua meta para liberar seu certificado.', variante: '' };
   }
   if (statusUsuarioDesafio !== 'CONCLUIDO') {
     return { texto: 'Meta atingida. Aguardando validação da organização.', variante: 'loading' };
