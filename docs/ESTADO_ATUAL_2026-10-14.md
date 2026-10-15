@@ -234,7 +234,9 @@ Após a restauração, a inspeção de `excluirAtividade` identificou um risco a
 **Escopo:** implementação e publicação somente DEV/LAB; sem edição das planilhas, dados de pessoas reais, PROD, Ranking, layouts ou regras de inscrição.
 
 
-## 19. Proteção de certificado já emitido após reapuração divergente — DEV/LAB
+## 19. Proteção de certificado já emitido após reapuração divergente — DEV/LAB — HISTÓRICO SUPERADO
+
+**REGRA SUPERADA (PR #307):** esta exceção foi retirada após confirmação da regra oficial de dois requisitos. Não implementar nem aplicar esta proposta. Ver seção 20.
 
 **Escopo da próxima etapa #304:** preservar a **recuperação de documento comprovadamente emitido** sem conceder nova emissão a desafios administrativamente não concluídos ou sem meta comprovada. Não alterar automaticamente `MEU_GIRO_RESUMO`, `dgmbDesafios` nem documentos reais.
 
@@ -246,3 +248,27 @@ Após a restauração, a inspeção de `excluirAtividade` identificou um risco a
 **Testes:** `tests/certificado_emitido_preservacao_sem_reemissao.test.js` (**13 PASS**), `tests/certificado_status_somente_leitura.test.js` (**9 PASS**) e `tests/conclusao_administrativa_vs_recalculo_diagnostico.test.js` (**5 PASS**). **27 PASS**, incluindo inscrição errada, validação reprovada, cancelamento, link inválido, geração legítima, download de arquivo existente e impossibilidade de emissão nova com apuração insuficiente; nenhum PDF real ou dado LAB foi alterado pelos testes.
 
 **Limite essencial:** uma inscrição **sem arquivo previamente emitido** não é automaticamente elegível se os KM calculados forem insuficientes. A divergência entre histórico e resumo, causada por registros de data anterior à janela individual, ainda depende de revisão administrativa. O recálculo de outras operações ainda pode alterar `status_apuracao`; esta proteção não restaura apurações nem resolve as causas históricas. A issue #304 permanece aberta até auditoria de como esses recálculos devem ser tratados. Sem mudanças PROD ou Ranking.
+
+
+## 20. Regra OFICIAL confirmada pelo organizador — meta 100% + CONCLUÍDO manual
+
+**Corrige expressamente a exceção da PR #307 e qualquer interpretação de que uma conclusão administrativa sozinha garante certificado.** São **duas condições cumulativas**:
+1. O progresso válido e apurado do desafio precisa alcançar **100% ou mais da meta em KM**, segundo a modalidade e janela do desafio.
+2. `Status_Usuario_Desafio` precisa ser **CONCLUIDO**, definido **MANUALMENTE pelo administrador**. O sistema não marca conclusão administrativa automaticamente a partir dos KM.
+
+| Meta KM apurada | Status manual | Certificado |
+|---|---|---|
+| < 100% | EM_ANDAMENTO | Bloqueado |
+| >= 100% | EM_ANDAMENTO | Aguarda Admin |
+| < 100% | CONCLUIDO | Bloqueado; divergência a revisar |
+| >= 100% | CONCLUIDO | Liberado |
+
+**Implementação DEV:**
+- Revertida a exceção da PR #307: **um LINK_CERTIFICADO anterior não dispensa nenhum requisito**. A rotina normal ainda pode reutilizar documento já emitido, mas **somente depois** da verificação das duas condições. Não remover documentos no Drive nem rebaixar o status manual automaticamente.
+- `CertificadoService.gs`: leitura direta e **sem escrita** de `Meta_KM` e `Distancia_Realizada` em `MEU_GIRO_RESUMO`, com correspondência inequívoca por inscrição e atleta. Exige `meta > 0 && distancia_realizada >= meta`; depois exige `status_usuario_desafio=CONCLUIDO`. O campo informativo `status_apuracao` não cria uma terceira condição independente, pois pode estar desatualizado em relação aos KM numéricos. Modo legado da função de consulta continua retornando status textual para compatibilidade.
+- `Script.html`: só habilita o botão se a meta numérica foi atingida e o status manual é CONCLUIDO. Quando faltam KM, informa o requisito de 100%; quando a meta foi atingida mas não houve conclusão manual, informa que aguarda validação.
+- `Utils.gs`: removido o sinalizador `certificado_emitido` da PR #307, que antes contornava a meta; permanece intacto o recálculo normal de progresso.
+
+**Testes isolados em memória:** `tests/certificado_emitido_preservacao_sem_reemissao.test.js` (arquivo histórico reescrito para impedir a antiga exceção), `tests/certificado_status_somente_leitura.test.js`, `tests/conclusao_administrativa_vs_recalculo_diagnostico.test.js` e novo `tests/certificado_meta_100_persistida.test.js`: **35 testes PASS**, incluindo quatro combinações, KM acima da meta, status de apuração textual divergente, documento existente, duplicidade de inscrição, falhas de leitura e ausência de recálculo.
+
+**Limite ainda pendente da issue #304:** a base LAB pode conter **resumos persistidos incoerentes com as datas e atividades de origem**. Essa proteção compara KM/meta do resumo persistido, sem recalcular automaticamente atividades durante solicitação de certificado. É necessário auditar e conciliar as divergências historicamente, com revisão humana, para garantir que os KM persistidos correspondam integralmente à modalidade e à janela. Não escrever na base LAB/PROD nem alterar conclusão administrativa de pessoas reais nesta etapa.
