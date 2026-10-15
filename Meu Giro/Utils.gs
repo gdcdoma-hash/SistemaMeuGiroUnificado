@@ -1136,7 +1136,6 @@ function obterVinculosDesafioUsuario_(idDgmb) {
   var idxStatusDesafio = getOptionalColumnIndex_(map, ['status_desafio', 'status desafio']);
   var idxStatusUsuarioDesafio = getOptionalColumnIndex_(map, ['status_usuario_desafio', 'status usuário desafio', 'status usuario desafio']);
   var idxStatusValidacaoCertificado = getOptionalColumnIndex_(map, ['status_validacao_certificado']);
-  var idxLinkCertificado = getOptionalColumnIndex_(map, ['link_certificado', 'url_certificado', 'certificado_url']);
   var idxStatusPag = getOptionalColumnIndex_(map, ['status_pagamento', 'pagamento_status', 'pagamento', 'pix_status']);
   var idxStatusInscricao = getOptionalColumnIndex_(map, ['status_inscricao', 'status inscrição']);
   var idxConfirmacao = getOptionalColumnIndex_(map, ['confirmacao', 'confirmação', 'confirmado', 'inscricao_confirmada']);
@@ -1258,8 +1257,6 @@ function obterVinculosDesafioUsuario_(idDgmb) {
       status_pagamento: statusPagamento,
       status_lista_desafios: statusLista,
       status_validacao_certificado: statusValidacaoCertificado,
-      certificado_emitido: idxLinkCertificado > -1 && /^https?:\/\/\S+/i.test(normalizeText_(row[idxLinkCertificado])) &&
-        (idxStatusValidacaoCertificado < 0 || normalizeText_(row[idxStatusValidacaoCertificado]).toUpperCase() !== 'REPROVADO'),
       apto: apto,
       periodo_inicio: periodo.inicio || '',
       periodo_fim: periodo.fim || '',
@@ -1547,7 +1544,6 @@ function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb, contextoLista
   var idxTipo = getOptionalColumnIndex_(map, ['tipo_do_desafio', 'tipo do desafio', 'tipo_desafio', 'tipo desafio']);
   var idxStatusUsuarioDesafio = getOptionalColumnIndex_(map, ['status_usuario_desafio', 'status usuário desafio', 'status usuario desafio']);
   var idxStatusValidacaoCertificado = getOptionalColumnIndex_(map, ['status_validacao_certificado']);
-  var idxLinkCertificado = getOptionalColumnIndex_(map, ['link_certificado', 'url_certificado', 'certificado_url']);
   var idxStatusDesafio = getOptionalColumnIndex_(map, ['status_desafio', 'status desafio']);
   var idxStatusPag = getOptionalColumnIndex_(map, ['status_pagamento', 'pagamento_status', 'pagamento', 'pix_status']);
   var idxStatusInscricao = getOptionalColumnIndex_(map, ['status_inscricao', 'status inscrição']);
@@ -1656,8 +1652,6 @@ function buildPeriodosDgmbDesafiosPorChave_(cacheDesafios, idDgmb, contextoLista
       ),
       status_usuario_desafio: statusUsuarioDesafio,
       status_validacao_certificado: idxStatusValidacaoCertificado > -1 ? normalizeText_(row[idxStatusValidacaoCertificado]).toUpperCase() : '',
-      certificado_emitido: idxLinkCertificado > -1 && /^https?:\/\/\S+/i.test(normalizeText_(row[idxLinkCertificado])) &&
-        (idxStatusValidacaoCertificado < 0 || normalizeText_(row[idxStatusValidacaoCertificado]).toUpperCase() !== 'REPROVADO'),
       status_desafio: idxStatusDesafio > -1 ? normalizeText_(row[idxStatusDesafio]) : '',
       status_pagamento: idxStatusPag > -1 ? normalizeText_(row[idxStatusPag]) : '',
       tipo_meta: tipoMeta || '',
@@ -1851,8 +1845,6 @@ function obterMeuGiroResumoAtualizadoLeve_(idDgmb, opcoes) {
         ((contextoListaDesafios.modalidade && contextoListaDesafios.modalidade.byId[idDesafioResumo]) || '')
       ),
       status_validacao_certificado: normalizeText_(statusDgmbResumo.status_validacao_certificado).toUpperCase(),
-      certificado_emitido: statusDgmbResumo.certificado_emitido === true &&
-        normalizeText_(statusDgmbResumo.status_validacao_certificado).toUpperCase() !== 'REPROVADO',
       status_desafio: normalizeText_(statusDgmbResumo.status_desafio),
       status_usuario_desafio: normalizeText_(statusDgmbResumo.status_usuario_desafio),
       status_pagamento: normalizeText_(statusDgmbResumo.status_pagamento),
@@ -2141,8 +2133,6 @@ function atualizarMeuGiroResumoComLockAdquirido_(idDgmb, opcoes) {
       status_apuracao: status,
       modalidade_esportiva: meuGiroModalidadeCanonica_(vinculo.modalidade_esportiva),
       status_validacao_certificado: normalizeText_(vinculo.status_validacao_certificado).toUpperCase(),
-      certificado_emitido: vinculo.certificado_emitido === true &&
-        normalizeText_(vinculo.status_validacao_certificado).toUpperCase() !== 'REPROVADO',
       status_desafio: normalizeText_(vinculo.status_desafio),
       status_usuario_desafio: normalizeText_(vinculo.status_usuario_desafio),
       status_pagamento: normalizeText_(vinculo.status_pagamento),
