@@ -144,3 +144,17 @@ Após a restauração, a inspeção de `excluirAtividade` identificou um risco a
 **Testes em memória:** `tests/exclusao_id_atividade_seguro.test.js` usa `excluirAtividade` e localizador reais, com planilha em memória. Sete casos PASS: exclusão única, dois registros iguais com IDs distintos, ID inexistente sem fallback perigoso, legado inequívoco, legado ambíguo, modalidades diferentes no mesmo timestamp e rollback da linha se falhar a atualização do resumo. Nenhum dado LAB/PROD foi alterado nesses testes.
 
 **Plano de homologação #297 (somente após sucesso do workflow DEV):** não excluir os dois registros originais de 3 km. Na conta sintética 1603, criar atividade temporária de **Ciclismo de 2 km em 02/10/2026**, desde que não haja registro nessa data. Confirmação de +2 km nos dois desafios Ciclismo: 1000 KM 18→20; Outubro Rosa 6→8. Ambos os desafios Caminhada/Corrida devem continuar 5,5. Excluir somente a atividade temporária e verificar retorno 18/6/5,5/5,5 e preservação das duas atividades de 3 km. Registrar evidência e encerrar issue #297 apenas após validação visual e do resumo, com PROD intocado.
+
+
+## 14. Homologação de exclusão segura — 15/10/2026 (#297)
+
+**Missão concluída e encerrada:** [GitHub issue #297](https://github.com/gdcdoma-hash/SistemaMeuGiroUnificado/issues/297), implementação DEV pela [PR #298](https://github.com/gdcdoma-hash/SistemaMeuGiroUnificado/pull/298).
+
+**Evidência do participante de homologação 1603** — duas capturas de `Registrar > Outubro/2026`:
+- Antes: Ciclismo **8 km**, Caminhada/Corrida **5,5 km**, atividade temporária **02/10 — 2 km — Ciclismo** presente; duas atividades **01/10 — 3 km — Ciclismo** presentes.
+- Depois: Ciclismo **6 km**, Caminhada/Corrida **5,5 km**; atividade temporária de 02/10 não aparece mais; **as duas atividades de 3 km continuam**.
+- Confirmação independente de **somente leitura na planilha LAB em uso**: `REGISTRO_KM` tem **7 linhas** para 1603, não contém a linha temporária, e mantém as duas atividades de 01/10 com `activity_id` distintos. `MEU_GIRO_RESUMO` mantém **1000 KM 18 km**, **Outubro Rosa 6 km**, **Caminhada/Corrida 50 km 5,5 km** e **75 km 5,5 km**.
+- Guardas implementadas e cobertas por sete testes em memória: ID fornecido deve identificar exatamente uma linha; ID incorreto não faz fallback destrutivo por timestamp; legado ambíguo é bloqueado; rollback previsto se falhar recálculo. A confirmação de exclusão em popup permanece.
+- Não houve gravação administrativa na planilha de teste nem publicação de código PROD pelo processo desta auditoria.
+
+**Próxima fronteira lógica sugerida:** verificar as regras de encerramento da janela individual `PRAZO_DIAS`, em particular **último dia incluído (15/10/2026)**, **dia seguinte excluído do progresso (16/10/2026)**, permanência no histórico pessoal, modalidades independentes e eventual atualização do status. A data futura nunca pode ser registrada antes de ocorrer no Brasil; usar casos simulados para o dia seguinte enquanto ainda for futuro. Ranking permanece fora de escopo.
