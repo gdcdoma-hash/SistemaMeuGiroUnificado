@@ -95,10 +95,11 @@ test('sem meta válida não liberar, mesmo com apuração antiga CONCLUIDO',()=>
   assert.equal(a.response.code,'META_NAO_ATINGIDA_CERTIFICADO');
 });
 
-test('status de apuração não concluído bloqueia mesmo com KM numéricos 100%',()=>{
+test('apuração textual desatualizada NÃO cria terceira condição: 100% + Admin CONCLUIDO bastam',()=>{
   const a=check({km:100,admin:'CONCLUIDO',status:'STATUS_EM_ANALISE'});
-  assert.equal(a.response.code,'DESAFIO_NAO_ELEGIVEL_CERTIFICADO');
-  assert.equal(ui.eligible({meta_km:100,distancia_realizada:100,status_apuracao:'STATUS_EM_ANALISE',status_usuario_desafio:'CONCLUIDO'}),false);
+  assert.equal(a.response.ok,true);
+  assert.equal(a.generated,1);
+  assert.equal(ui.eligible({meta_km:100,distancia_realizada:100,status_apuracao:'STATUS_EM_ANALISE',status_usuario_desafio:'CONCLUIDO'}),true);
 });
 
 test('certificado existente é reutilizado APENAS com ambos os requisitos presentes',()=>{
