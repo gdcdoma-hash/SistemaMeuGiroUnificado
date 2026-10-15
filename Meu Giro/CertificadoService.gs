@@ -726,6 +726,10 @@ function certificadoBuscarContextoDesafio_(payload) {
   };
 }
 
+/**
+ * Consulta status persistido, sem refazer apuração durante o download.
+ * Ausência/ambiguidade não concede certificado: permanece para revisão.
+ */
 function certificadoBuscarStatusApuracaoResumo_(idInscricao, idDgmb, idDesafio, idItemEstoque) {
   var inscricao = normalizeText_(idInscricao);
   var id = normalizeText_(idDgmb);
@@ -733,29 +737,43 @@ function certificadoBuscarStatusApuracaoResumo_(idInscricao, idDgmb, idDesafio, 
   var item = normalizeText_(idItemEstoque);
   if (!id || (!inscricao && !desafio)) return '';
 
-  var resumo = [];
+  // NÃO chamar atualizarMeuGiroResumo_: uma consulta ao certificado
+  // não pode modificar um resultado administrativo já registrado.
   try {
-    resumo = atualizarMeuGiroResumo_(id) || [];
-  } catch (e) {
-    resumo = [];
-  }
+    var sh = getSpreadsheet_().getSheetByName(SHEETS.MEU_GIRO_RESUMO || 'MEU_GIRO_RESUMO');
+    if (!sh) return '';
+    var valores = sh.getDataRange().getValues();
+    if (!valores || valores.length < 2) return '';
+    var map = buildHeaderMap_(valores[0] || []);
+    var idxId = getOptionalColumnIndex_(map, ['id_dgmb']);
+    var idxInscricao = getOptionalColumnIndex_(map, ['id_inscricao', 'id inscrição', 'id inscricao']);
+    var idxDesafio = getOptionalColumnIndex_(map, ['id_desafio']);
+    var idxItem = getOptionalColumnIndex_(map, ['id_item_estoque', 'id item estoque']);
+    var idxStatus = getOptionalColumnIndex_(map, ['status_apuracao', 'status apuracao', 'status apuração']);
+    if (idxId < 0 || idxStatus < 0) return '';
+    if (inscricao && idxInscricao < 0) return '';
+    if (!inscricao && (idxDesafio < 0 || idxItem < 0)) return '';
 
-  if (inscricao) {
-    for (var i = 0; i < resumo.length; i++) {
-      var rowInscricao = resumo[i] || {};
-      if (normalizeText_(rowInscricao.id_inscricao) !== inscricao) continue;
-      if (normalizeText_(rowInscricao.id_dgmb || id) !== id) continue;
-      return normalizeText_(rowInscricao.status_apuracao).toUpperCase();
+    var quantidade = 0;
+    var statusEncontrado = '';
+    for (var i = 1; i < valores.length; i++) {
+      var row = valores[i] || [];
+      if (normalizeText_(row[idxId]) !== id) continue;
+      if (inscricao) {
+        if (normalizeText_(row[idxInscricao]) !== inscricao) continue;
+      } else {
+        // Não vincular por chave legada uma inscrição moderna.
+        if (idxInscricao >= 0 && normalizeText_(row[idxInscricao])) continue;
+        if (normalizeText_(row[idxDesafio]) !== desafio) continue;
+        if (normalizeText_(row[idxItem]) !== item) continue;
+      }
+      quantidade++;
+      statusEncontrado = normalizeText_(row[idxStatus]).toUpperCase();
+      if (quantidade > 1) return '';
     }
+    return quantidade === 1 ? statusEncontrado : '';
+  } catch (e) {
+    // Falhar fechado, sem tentar reconciliar/reescrever planilhas.
     return '';
   }
-
-  for (var j = 0; j < resumo.length; j++) {
-    var row = resumo[j] || {};
-    if (normalizeText_(row.id_desafio) !== desafio) continue;
-    if (normalizeText_(row.id_item_estoque) !== item) continue;
-    return normalizeText_(row.status_apuracao).toUpperCase();
-  }
-
-  return '';
 }
