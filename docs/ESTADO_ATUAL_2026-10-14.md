@@ -158,3 +158,24 @@ Após a restauração, a inspeção de `excluirAtividade` identificou um risco a
 - Não houve gravação administrativa na planilha de teste nem publicação de código PROD pelo processo desta auditoria.
 
 **Próxima fronteira lógica sugerida:** verificar as regras de encerramento da janela individual `PRAZO_DIAS`, em particular **último dia incluído (15/10/2026)**, **dia seguinte excluído do progresso (16/10/2026)**, permanência no histórico pessoal, modalidades independentes e eventual atualização do status. A data futura nunca pode ser registrada antes de ocorrer no Brasil; usar casos simulados para o dia seguinte enquanto ainda for futuro. Ranking permanece fora de escopo.
+
+
+## 15. Missão #300 — auditoria técnica autônoma do último dia (15/10/2026)
+
+**Referência:** [Issue #300](https://github.com/gdcdoma-hash/SistemaMeuGiroUnificado/issues/300), ainda **aberta** até homologação funcional. Data/hora local aferida em 15/10/2026, 07:45 (UTC-03).
+
+**Base de dados DEV/LAB examinada em leitura exclusiva, sem gravação:**
+- Atleta sintético 1603, `REGISTRO_KM`: 7 atividades; nenhuma em 15/10 nem 16/10 no instante da consulta. Baseline Ciclismo = 12 km de setembro + 6 km outubro; Caminhada/Corrida = 44 km setembro e 5,5 km outubro.
+- `MEU_GIRO_RESUMO`: desafio 1000 KM **18 km**, Outubro Rosa Ciclismo **6 km**, metas de Caminhada/Corrida 50 km e 75 km **5,5 km** cada.
+- Em `dgmbDesafios`, inscrição de 1000 KM com `Prazo_Dias=45`, `data_inicio_desafio=2026-09-01`, `data_fim_desafio=2026-10-15`; `Status_Usuario_Desafio=EM_ANDAMENTO`. Manter status administrativo original até conferência/validação oficial.
+
+**Regressões automatizadas:** arquivo `tests/prazo_ultimo_dia_historico_1603.test.js` executado em memória com **7 PASS**, utilizando as funções reais de `ModalidadeEsportivaService.gs`, `atividadeDentroPeriodoOficial_` de `Utils.gs` e `obterTempoRestanteDesafioPainel_` de `Script.html` com relógio simulado. Confirma:
+1. 14/10: 15 e 16 são datas futuras e são bloqueadas; relógio UI mostra `1 dia`.
+2. 15/10: +1 km Ciclismo nesse dia vai de 18→19 no 1000 KM, de 6→7 no Outubro Rosa, e não toca nas metas de Caminhada/Corrida; UI indica `Último dia`.
+3. 16/10: registros desse dia são aceitos no histórico, entram em Outubro Rosa mas não no 1000 KM; UI indica `Encerrado`.
+4. Novembro: atividades históricas válidas permanecem no total de 45 dias; atividade posterior não entra em nenhum dos desafios encerrados em outubro.
+5. Modalidade diferente nunca contamina os km do Ciclismo, e exclusão simulada do km temporário restaura a base; datas inválidas são recusadas.
+
+**Atenção: classificação do desafio após o prazo.** `obterTempoRestanteDesafioPainel_` informa `Encerrado` após 15/10, mas `isDesafioAtivo_` e `classificarDesafioV2_` usam principalmente os status de origem, e não a data final. Enquanto a inscrição 1603 continuar `EM_ANDAMENTO` e o resumo `STATUS_EM_ANALISE`, o card poderá ficar em "Seus desafios em andamento" com "Encerrado". **Não transformar automaticamente a situação administrativa em CONCLUIDO, EXPIRADO ou NAO_CONCLUIDO**; o tratamento visual e o fluxo de apuração de encerramento precisam ser definidos e homologados separadamente.
+
+**Pendência operacional da #300:** simulação em memória não equivale a chamada autenticada ao Web App. Não houve registro/exclusão direta na planilha, para não contornar o código real ou alterar a base de homologação de modo artificial. A verificação end-to-end de registrar/excluir 1 km em 15/10 (ou test harness integrado usando a execução real do GAS DEV) permanece pendente. Depois da virada para 16/10 (Brasil), conferir novamente somente leitura o comportamento do limite e o status visual; eventual registro de 16/10 precisa respeitar a data efetiva, sem retroagir o relógio em produção.
