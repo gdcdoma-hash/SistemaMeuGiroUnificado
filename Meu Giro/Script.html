@@ -4515,8 +4515,8 @@ function isDesafioElegivelCertificado_(desafio) {
   if (!desafio) return false;
   var statusApuracao = String(desafio.status_apuracao || '').trim().toUpperCase();
   var statusUsuarioDesafio = String(desafio.status_usuario_desafio || '').trim().toUpperCase();
-  return statusApuracao === 'CONCLUIDO' &&
-    statusUsuarioDesafio === 'CONCLUIDO';
+  return statusUsuarioDesafio === 'CONCLUIDO' &&
+    (statusApuracao === 'CONCLUIDO' || desafio.certificado_emitido === true);
 }
 
 function getMensagemCertificado_(desafio) {
@@ -4529,6 +4529,10 @@ function getMensagemCertificado_(desafio) {
   }
   if (statusApuracao === 'EXPIRADO' && statusUsuarioDesafio === 'NAO_CONCLUIDO') {
     return { texto: 'Desafio encerrado sem conclusão da meta.', variante: '' };
+  }
+  if (statusUsuarioDesafio === 'CONCLUIDO' && item.certificado_emitido === true &&
+      statusApuracao !== 'CONCLUIDO') {
+    return { texto: 'Certificado já emitido. Disponível para download.', variante: 'success' };
   }
   if (statusApuracao !== 'CONCLUIDO') {
     return { texto: 'Conclua sua meta para liberar seu certificado.', variante: '' };
