@@ -1,0 +1,64 @@
+name: Enviar codigo somente ao projeto Meu Giro STAGING (sem deployment)
+
+on:
+  push:
+    branches:
+      - prep/staging-isolado-meugiro-2026-10-15
+    paths:
+      - '.github/workflows/push-appscript-staging-isolado.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: push-push_staging_meu_giro_20261015
+  cancel-in-progress: false
+
+jobs:
+  push:
+    if: github.ref == 'refs/heads/prep/staging-isolado-meugiro-2026-10-15' && contains(github.event.head_commit.message, '[PUSH_STAGING_MEU_GIRO_20261015]')
+    name: Atualizar somente Meu Giro STAGING novo
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Verificar destino Apps Script novo
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -e --arg id '1Qkn_ko5Wv6fNwvVfC9lIQOMWZdncArqdWntHtspBEVyp8X1CC9gSsGs4' --arg root 'Meu Giro' '.scriptId==$id and .rootDir==$root' .clasp.json >/dev/null
+          echo "::notice::Destino STAGING confirmado; nao executar deploy."
+
+      - name: Validar trava de configuracao especifica de STAGING
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq "1Qkn_ko5Wv6fNwvVfC9lIQOMWZdncArqdWntHtspBEVyp8X1CC9gSsGs4" 'Meu Giro/EnvironmentConfig.gs'
+          grep -Fq 'STAGING' 'Meu Giro/EnvironmentConfig.gs'
+          echo "::notice::Trava de configuracao encontrada."
+
+      - name: Instalar clasp
+        run: npm install --global @google/clasp@3.4.1
+
+      - name: Configurar autenticacao
+        shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+
+      - name: Atualizar codigo STAGING SEM criar deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          clasp show-file-status
+          clasp push --force
+          echo "::notice::Codigo enviado apenas a projeto STAGING; nenhum deployment foi criado ou atualizado."
