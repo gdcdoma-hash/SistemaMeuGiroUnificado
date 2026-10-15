@@ -19,6 +19,25 @@ function gerarOuObterCertificadoDesafio(payload) {
       };
     }
 
+    // Certificado JA EMITIDO não pode perder acesso por reapuração posterior
+    // divergente: apenas reutilizar o link salvo na mesma inscrição, nunca
+    // conceder nova emissão. Exige conclusão administrativa e revalidação
+    // da identidade da linha antes de devolver o arquivo existente.
+    if (contexto.status_apuracao !== 'CONCLUIDO' &&
+        contexto.status_usuario_desafio === 'CONCLUIDO' &&
+        contexto.status_validacao_certificado !== 'REPROVADO') {
+      var shDocumento = getSpreadsheet_().getSheetByName(contexto.sheet_name);
+      var identidadeDocumento = shDocumento
+        ? certificadoRevalidarLinhaInscricao_(shDocumento, contexto)
+        : {ok:false};
+      if (identidadeDocumento.ok) {
+        var linkJaEmitido = certificadoLerLinkPlanilha_(contexto);
+        if (certLinkValido_(linkJaEmitido)) {
+          return certificadoRespostaLinkExistente_(contexto, linkJaEmitido);
+        }
+      }
+    }
+
     if (contexto.status_apuracao !== 'CONCLUIDO') {
       return {
         ok: false,
@@ -91,6 +110,22 @@ function gerarOuObterCertificadoDesafio(payload) {
     };
   }
 }
+
+
+/** Resposta somente leitura para documento previamente emitido. */
+function certificadoRespostaLinkExistente_(contexto, url) {
+  var extras = certificadoMontarExtrasImagem_(contexto);
+  return {
+    ok: true,
+    url: url,
+    pdfDownloadUrl: montarUrlDownloadPdfCertificado_(url),
+    reused: true,
+    imageUrl: extras.imageUrl || '',
+    downloadImageUrl: extras.downloadImageUrl || '',
+    whatsAppUrl: extras.whatsAppUrl || ''
+  };
+}
+
 
 function certificadoMontarExtrasImagem_(contexto) {
   var ctx = contexto || {};
