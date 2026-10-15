@@ -24,12 +24,12 @@ const code=sourceFunction(utils,'atividadeDentroPeriodoOficial_')+
   'isActive:isDesafioAtivo_,classify:classificarDesafioV2_,certificate:isDesafioElegivelCertificado_};';
 
 const api=new Function('normalizarDataISO_','isDataIsoValida_','Utilities','parseLocalizedNumber_',
-  code)(v=>String(v||''),v=>/^\d{4}-\d{2}-\d{2}$/.test(v),
-  {formatDate:()=> '2026-10-15'},v=>Number(v));
+  'toFiniteNumber', code)(v=>String(v||''),v=>/^\d{4}-\d{2}-\d{2}$/.test(v),
+  {formatDate:()=> '2026-10-15'},v=>Number(v),v=>Number(v)||0);
 const enrollment={periodo_inicio:'2026-09-02',periodo_fim:'2026-11-30',
   modalidade_esportiva:'CICLISMO'};
 const completed={...enrollment,status_usuario_desafio:'CONCLUIDO',
-  status_apuracao:'CONCLUIDO',status_desafio:'Ativo'};
+  status_apuracao:'CONCLUIDO',status_desafio:'Ativo',meta_km:1000,distancia_realizada:1000};
 
 test('atividade anterior ao início nunca contribui para PRAZO_DIAS',()=>{
   assert.equal(api.sum([{data_atividade:'2026-09-01',km:1000,
@@ -53,7 +53,7 @@ test('a classificação atual respeita conclusão oficial antes do prazo',()=>{
 test('DIAGNÓSTICO: recomputar resumo incompatível pode desabilitar certificado sem tirar de Concluídos',()=>{
   const km=api.sum([{data_atividade:'2026-09-01',km:1000,
     modalidade_esportiva:'CICLISMO'}],enrollment);
-  const after={...completed,status_apuracao:api.status(km/1000*100)};
+  const after={...completed,distancia_realizada:km,status_apuracao:api.status(km/1000*100)};
   assert.equal(after.status_apuracao,'STATUS_EM_ANALISE');
   assert.equal(api.classify(after).grupo,'concluidos');
   assert.equal(api.isActive(after),false);
