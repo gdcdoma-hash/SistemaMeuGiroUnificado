@@ -24,7 +24,8 @@ function gerarOuObterCertificadoDesafio(payload) {
     // conceder nova emissão. Exige conclusão administrativa e revalidação
     // da identidade da linha antes de devolver o arquivo existente.
     if (contexto.status_apuracao !== 'CONCLUIDO' &&
-        contexto.status_usuario_desafio === 'CONCLUIDO') {
+        contexto.status_usuario_desafio === 'CONCLUIDO' &&
+        contexto.status_validacao_certificado !== 'REPROVADO') {
       var shDocumento = getSpreadsheet_().getSheetByName(contexto.sheet_name);
       var identidadeDocumento = shDocumento
         ? certificadoRevalidarLinhaInscricao_(shDocumento, contexto)
