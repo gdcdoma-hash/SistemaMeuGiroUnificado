@@ -1,0 +1,63 @@
+name: Criar projeto novo - Meu Giro STAGING INTEGRADO (sem publicacao)
+
+on:
+  push:
+    branches:
+      - prep/staging-isolado-meugiro-2026-10-15
+    paths:
+      - '.github/workflows/criar-appscript-staging-isolado.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: criar-appscript-staging-isolado-meugiro
+  cancel-in-progress: false
+
+jobs:
+  criar:
+    if: github.ref == 'refs/heads/prep/staging-isolado-meugiro-2026-10-15' && contains(github.event.head_commit.message, '[CREATE_STAGING_MEU_GIRO_20261015]')
+    name: Criar Apps Script Meu Giro STAGING vazio, SEM push/deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar clasp
+        run: npm install --global @google/clasp@3.4.1
+
+      - name: Configurar autenticacao sem imprimir segredo
+        shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          set -euo pipefail
+          if [ -z "$CLASPRC_JSON" ]; then
+            echo "::error::Secret CLASPRC_JSON nao configurado."
+            exit 1
+          fi
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+
+      - name: Criar somente projeto NOVO no diretorio temporario
+        shell: bash
+        run: |
+          set -euo pipefail
+          STAGING_DIR="$RUNNER_TEMP/meugiro-staging-20261015"
+          mkdir -p "$STAGING_DIR"
+          cd "$STAGING_DIR"
+          clasp create --type standalone --title "Desafio Giro Meu Giro STAGING Integrado 2026-10-15"
+          SCRIPT_ID="$(jq -er '.scriptId | select(type == "string" and length > 30)' .clasp.json)"
+          mkdir -p "$RUNNER_TEMP/staging-criacao"
+          jq -n --arg scriptId "$SCRIPT_ID"             --arg title "Desafio Giro Meu Giro STAGING Integrado 2026-10-15"             --arg branch "$GITHUB_REF_NAME"             '{title:$title,scriptId:$scriptId,branch:$branch,codePushed:false,deploymentCreated:false,propertiesSet:false}'             > "$RUNNER_TEMP/staging-criacao/meugiro-staging-criado.json"
+          echo "::notice::Novo projeto Meu Giro STAGING criado. Nenhum codigo enviado, deployment criado ou propriedade alterada."
+
+      - name: Guardar identificador do projeto novo
+        uses: actions/upload-artifact@v4
+        with:
+          name: meugiro-staging-criado-20261015
+          path: ${{ runner.temp }}/staging-criacao/meugiro-staging-criado.json
+          retention-days: 30
