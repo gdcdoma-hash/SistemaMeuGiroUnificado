@@ -29,16 +29,6 @@ function gerarOuObterCertificadoDesafio(payload) {
       };
     }
 
-    if (contexto.status_apuracao !== 'CONCLUIDO') {
-      return {
-        ok: false,
-        code: 'DESAFIO_NAO_ELEGIVEL_CERTIFICADO',
-        msg: contexto.status_apuracao === 'EXPIRADO' && contexto.status_usuario_desafio === 'NAO_CONCLUIDO'
-          ? 'Desafio encerrado sem conclusão da meta.'
-          : 'Conclua sua meta para liberar seu certificado.'
-      };
-    }
-
     if (contexto.status_usuario_desafio !== 'CONCLUIDO') {
       return {
         ok: false,
@@ -709,8 +699,7 @@ function certificadoBuscarContextoDesafio_(payload) {
   var statusUsuarioDesafio = normalizeText_(row[idxStatusUsuarioDesafio]).toUpperCase();
   var statusValidacaoCertificado = normalizeText_(row[idxStatusValidacao]).toUpperCase();
   var metaAtingida = !!(apuracao && apuracao.meta_atingida === true);
-  var desafioElegivel = metaAtingida && statusApuracao === 'CONCLUIDO' &&
-    statusUsuarioDesafio === 'CONCLUIDO';
+  var desafioElegivel = metaAtingida && statusUsuarioDesafio === 'CONCLUIDO';
 
   return {
     ok: true,
