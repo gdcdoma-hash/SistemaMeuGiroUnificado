@@ -19,6 +19,16 @@ function gerarOuObterCertificadoDesafio(payload) {
       };
     }
 
+    // A aprovação administrativa não substitui o requisito de KM >= 100%.
+    // A consulta é somente leitura; não recalcular nem alterar a inscrição.
+    if (contexto.meta_atingida !== true) {
+      return {
+        ok: false,
+        code: 'META_NAO_ATINGIDA_CERTIFICADO',
+        msg: 'O certificado exige 100% da meta e conclusão confirmada pelo administrador.'
+      };
+    }
+
     if (contexto.status_apuracao !== 'CONCLUIDO') {
       return {
         ok: false,
@@ -689,14 +699,17 @@ function certificadoBuscarContextoDesafio_(payload) {
   var rowInscricao = idxIdInscricao > -1 ? normalizeText_(row[idxIdInscricao]) : '';
   var rowDesafio = obterIdDesafioRegistro_(row, idxIdDesafio, idxObservacao);
   var rowItem = idxIdItem > -1 ? normalizeText_(row[idxIdItem]) : '';
-  var statusApuracao = certificadoBuscarStatusApuracaoResumo_(rowInscricao, rowId, rowDesafio, rowItem);
+  var apuracao = certificadoBuscarStatusApuracaoResumo_(
+    rowInscricao, rowId, rowDesafio, rowItem, { detalharMeta: true });
+  var statusApuracao = apuracao && apuracao.status_apuracao || '';
   if (!statusApuracao && !rowInscricao && idxStatusApuracao > -1) {
     statusApuracao = normalizeText_(row[idxStatusApuracao]).toUpperCase();
   }
 
   var statusUsuarioDesafio = normalizeText_(row[idxStatusUsuarioDesafio]).toUpperCase();
   var statusValidacaoCertificado = normalizeText_(row[idxStatusValidacao]).toUpperCase();
-  var desafioElegivel = statusApuracao === 'CONCLUIDO' &&
+  var metaAtingida = !!(apuracao && apuracao.meta_atingida === true);
+  var desafioElegivel = metaAtingida && statusApuracao === 'CONCLUIDO' &&
     statusUsuarioDesafio === 'CONCLUIDO';
 
   return {
@@ -707,6 +720,7 @@ function certificadoBuscarContextoDesafio_(payload) {
     id_desafio: rowDesafio,
     id_item_estoque: rowItem,
     status_apuracao: statusApuracao,
+    meta_atingida: metaAtingida,
     status_usuario_desafio: statusUsuarioDesafio,
     desafio_elegivel: desafioElegivel,
     status_validacao_certificado: statusValidacaoCertificado,
@@ -730,7 +744,12 @@ function certificadoBuscarContextoDesafio_(payload) {
  * Consulta status persistido, sem refazer apuração durante o download.
  * Ausência/ambiguidade não concede certificado: permanece para revisão.
  */
-function certificadoBuscarStatusApuracaoResumo_(idInscricao, idDgmb, idDesafio, idItemEstoque) {
+/**
+ * Compatibilidade: por padrão retorna somente status_apuracao.
+ * Com detalharMeta=true, confirma 100% por KM realizado/meta persistidos,
+ * sem escrever ou recalcular a inscrição.
+ */
+function certificadoBuscarStatusApuracaoResumo_(idInscricao, idDgmb, idDesafio, idItemEstoque, opcoes) {
   var inscricao = normalizeText_(idInscricao);
   var id = normalizeText_(idDgmb);
   var desafio = normalizeText_(idDesafio);
@@ -751,11 +770,18 @@ function certificadoBuscarStatusApuracaoResumo_(idInscricao, idDgmb, idDesafio, 
     var idxItem = getOptionalColumnIndex_(map, ['id_item_estoque', 'id item estoque']);
     var idxStatus = getOptionalColumnIndex_(map, ['status_apuracao', 'status apuracao', 'status apuração']);
     if (idxId < 0 || idxStatus < 0) return '';
+    var detalharMeta = !!(opcoes && opcoes.detalharMeta === true);
+    var idxMeta = detalharMeta
+      ? getOptionalColumnIndex_(map, ['meta_km', 'meta km']) : -1;
+    var idxKm = detalharMeta
+      ? getOptionalColumnIndex_(map, ['distancia_realizada', 'distancia realizada']) : -1;
+    if (detalharMeta && (idxMeta < 0 || idxKm < 0)) return '';
     if (inscricao && idxInscricao < 0) return '';
     if (!inscricao && (idxDesafio < 0 || idxItem < 0)) return '';
 
     var quantidade = 0;
     var statusEncontrado = '';
+    var rowEncontrada = null;
     for (var i = 1; i < valores.length; i++) {
       var row = valores[i] || [];
       if (normalizeText_(row[idxId]) !== id) continue;
@@ -769,9 +795,22 @@ function certificadoBuscarStatusApuracaoResumo_(idInscricao, idDgmb, idDesafio, 
       }
       quantidade++;
       statusEncontrado = normalizeText_(row[idxStatus]).toUpperCase();
+      rowEncontrada = row;
       if (quantidade > 1) return '';
     }
-    return quantidade === 1 ? statusEncontrado : '';
+    if (quantidade !== 1) return '';
+    if (!detalharMeta) return statusEncontrado;
+
+    // Em leitura somente: porcentagem efetiva = realizado/meta.
+    // Não tomar status administrativo nem link de certificado por prova de KM.
+    var meta = parseLocalizedNumber_(rowEncontrada[idxMeta]);
+    var realizado = parseLocalizedNumber_(rowEncontrada[idxKm]);
+    return {
+      status_apuracao: statusEncontrado,
+      meta_atingida: meta > 0 && realizado >= meta,
+      meta_km: meta,
+      distancia_realizada: realizado
+    };
   } catch (e) {
     // Falhar fechado, sem tentar reconciliar/reescrever planilhas.
     return '';
