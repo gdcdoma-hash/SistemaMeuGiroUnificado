@@ -1,0 +1,82 @@
+name: Publicar pacote seletivo Meu Giro PROD — corte controlado
+on:
+  push:
+    branches:
+      - prep/corte-meugiro-com-trava-2026-10-16
+    paths:
+      - '.github/workflows/publicar-modalidades-meugiro-2026-10-16.yml'
+permissions:
+  contents: read
+concurrency:
+  group: dgmb-publicacao-modalidades-meugiro-20261016
+  cancel-in-progress: false
+jobs:
+  publicar:
+    if: github.ref == 'refs/heads/prep/corte-meugiro-com-trava-2026-10-16' && contains(github.event.head_commit.message, '[CORTE_MODALIDADES_MEU_GIRO_20261016]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Conferir origem, manifesto e protecao
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -e --arg id '1N-10MQMYaq_91O75W_TFF837vPR6KfSDpJwVQJNS7776IwGo56NuppzG' --arg root 'Meu Giro' '.scriptId==$id and .rootDir==$root' .clasp.json >/dev/null
+          jq -e '.webapp.access == "ANYONE_ANONYMOUS" and .webapp.executeAs == "USER_DEPLOYING"' 'Meu Giro/appsscript.json' >/dev/null
+          grep -Fq 'DGMB_CORTE_MANUTENCAO' 'Meu Giro/CorteManutencaoService.gs'
+          grep -Fq 'dgmbCorteGravacaoPausada_()' 'Meu Giro/RegistroService.gs'
+          test ! -f 'Meu Giro/StagingBootstrapService.gs'
+          node --check < 'Meu Giro/RegistroService.gs'
+          node --check < 'Meu Giro/CorteManutencaoService.gs'
+      - name: Instalar clasp
+        run: npm install --global @google/clasp@3.4.1
+      - name: Autenticar de forma privada
+        shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+      - name: Travar destino PROD e versão anterior
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -n --arg id '1gCtXj8xlNLhQi6XSJhQF7c8bxgvVvMuq3-ZmZ4_BIGoubMUs09D8VKY2' --arg root 'Meu Giro' '{scriptId:$id,rootDir:$root}' > .clasp.json
+          clasp deployments | tee "$RUNNER_TEMP/deployments-before.txt"
+          grep -Fq 'AKfycbzgCdo-kgL9Hf-f43wPIrt_hFYlamgZD5AaIEM9l3f2q8oM7cgOHUnMEDctvztqTC6s3w @9 ' "$RUNNER_TEMP/deployments-before.txt"
+      - name: Conferir pacote runtime, sem testes nem configuracoes STAGING
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > .claspignore <<'IGNORE'
+          **/**
+          !Meu Giro/*.gs
+          !Meu Giro/*.html
+          !Meu Giro/appsscript.json
+          !Meu Giro/
+          tests/**
+          **/tests/**
+          .git/**
+          IGNORE
+          clasp show-file-status | tee "$RUNNER_TEMP/status.txt"
+          node <<'NODE'
+          const fs=require('node:fs');
+          const tracked=fs.readFileSync(process.env.RUNNER_TEMP+'/status.txt','utf8').split('Untracked files:')[0];
+          const lines=tracked.split('\n').filter(x=>/\.(gs|html)$|appsscript\.json/.test(x));
+          if(lines.length!==28)throw Error('Inventario inesperado: '+lines.length);
+          if(/tests\/|\.test\.js|\.git\/|StagingBootstrapService\.gs|_BACKUP_/.test(tracked))throw Error('Arquivo proibido no runtime');
+          if(!tracked.includes('CorteManutencaoService.gs'))throw Error('Trava nao enviada');
+          NODE
+      - name: Publicar no deployment publico existente
+        shell: bash
+        run: |
+          set -euo pipefail
+          clasp push --force
+          clasp update-deployment 'AKfycbzgCdo-kgL9Hf-f43wPIrt_hFYlamgZD5AaIEM9l3f2q8oM7cgOHUnMEDctvztqTC6s3w' --description 'DGMB modalidades seletivas 2026-10-16 - corte em manutencao'
+          clasp deployments
+          echo 'Pacote seletivo aplicado; manter manutencao ate validacao e reconstrucoes.'
