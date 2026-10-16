@@ -142,9 +142,13 @@ test('fluxo normal não solicita segunda recarga após atualização bem-sucedid
 
 test('falhas das três mutações convertem o processamento em modal de erro', () => {
   assert.ok(
-    (script.match(/await mostrarErroAcaoAtividade\(\)/g) || []).length >= 6,
+    (script.match(/await mostrarErroAcaoAtividade\((?:res)?\)/g) || []).length >= 6,
     'Respostas inválidas e falhas de conexão devem liberar a UI com mensagem clara'
   );
+  // Os fluxos de registrar, editar e excluir mostram o mesmo modal;
+  // em resposta inválida ele recebe "res", em falha de rede não recebe argumento.
+  assert.match(script, /await mostrarErroAcaoAtividade\(res\)/);
+  assert.match(script, /await mostrarErroAcaoAtividade\(\)/);
   assert.match(script, /titulo: 'Não foi possível concluir a ação'/);
   assert.match(script, /pendingDeletionKeys\.delete\(deletionKey\)/);
   assert.match(script, /setActivityFormLocked\(false\)/);
