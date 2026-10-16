@@ -67,3 +67,5 @@ jobs:
           clasp update-deployment 'AKfycbyXwZNb_aMaTnXLXh8TKFus5ehpXgiYBl1ZGv3n7XGecKZh0aaHIjH8oRVjUAQExYxF' --description 'STAGING privado Meu Giro — pacote seletivo certificados legados — 2026-10-16'
           clasp deployments
           echo "::notice::STAGING atualizado sem alterar DEV/LAB/PROD."
+
+# Acionamento unico do pacote seletivo no STAGING privado; PROD permanece separado.
