@@ -90,7 +90,13 @@ test('cada atividade continua sendo avaliada independentemente contra o período
 
   assert.match(fonte, /for \(var v = 0; v < vinculos\.length; v\+\+\)/);
   assert.match(fonte, /for \(var r = 0; r < registros\.length; r\+\+\)/);
-  assert.match(fonte, /atividadeDentroPeriodoOficial_\(reg\.data_atividade, inicio, fim\)/);
+  // A função especializada aplica as três condições: modalidade, janela e data não futura.
+  assert.match(fonte, /meuGiroAtividadeNoVinculo_\(reg, vinculo\)/);
+  const modalidade = fs.readFileSync(path.resolve(__dirname, '..', 'Meu Giro', 'ModalidadeEsportivaService.gs'), 'utf8');
+  assert.match(modalidade, /function meuGiroAtividadeNoVinculo_/);
+  assert.match(modalidade, /meuGiroModalidadeRegistro_\(atividade\) === meuGiroModalidadeCanonica_/);
+  assert.match(modalidade, /atividadeDentroPeriodoOficial_\(/);
+  assert.match(modalidade, /dataAtividade <= meuGiroHojeBrasilISO_\(\)/);
 });
 
 test('toda escrita do resumo passa pelo wrapper de lock e fluxos já travados usam a implementação interna', () => {
