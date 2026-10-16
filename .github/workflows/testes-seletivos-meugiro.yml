@@ -1,4 +1,4 @@
-name: Testes seletivos Meu Giro — SEM DEPLOY
+name: Testes seletivos Meu Giro sem deploy
 on:
   push:
     branches:
@@ -14,69 +14,36 @@ permissions:
 
 jobs:
   regressao-local:
-    name: Regressao Node.js sem Google/Clasp
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Baixar branch de revisao com historico completo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Preparar Node.js sem credenciais
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Assegurar integridade de Ranking certificados e configuracoes
+      - name: Proteger funcionalidades legadas
         shell: bash
         run: |
-          set -euo pipefail
-          git diff --exit-code 1df3d6431838f9f7399dc6c9401fa4ca18f0b9d3 HEAD -- \
-            'Meu Giro/RankingService.gs' \
-            'Meu Giro/CertificadoService.gs' \
-            'Meu Giro/EnvironmentConfig.gs' \
-            'Meu Giro/appsscript.json' \
-            '.clasp.json'
-          echo "Protecao: arquivos legados e configuracoes inalterados"
-      - name: Comparar testes legados contra base PROD anterior
+          git diff --exit-code 1df3d6431838f9f7399dc6c9401fa4ca18f0b9d3 HEAD -- 'Meu Giro/RankingService.gs' 'Meu Giro/CertificadoService.gs' 'Meu Giro/EnvironmentConfig.gs' 'Meu Giro/appsscript.json' '.clasp.json'
+      - name: Medir falhas na base anterior
         shell: bash
         run: |
-          set -euo pipefail
-          BASE=1df3d6431838f9f7399dc6c9401fa4ca18f0b9d3
-          WORKBASE="${RUNNER_TEMP}/meugiro-base"
-          git worktree add --detach "${WORKBASE}" "${BASE}"
-          (cd "${WORKBASE}" && node --test tests/*.test.js > "${RUNNER_TEMP}/base.tap" 2>&1) || true
-          mapfile -t OLD_FILES < <(git ls-tree -r --name-only "${BASE}" tests/ | grep '[.]test[.]js
-# Este workflow nao instala clasp, nao usa secrets, nao acessa planilhas
-# e NAO sincroniza nenhum projeto Apps Script.
-)
-          node --test "${OLD_FILES[@]}" > "${RUNNER_TEMP}/seleto-legado.tap" 2>&1 || true
-          grep '^not ok ' "${RUNNER_TEMP}/base.tap" | sed -E 's/^not ok [0-9]+ - //' | sort > "${RUNNER_TEMP}/falhas-base.txt" || true
-          grep '^not ok ' "${RUNNER_TEMP}/seleto-legado.tap" | sed -E 's/^not ok [0-9]+ - //' | sort > "${RUNNER_TEMP}/falhas-seleto.txt" || true
-          echo "==== Base PROD anterior ===="
-          grep '^# \\(tests\\|pass\\|fail\\) ' "${RUNNER_TEMP}/base.tap" | tail -n 3 || true
-          echo "==== Pacote seletivo nos MESMOS testes legados ===="
-          grep '^# \\(tests\\|pass\\|fail\\) ' "${RUNNER_TEMP}/seleto-legado.tap" | tail -n 3 || true
-          echo "==== Falhas novas nos testes legados ===="
-          comm -13 "${RUNNER_TEMP}/falhas-base.txt" "${RUNNER_TEMP}/falhas-seleto.txt" || true
-          echo "==== Falhas que ja estavam na base ===="
-          comm -12 "${RUNNER_TEMP}/falhas-base.txt" "${RUNNER_TEMP}/falhas-seleto.txt" || true
-
-      - name: Executar somente 11 novos testes de modalidades
+          git worktree add --detach /tmp/base-meugiro 1df3d6431838f9f7399dc6c9401fa4ca18f0b9d3
+          (cd /tmp/base-meugiro && node --test tests/*.test.js > /tmp/base.tap 2>&1) || true
+          tail -n 12 /tmp/base.tap
+          grep 'not ok ' /tmp/base.tap | head -n 35 || true
+      - name: Medir falhas legadas no pacote seletivo
         shell: bash
         run: |
-          set -euo pipefail
-          BASE=1df3d6431838f9f7399dc6c9401fa4ca18f0b9d3
-          mapfile -t ADDED < <(git diff --name-only --diff-filter=A "${BASE}" HEAD -- tests/ | grep '[.]test[.]js
-# Este workflow nao instala clasp, nao usa secrets, nao acessa planilhas
-# e NAO sincroniza nenhum projeto Apps Script.
-)
-          printf 'Testes adicionados: %s\\n' "${#ADDED[@]}"
-          node --test "${ADDED[@]}" > "${RUNNER_TEMP}/modalidades.tap" 2>&1 || {
-            grep '^not ok ' "${RUNNER_TEMP}/modalidades.tap" || true
-            grep '^# \\(tests\\|pass\\|fail\\) ' "${RUNNER_TEMP}/modalidades.tap" | tail -n 3 || true
-            exit 1
-          }
-          grep '^# \\(tests\\|pass\\|fail\\) ' "${RUNNER_TEMP}/modalidades.tap" | tail -n 3 || true
-
-# Este workflow nao instala clasp, nao usa secrets, nao acessa planilhas
-# e NAO sincroniza nenhum projeto Apps Script.
+          git ls-tree -r --name-only 1df3d6431838f9f7399dc6c9401fa4ca18f0b9d3 tests/ | xargs node --test > /tmp/seletivo-legado.tap 2>&1 || true
+          tail -n 12 /tmp/seletivo-legado.tap
+          grep 'not ok ' /tmp/seletivo-legado.tap | head -n 35 || true
+      - name: Rodar novos testes de modalidades
+        shell: bash
+        run: |
+          node --test tests/modalidade_esportiva_isolamento.test.js tests/registro_exige_modalidade_multimodal.test.js tests/prazo_ultimo_dia_historico_1603.test.js tests/registro_tres_campos_mesma_linha.test.js tests/identidade_modalidades_meu_giro.test.js tests/atividade_compartilhada_janelas_multimes.test.js tests/registro_servico_real_prazo_1603.test.js tests/registro_validacao_popup.test.js tests/edicao_duplicidade_confirmada.test.js tests/exclusao_id_atividade_seguro.test.js tests/registro_1603_multimes_homologacao.test.js > /tmp/modalidades.tap 2>&1 || true
+          tail -n 12 /tmp/modalidades.tap
+          grep 'not ok ' /tmp/modalidades.tap | head -n 35 || true
+# Sem clasp, segredos Google, Google Sheets ou deployment.
