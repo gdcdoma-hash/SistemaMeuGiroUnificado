@@ -53,16 +53,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat > .claspignore <<'IGNORE'
-          **/**
-          !Meu Giro/*.gs
-          !Meu Giro/*.html
-          !Meu Giro/appsscript.json
-          !Meu Giro/
-          tests/**
-          **/tests/**
-          .git/**
-          IGNORE
           clasp show-file-status | tee "$RUNNER_TEMP/status.txt"
           node <<'NODE'
           const fs=require('node:fs');
