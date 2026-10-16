@@ -1,0 +1,71 @@
+name: Atualizar Web App STAGING meugiro com link privado (execucao unica)
+on:
+  push:
+    branches:
+      - test/pausa-corte-meugiro-2026-10-16
+    paths:
+      - '.github/workflows/redeploy-pausa-corte-staging.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: redeploy-pausa-corte-meugiro-20261016
+  cancel-in-progress: false
+
+jobs:
+  implantar:
+    if: github.ref == 'refs/heads/test/pausa-corte-meugiro-2026-10-16' && contains(github.event.head_commit.message, '[REDEPLOY_PAUSA_CORTE_MEUGIRO_STAGING_20261016]')
+    name: Replicar codigo e versao APENAS Web App meugiro STAGING
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verificar destinos e acesso restrito
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -e --arg id '1Qkn_ko5Wv6fNwvVfC9lIQOMWZdncArqdWntHtspBEVyp8X1CC9gSsGs4' --arg root 'Meu Giro' '.scriptId == $id and .rootDir == $root' .clasp.json >/dev/null
+          jq -e '.webapp.access == "MYSELF" and .webapp.executeAs == "USER_DEPLOYING"' 'Meu Giro/appsscript.json' >/dev/null
+          grep -Fq 'AKfycbzkI5HpnfLpMjfokvZGj7lAj5sQGA_CYAz7UQhOp4UPcxlgX-tuAFUxBTIu1QF5dfjs' 'Meu Giro/EnvironmentConfig.gs'
+          grep -Fq 'DGMB_PORTAL_WEBAPP_URL' 'Meu Giro/EnvironmentConfig.gs'
+          grep -Fq 'STAGING' 'Meu Giro/EnvironmentConfig.gs'
+          echo "::notice::Script ID, manifesto MYSELF e link reciproco exclusivos do STAGING conferidos."
+      - name: Instalar clasp
+        run: npm install --global @google/clasp@3.4.1
+      - name: Configurar credencial
+        shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+      - name: Conferir deployment existente e arquivos elegiveis
+        shell: bash
+        run: |
+          set -euo pipefail
+          clasp deployments | tee "$RUNNER_TEMP/deployments-before.txt"
+          grep -Fq 'AKfycbyXwZNb_aMaTnXLXh8TKFus5ehpXgiYBl1ZGv3n7XGecKZh0aaHIjH8oRVjUAQExYxF' "$RUNNER_TEMP/deployments-before.txt"
+          STATUS="$(clasp show-file-status)"
+          printf '%s\n' "$STATUS"
+          STATUS_TRACKED="$(printf '%s\n' "$STATUS" | sed '/^Untracked files:/,$d')"
+          if printf '%s\n' "$STATUS_TRACKED" | grep -Eq '(^|[/[:space:]])tests/|\.test\.(js|gs)|_BACKUP_PIX_LOTES_MISSAO_A/'; then
+            echo "::error::Arquivos de teste Node entre arquivos GAS; envio bloqueado."
+            exit 1
+          fi
+          printf '%s\n' "$STATUS_TRACKED" | grep -Fq 'EnvironmentConfig.gs'
+      - name: Atualizar SOMENTE projeto e deployment STAGING
+        shell: bash
+        run: |
+          set -euo pipefail
+          clasp push --force
+          clasp update-deployment 'AKfycbyXwZNb_aMaTnXLXh8TKFus5ehpXgiYBl1ZGv3n7XGecKZh0aaHIjH8oRVjUAQExYxF' --description 'STAGING privado Meu Giro — pacote seletivo certificados legados — 2026-10-16'
+          clasp deployments
+          echo "::notice::STAGING atualizado sem alterar DEV/LAB/PROD."
+
+# Acionamento unico do pacote seletivo no STAGING privado; PROD permanece separado.

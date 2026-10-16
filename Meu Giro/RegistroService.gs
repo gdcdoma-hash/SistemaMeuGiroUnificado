@@ -1,4 +1,5 @@
 function registrarAtividade(idDgmb, dataAtividade, km, force, modalidadeEsportiva) {
+  if (dgmbCorteGravacaoPausada_()) return {ok:false,code:'MANUTENCAO',msg:'Meu Giro temporariamente em manutenção. Tente novamente em alguns minutos.'};
   var perfTotalInicio = meuGiroPerfNow_();
   var perfOperacaoAnterior = MEU_GIRO_PERF_OPERACAO_ATUAL_;
   MEU_GIRO_PERF_OPERACAO_ATUAL_ = 'registrarAtividade';
@@ -316,6 +317,7 @@ function meuGiroPodeConfirmarDuplicidadeEdicao_(payload, activityId, linhasEncon
 }
 
 function editarAtividade(payload) {
+  if (dgmbCorteGravacaoPausada_()) return {ok:false,code:'MANUTENCAO',msg:'Meu Giro temporariamente em manutenção. Tente novamente em alguns minutos.'};
   var perfTotalInicio = meuGiroPerfNow_();
   var perfOperacaoAnterior = MEU_GIRO_PERF_OPERACAO_ATUAL_;
   MEU_GIRO_PERF_OPERACAO_ATUAL_ = 'editarAtividade';
@@ -578,6 +580,7 @@ function kmsIguaisEdicao_(a, b) {
 }
 
 function excluirAtividade(payload) {
+  if (dgmbCorteGravacaoPausada_()) return {ok:false,code:'MANUTENCAO',msg:'Meu Giro temporariamente em manutenção. Tente novamente em alguns minutos.'};
   var perfTotalInicio = meuGiroPerfNow_();
   var perfOperacaoAnterior = MEU_GIRO_PERF_OPERACAO_ATUAL_;
   MEU_GIRO_PERF_OPERACAO_ATUAL_ = 'excluirAtividade';
