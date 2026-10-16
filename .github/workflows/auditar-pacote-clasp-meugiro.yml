@@ -1,0 +1,54 @@
+name: AUDITORIA CLASP Meu Giro - SEM DEPLOY
+on:
+  push:
+    branches:
+      - prep/corte-seletivo-meugiro-modalidades-2026-10-16
+    paths:
+      - '.github/workflows/auditar-pacote-clasp-meugiro.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  conferir-pacote:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Ler arquivos da branch isolada
+        uses: actions/checkout@v4
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Conferir destino INERTE sem usar credenciais Google
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const cfg = JSON.parse(fs.readFileSync('.clasp.json', 'utf8'));
+          const expectedRoot = "Meu Giro";
+          const forbidden = ["13Ogx0Cl15RR51UZaYrlKejQPKoWkSuEKeOEbWSKuJ7zb7P4_XFyAA-KR", "1gCtXj8xlNLhQi6XSJhQF7c8bxgvVvMuq3-ZmZ4_BIGoubMUs09D8VKY2"];
+          if (cfg.rootDir !== expectedRoot || !cfg.scriptId || forbidden.includes(cfg.scriptId)) {
+            console.error('BLOQUEADO: rootDir invalido ou scriptId PROD no preparo.'); process.exit(1);
+          }
+          const files = fs.readdirSync(expectedRoot, {withFileTypes:true}).filter(e=>e.isFile()).map(e=>e.name);
+          const runtime = files.filter(f=>/\.(gs|html)$/.test(f) || f==='appsscript.json');
+          const unexpected = runtime.filter(f=>f.endsWith('.test.js') || /^StagingBootstrapService[.]gs$/.test(f));
+          const expectedCount = 27;
+          if(runtime.length!==expectedCount || unexpected.length) {
+            console.error('BLOQUEADO: inventario runtime diverge.',{count:runtime.length,expectedCount,unexpected});
+            process.exit(1);
+          }
+          console.log('PACOTE LOCAL VALIDADO:',{tipo:"Meu Giro",rootDir:cfg.rootDir,arquivos:runtime.length,esperado:expectedCount});
+          NODE
+      - name: Instalar clasp (apenas para inventario)
+        run: npm install --global @google/clasp@3.4.1
+      - name: Executar show-file-status SEM credenciais nem escrita
+        shell: bash
+        run: |
+          set -euo pipefail
+          clasp show-file-status > pacote-clasp.txt
+          cat pacote-clasp.txt
+          echo "AUDITORIA CLASP SOMENTE LEITURA CONCLUIDA"
+# PROIBIDO adicionar login Google, secrets, clasp push, update-deployment ou deploy.
