@@ -105,25 +105,17 @@ test('reaproveita uma única leitura de REGISTRO_KM nas sincronizações da P26'
   assert.ok(fontes.includes("'leitura_REGISTRO_KM_reaproveitada'"));
 });
 
-test('restaura o fluxo seguro da P31 ao atualizar a distância realizada', () => {
-  const atualizarDistancia = registroService.match(
-    /function atualizarDistanciaRealizada_\(idDgmb, opcoes\)\{[\s\S]*?\n\}/
-  );
-
-  assert.ok(atualizarDistancia, 'Função atualizarDistanciaRealizada_ não encontrada');
-  assert.doesNotMatch(atualizarDistancia[0], /getDataRange\(\)\.getValues\(\)/);
-  assert.doesNotMatch(atualizarDistancia[0], /createTextFinder/);
-  assert.match(
-    atualizarDistancia[0],
-    /obterDgmbDesafiosCacheExecucao_\('atualizarDistanciaRealizada_'\)/
-  );
-  assert.match(
-    atualizarDistancia[0],
-    /obterDadosInscricaoUsuario_\(idDgmb, \{[\s\S]*?cache: cacheDesafios/
-  );
-  assert.match(atualizarDistancia[0], /sheet\.getRange\(i \+ 1, idxRealizado \+ 1\)\.setValue\(total\)/);
-  assert.match(atualizarDistancia[0], /dados\[i\]\[idxRealizado\] = total/);
-  assert.ok(atualizarDistancia[0].includes("'atualizarDistanciaRealizada_total'"));
+test('atualiza a distância apenas no vínculo autorizado por ID, modalidade e prazo', () => {
+  const atualizarDistancia = extractFunction(registroService, 'atualizarDistanciaRealizada_');
+  assert.doesNotMatch(atualizarDistancia, /getDataRange\(\)\.getValues\(\)/);
+  assert.doesNotMatch(atualizarDistancia, /createTextFinder/);
+  assert.match(atualizarDistancia, /obterDgmbDesafiosCacheExecucao_\('atualizarDistanciaRealizada_'\)/);
+  assert.match(atualizarDistancia, /var vinculos = obterVinculosDesafioUsuario_\(id\)/);
+  assert.match(atualizarDistancia, /var linha = Number\(vinculo\.linha_inscricao \|\| 0\)/);
+  assert.match(atualizarDistancia, /String\(dados\[linha - 1\]\[colId\] \|\| ''\)\.trim\(\) !== id/);
+  assert.match(atualizarDistancia, /meuGiroSomarKmPorVinculo_\(registros, vinculo\)/);
+  assert.match(atualizarDistancia, /cache\.sheet\.getRange\(linha, colRealizado \+ 1\)\.setValue\(total\)/);
+  assert.match(atualizarDistancia, /dados\[linha - 1\]\[colRealizado\] = total/);
 });
 
 test('remove helper e TextFinder introduzidos pela P33', () => {
