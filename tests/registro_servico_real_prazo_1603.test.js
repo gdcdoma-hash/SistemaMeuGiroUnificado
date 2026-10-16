@@ -73,6 +73,9 @@ function setup(asOf) {
   const deps={
     MEU_GIRO_PERF_OPERACAO_ATUAL_:'',meuGiroPerfNow_:()=>0,
     meuGiroPerfLog_:()=>{},Logger:{log:()=>{}},
+    // A aplicação PROD consulta a trava de manutenção antes de editar os dados.
+    // Aqui simulamos explicitamente o estado LIBERADO; nenhum GAS real é chamado.
+    dgmbCorteGravacaoPausada_: () => false,
     LockService:{getScriptLock:()=>({waitLock:()=>{},releaseLock:()=>{}})},
     normalizarDataISO_:v=>String(v||''),
     isDataIsoValida_:v=>/^\d{4}-\d{2}-\d{2}$/.test(v) &&
