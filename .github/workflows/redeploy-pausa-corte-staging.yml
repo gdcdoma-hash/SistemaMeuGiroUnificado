@@ -69,3 +69,5 @@ jobs:
           echo "::notice::STAGING atualizado sem alterar DEV/LAB/PROD."
 
 # Acionamento unico do pacote seletivo no STAGING privado; PROD permanece separado.
+
+# Uma validacao da trava de manutencao somente no STAGING privado.
