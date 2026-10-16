@@ -1,0 +1,58 @@
+name: Auditoria corte Meu Giro com trava — SEM DEPLOY
+on:
+  push:
+    branches:
+      - prep/corte-meugiro-com-trava-2026-10-16
+    paths:
+      - '.github/workflows/auditar-corte-meugiro-travado-2026-10-16.yml'
+permissions:
+  contents: read
+jobs:
+  conferir-pacote:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validar pacote, destino inerte e travas
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs=require('node:fs');
+          const cfg=JSON.parse(fs.readFileSync('.clasp.json','utf8'));
+          if(cfg.rootDir!=="Meu Giro") throw Error('rootDir inesperado');
+          const forbidden=['13Ogx0Cl15RR51UZaYrlKejQPKoWkSuEKeOEbWSKuJ7zb7P4_XFyAA-KR','1gCtXj8xlNLhQi6XSJhQF7c8bxgvVvMuq3-ZmZ4_BIGoubMUs09D8VKY2'];
+          if(!cfg.scriptId||forbidden.includes(cfg.scriptId)) throw Error('Script ID PROD proibido nesta auditoria');
+          const main=fs.readFileSync("Meu Giro/RegistroService.gs",'utf8');
+          const guard=fs.readFileSync("Meu Giro/CorteManutencaoService.gs",'utf8');
+          if(!guard.includes('DGMB_CORTE_MANUTENCAO')) throw Error('Servico de manutencao ausente');
+          for(const fn of ["registrarAtividade","editarAtividade","excluirAtividade"]) {
+            const rx=new RegExp('function '+fn+'\\([^)]*\\) \\{\\s*if \\(dgmbCorteGravacaoPausada_\\(\\)\\)');
+            if(!rx.test(main)) throw Error('Trava nao encontrada em '+fn);
+          }
+          new Function(main);new Function(guard);
+          console.log('Travas e sintaxe validadas: registrarAtividade, editarAtividade, excluirAtividade');
+          NODE
+      - name: Instalar clasp (sem autenticacao Google)
+        run: npm install --global @google/clasp@3.4.1
+      - name: Auditar inventario SEM PUSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          clasp show-file-status | tee "$RUNNER_TEMP/packaging.txt"
+          node <<'NODE'
+          const fs=require('node:fs');
+          const files=fs.readFileSync(process.env.RUNNER_TEMP+'/packaging.txt','utf8');
+          const tracked=files.split('Untracked files:')[0];
+          const root="Meu Giro";
+          const items=tracked.split('\n').filter(s=>/\.(gs|html)$|appsscript\.json/.test(s)&&!/Untracked/.test(s));
+          if(items.length!==28) throw Error('Inventario inesperado: '+items.length+', esperado 28');
+          if(/\.test\.js|tests\/|_BACKUP_|node_modules\//.test(tracked))throw Error('Arquivo auxiliar incluído no pacote GAS');
+          for(const f of ["RegistroService.gs","CorteManutencaoService.gs"]){if(!tracked.includes(f))throw Error('Arquivo obrigatório não incluido: '+f);}
+          console.log('Inventario validado:',items.length,'arquivos runtime; root:',root);
+          NODE
+      - name: Confirmar SOMENTE leitura
+        run: echo 'SEM CREDENCIAIS; SEM CLASP PUSH; SEM DEPLOY; SEM ALTERACAO DE PLANILHAS'
