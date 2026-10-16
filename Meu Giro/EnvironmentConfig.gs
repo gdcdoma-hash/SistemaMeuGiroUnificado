@@ -8,6 +8,36 @@ function dgmbMeuGiroConfigGet_(chave, fallback) {
   var nome = String(chave || '').trim();
   if (!nome) throw new Error('Nome da configuracao do Meu Giro ausente.');
 
+  // STAGING: aceitar apenas projeto novo e propriedades explicitas da base copiada.
+  if (ScriptApp.getScriptId() !== '1Qkn_ko5Wv6fNwvVfC9lIQOMWZdncArqdWntHtspBEVyp8X1CC9gSsGs4') {
+    throw new Error('[STAGING_MEU_GIRO_PROJETO_INCORRETO] Publicacao bloqueada neste projeto.');
+  }
+  var propsStaging = PropertiesService.getScriptProperties();
+  if (String(propsStaging.getProperty('DGMB_ENVIRONMENT') || '').trim() !== 'STAGING') {
+    throw new Error('[STAGING_MEU_GIRO_AMBIENTE_NAO_CONFIGURADO]');
+  }
+  var idStaging = String(propsStaging.getProperty('DGMB_SPREADSHEET_ID') || '').trim();
+  if (!idStaging) throw new Error('[STAGING_MEU_GIRO_PLANILHA_NAO_CONFIGURADA]');
+  if (SpreadsheetApp.openById(idStaging).getName() !== 'STAGING ISOLADO — Portal Giro + Meu Giro — 2026-10-15 — NAO PROD') {
+    throw new Error('[STAGING_MEU_GIRO_PLANILHA_DIVERGENTE]');
+  }
+  if (nome === 'DGMB_ENVIRONMENT') return 'STAGING';
+  // Somente neste projeto STAGING: URL do Portal implantado e restrito.
+  // Recusar propriedades divergentes para nunca encaminhar o atleta ao DEV/PROD.
+  if (nome === 'DGMB_PORTAL_WEBAPP_URL') {
+    var destinoStaging = 'https://script.google.com/macros/s/AKfycbzkI5HpnfLpMjfokvZGj7lAj5sQGA_CYAz7UQhOp4UPcxlgX-tuAFUxBTIu1QF5dfjs/exec';
+    var existente = String(propsStaging.getProperty(nome) || '').trim();
+    if (existente && existente !== destinoStaging) {
+      throw new Error('[STAGING_MEU_GIRO_URL_PORTAL_DIVERGENTE]');
+    }
+    return destinoStaging;
+  }
+
+  var configuradoStaging = String(propsStaging.getProperty(nome) || '').trim();
+  if (!configuradoStaging) throw new Error('[STAGING_MEU_GIRO_CONFIG_OBRIGATORIA_AUSENTE] ' + nome);
+  return configuradoStaging;
+
+
   var valor = '';
   try {
     valor = String(PropertiesService.getScriptProperties().getProperty(nome) || '').trim();
