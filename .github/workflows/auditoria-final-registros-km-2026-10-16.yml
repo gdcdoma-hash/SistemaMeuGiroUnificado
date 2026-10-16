@@ -1,0 +1,87 @@
+name: Auditoria final registros KM e modalidades PROD - sem deploy
+on:
+  push:
+    branches:
+      - prep/corte-meugiro-com-trava-2026-10-16
+    paths:
+      - 'Meu Giro/**'
+      - 'tests/**'
+      - '.github/workflows/auditoria-final-registros-km-2026-10-16.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  regressao-local:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Proteger funcionalidades legadas
+        shell: bash
+        run: |
+          git diff --exit-code 1df3d6431838f9f7399dc6c9401fa4ca18f0b9d3 HEAD -- 'Meu Giro/RankingService.gs' 'Meu Giro/CertificadoService.gs' 'Meu Giro/EnvironmentConfig.gs' 'Meu Giro/appsscript.json' '.clasp.json'
+      - name: Medir falhas na base anterior
+        shell: bash
+        run: |
+          git worktree add --detach /tmp/base-meugiro 1df3d6431838f9f7399dc6c9401fa4ca18f0b9d3
+          (cd /tmp/base-meugiro && node --test tests/*.test.js > /tmp/base.tap 2>&1) || true
+          tail -n 12 /tmp/base.tap
+          grep 'not ok ' /tmp/base.tap | head -n 35 || true
+      - name: Medir falhas legadas no pacote seletivo
+        shell: bash
+        run: |
+          git ls-tree -r --name-only 1df3d6431838f9f7399dc6c9401fa4ca18f0b9d3 tests/ | xargs node --test > /tmp/seletivo-legado.tap 2>&1 || true
+          tail -n 12 /tmp/seletivo-legado.tap
+          grep 'not ok ' /tmp/seletivo-legado.tap | head -n 35 || true
+      - name: Rodar novos testes de modalidades
+        shell: bash
+        run: |
+          node --test tests/modalidade_esportiva_isolamento.test.js tests/registro_exige_modalidade_multimodal.test.js tests/prazo_ultimo_dia_historico_1603.test.js tests/registro_tres_campos_mesma_linha.test.js tests/identidade_modalidades_meu_giro.test.js tests/atividade_compartilhada_janelas_multimes.test.js tests/registro_servico_real_prazo_1603.test.js tests/registro_validacao_popup.test.js tests/edicao_duplicidade_confirmada.test.js tests/exclusao_id_atividade_seguro.test.js tests/registro_1603_multimes_homologacao.test.js > /tmp/modalidades.tap 2>&1 || true
+          tail -n 12 /tmp/modalidades.tap
+          grep 'not ok ' /tmp/modalidades.tap | head -n 35 || true
+      - name: Impedir novas falhas e exigir modalidades aprovadas
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const ler = (p) => {
+            const txt = fs.readFileSync(p, 'utf8');
+            const metric = (k) => {
+              const linha = txt.split('\n').find(x => x.startsWith('# ' + k + ' '));
+              return Number(linha?.trim().split(' ').pop() ?? -1);
+            };
+            const failures = [...txt.matchAll(/^not ok \d+ - (.*)$/gm)].map(m => m[1].trim()).sort();
+            return {tests:metric('tests'),pass:metric('pass'),fail:metric('fail'),failures};
+          };
+          const baseline = ler('/tmp/base.tap');
+          const selective = ler('/tmp/seletivo-legado.tap');
+          const modalidades = ler('/tmp/modalidades.tap');
+          const a = new Map();
+          for (const f of baseline.failures) a.set(f,(a.get(f)||0)+1);
+          const extra = [];
+          for (const f of selective.failures) {
+            const n = a.get(f) || 0;
+            if(n) a.set(f,n-1);
+            else extra.push(f);
+          }
+          console.log('LEGADO PROD:', baseline);
+          console.log('LEGADO SELETIVO:', selective);
+          console.log('MODALIDADES:', {tests:modalidades.tests,pass:modalidades.pass,fail:modalidades.fail});
+          console.log('FALHAS ADICIONAIS:', extra);
+          if (baseline.tests !== 100 || selective.tests !== baseline.tests) {
+            console.error('Numero de testes legados inesperado.'); process.exitCode=1;
+          }
+          if (baseline.fail !== baseline.failures.length || selective.fail !== selective.failures.length || extra.length) {
+            console.error('Falhas adicionais ou resultado inconsistente no pacote seletivo.'); process.exitCode=1;
+          }
+          if (modalidades.tests !== 58 || modalidades.fail !== 0 || modalidades.pass !== 58) {
+            console.error('A suite de modalidades nao passou integralmente.'); process.exitCode=1;
+          }
+          NODE
+# Sem clasp, segredos Google, Google Sheets ou deployment.
