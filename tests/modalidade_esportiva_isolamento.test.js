@@ -66,7 +66,8 @@ test('regra de pontuação, gravação e histórico estão conectados às modali
   assert.match(painel, /modalidade_esportiva: meuGiroModalidadeRegistro_\(row\)/);
   assert.match(ui, /registrarAtividade\(idDgmb, data, km, !!forcarDuplicidade, meuGiroModalidadeFormularioAtividade_\(\)\)/);
   assert.match(ui, /modos\.CAMINHADA_CORRIDA/);
-  assert.match(ui, /var chaveFoco = String/);
+  assert.match(ui, /var chaveFocoBackend = getDesafioKey/);
+  assert.match(ui, /var chaveFocoVisual = getDesafioKey/);
   assert.match(formulario, /id="modalidade-atividade"/);
 });
 
