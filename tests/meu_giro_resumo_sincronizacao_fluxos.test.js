@@ -59,7 +59,11 @@ test('repositório declara ausência do fluxo real de nova inscrição e aponta 
 
 test('não há teste falso de inscrição: fluxo de atividade sincroniza apenas após gravação própria', () => {
   assert.match(registrarAtividade, /sheet\.getRange\(linhaInserida, 1, 1, rowLength\)\.setValues\(\[row\]\);[\s\S]*?atualizarDistanciaRealizada_\(idDgmb, opcoesRegistroKm\);[\s\S]*?atualizarMeuGiroResumoComLockAdquirido_\(idDgmb, opcoesRegistroKm\);/);
-  assert.match(atualizarDistancia, /sheet\.getRange\(i \+ 1, idxRealizado \+ 1\)\.setValue\(total\);/);
+  // A escrita deve apontar à linha da inscrição vinculada, não a um índice global.
+  assert.match(atualizarDistancia, /var linha = Number\(vinculo\.linha_inscricao \|\| 0\)/);
+  assert.match(atualizarDistancia, /String\(dados\[linha - 1\]\[colId\] \|\| ''\)\.trim\(\) !== id/);
+  assert.match(atualizarDistancia, /meuGiroSomarKmPorVinculo_\(registros, vinculo\)/);
+  assert.match(atualizarDistancia, /cache\.sheet\.getRange\(linha, colRealizado \+ 1\)\.setValue\(total\);/);
   assert.doesNotMatch(registrarAtividade, /gravarInscricao|ID_INSCRICAO|Status_Usuario_Desafio/);
 });
 
