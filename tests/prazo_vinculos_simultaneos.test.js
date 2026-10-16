@@ -94,7 +94,7 @@ test('cada atividade continua sendo avaliada independentemente contra o período
   assert.match(fonte, /meuGiroAtividadeNoVinculo_\(reg, vinculo\)/);
   const modalidade = fs.readFileSync(path.resolve(__dirname, '..', 'Meu Giro', 'ModalidadeEsportivaService.gs'), 'utf8');
   assert.match(modalidade, /function meuGiroAtividadeNoVinculo_/);
-  assert.match(modalidade, /meuGiroModalidadeRegistro_\(atividade\) === meuGiroModalidadeCanonica_/);
+  assert.match(modalidade, /meuGiroModalidadeRegistro_\(atividade\)\s*===\s*meuGiroModalidadeCanonica_/);
   assert.match(modalidade, /atividadeDentroPeriodoOficial_\(/);
   assert.match(modalidade, /dataAtividade <= meuGiroHojeBrasilISO_\(\)/);
 });

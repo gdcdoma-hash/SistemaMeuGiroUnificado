@@ -149,7 +149,7 @@ test('falhas das três mutações convertem o processamento em modal de erro', (
   // em resposta inválida ele recebe "res", em falha de rede não recebe argumento.
   assert.match(script, /await mostrarErroAcaoAtividade\(res\)/);
   assert.match(script, /await mostrarErroAcaoAtividade\(\)/);
-  assert.match(script, /titulo: 'Não foi possível concluir a ação'/);
+  assert.match(script, /titulo: dataFutura \? 'Data futura não permitida' : 'Não foi possível concluir a ação'/);
   assert.match(script, /pendingDeletionKeys\.delete\(deletionKey\)/);
   assert.match(script, /setActivityFormLocked\(false\)/);
 });

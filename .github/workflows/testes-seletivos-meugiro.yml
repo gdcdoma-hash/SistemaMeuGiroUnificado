@@ -46,4 +46,41 @@ jobs:
           node --test tests/modalidade_esportiva_isolamento.test.js tests/registro_exige_modalidade_multimodal.test.js tests/prazo_ultimo_dia_historico_1603.test.js tests/registro_tres_campos_mesma_linha.test.js tests/identidade_modalidades_meu_giro.test.js tests/atividade_compartilhada_janelas_multimes.test.js tests/registro_servico_real_prazo_1603.test.js tests/registro_validacao_popup.test.js tests/edicao_duplicidade_confirmada.test.js tests/exclusao_id_atividade_seguro.test.js tests/registro_1603_multimes_homologacao.test.js > /tmp/modalidades.tap 2>&1 || true
           tail -n 12 /tmp/modalidades.tap
           grep 'not ok ' /tmp/modalidades.tap | head -n 35 || true
+      - name: Impedir novas falhas e exigir modalidades aprovadas
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const ler = (p) => {
+            const txt = fs.readFileSync(p, 'utf8');
+            const metric = (k) => Number(txt.match(new RegExp('^# ' + k + ' (\\d+)# Sem clasp, segredos Google, Google Sheets ou deployment.
+, 'm'))?.[1] ?? -1);
+            const failures = [...txt.matchAll(/^not ok \d+ - (.*)$/gm)].map(m => m[1].trim()).sort();
+            return {tests:metric('tests'),pass:metric('pass'),fail:metric('fail'),failures};
+          };
+          const baseline = ler('/tmp/base.tap');
+          const selective = ler('/tmp/seletivo-legado.tap');
+          const modalidades = ler('/tmp/modalidades.tap');
+          const a = new Map();
+          for (const f of baseline.failures) a.set(f,(a.get(f)||0)+1);
+          const extra = [];
+          for (const f of selective.failures) {
+            const n = a.get(f) || 0;
+            if(n) a.set(f,n-1);
+            else extra.push(f);
+          }
+          console.log('LEGADO PROD:', baseline);
+          console.log('LEGADO SELETIVO:', selective);
+          console.log('MODALIDADES:', {tests:modalidades.tests,pass:modalidades.pass,fail:modalidades.fail});
+          console.log('FALHAS ADICIONAIS:', extra);
+          if (baseline.tests !== 100 || selective.tests !== baseline.tests) {
+            console.error('Numero de testes legados inesperado.'); process.exitCode=1;
+          }
+          if (baseline.fail !== baseline.failures.length || selective.fail !== selective.failures.length || extra.length) {
+            console.error('Falhas adicionais ou resultado inconsistente no pacote seletivo.'); process.exitCode=1;
+          }
+          if (modalidades.tests !== 58 || modalidades.fail !== 0 || modalidades.pass !== 58) {
+            console.error('A suite de modalidades nao passou integralmente.'); process.exitCode=1;
+          }
+          NODE
 # Sem clasp, segredos Google, Google Sheets ou deployment.

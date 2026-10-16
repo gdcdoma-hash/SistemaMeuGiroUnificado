@@ -119,7 +119,7 @@ test('tela inicial mantém um cartão em foco com navegação por desafio', () =
   // A navegação homologada usa setas e um card focal, sem rolagem horizontal.
   assert.match(script, /feed\.scrollLeft = 0/);
   assert.match(script, /card\.remove\(\)/);
-  assert.match(styles, /\.painel-desafios-feed-multiplo/);
+  assert.match(script, /feed\.classList\.remove\('painel-desafios-feed-multiplo'\)/);
 });
 
 test('feed mantém cartão único e oculta o cabeçalho quando existe só um desafio', () => {
