@@ -20,24 +20,25 @@ function controlador(modalidades,focusModalidade='CICLISMO'){
   assert.ok(a>=0&&b>a);
   const funcoes=new Function('document','meuGiroConfigurarLimiteDataRegistro_',
     'getDesafioEmFocoAtual','currentPainel','activeEditKey','releaseRegistroSubmitGuard',
-    'setRegistroMsg',script.slice(a,b)+
+    'setRegistroMsg','mostrarModalMeuGiro',script.slice(a,b)+
     '\nreturn {sync:sincronizarModalidadeFormularioAtividade_,'+
     'get:meuGiroModalidadeFormularioAtividade_,'+
     'validate:meuGiroValidarModalidadeRegistro_};');
   const state=funcoes(documento,()=>{},()=>({modalidade_esportiva:focusModalidade}),{
     id_dgmb:'TESTE',desafios_ativos:modalidades.map(modalidade_esportiva=>({modalidade_esportiva}))
-  },'',()=>liberou++,t=>mensagem=t);
+  },'',()=>liberou++,t=>mensagem=t,opcoes=>{mensagem=opcoes.mensagem;return Promise.resolve(true);});
   return {state,elementos,getMensagem:()=>mensagem,getLiberou:()=>liberou};
 }
 
-test('com Ciclismo e Caminhada/Corrida, não há modalidade pré-selecionada',()=>{
+test('com Ciclismo e Caminhada/Corrida, não há modalidade pré-selecionada',async()=>{
   const c=controlador(['CICLISMO','CAMINHADA_CORRIDA']);
   assert.equal(c.state.sync(),'');
   assert.equal(c.state.get(),'');
   assert.equal(c.elementos['registro-modalidade-box'].hidden,false);
   assert.equal(c.elementos['modalidade-atividade'].required,true);
   assert.equal(c.state.validate(),false);
-  assert.match(c.getMensagem(),/Escolha Ciclismo ou Caminhada\/Corrida/);
+  assert.match(c.getMensagem(),/Selecione Ciclismo ou Caminhada\/Corrida/);
+  await Promise.resolve(); // foco vem apos a confirmacao do popup
   assert.equal(c.elementos['modalidade-atividade'].focused,true);
   assert.equal(c.getLiberou(),1);
 });
