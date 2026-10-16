@@ -98,7 +98,7 @@ test('card PRAZO_DIAS mostra prazo em dias e faixa compacta', () => {
   assert.match(script, /desafio-v2-prazo-datas/);
 });
 
-test('tela inicial possui feed horizontal para desafios simultâneos', () => {
+test('tela inicial mantém um cartão em foco com navegação por desafio', () => {
   const index = fs.readFileSync(path.join(repoRoot, 'Meu Giro', 'Index.html'), 'utf8');
   const script = fs.readFileSync(path.join(repoRoot, 'Meu Giro', 'Script.html'), 'utf8');
   const styles = fs.readFileSync(path.join(repoRoot, 'Meu Giro', 'Styles.html'), 'utf8');
@@ -116,27 +116,33 @@ test('tela inicial possui feed horizontal para desafios simultâneos', () => {
 
   assert.match(styles, /\.painel-desafios-feed\s*\{/);
   assert.match(styles, /overflow-x:\s*auto/);
-  assert.match(styles, /scroll-snap-type:\s*x mandatory/);
+  // A navegação homologada usa setas e um card focal, sem rolagem horizontal.
+  assert.match(script, /feed\.scrollLeft = 0/);
+  assert.match(script, /card\.remove\(\)/);
   assert.match(styles, /\.painel-desafios-feed-multiplo/);
 });
 
-test('feed mantém um único card sem cabeçalho quando não há desafio simultâneo', () => {
+test('feed mantém cartão único e oculta o cabeçalho quando existe só um desafio', () => {
   const script = fs.readFileSync(path.join(repoRoot, 'Meu Giro', 'Script.html'), 'utf8');
   const inicio = script.indexOf('function renderFeedDesafiosPainel_');
   const fim = script.indexOf('\nfunction sincronizarPainelComDesafioEmFoco', inicio);
   assert.ok(inicio >= 0 && fim > inicio);
   const fonte = script.slice(inicio, fim);
 
-  assert.match(fonte, /header\.hidden = totalCards <= 1/);
-  assert.match(fonte, /painel-desafios-feed-multiplo', totalCards > 1/);
+  assert.match(fonte, /var quantidade = Array\.isArray\(desafiosAtivosCarouselItems\)/);
+  assert.match(fonte, /header\.hidden = quantidade <= 1/);
+  assert.match(fonte, /feed\.classList\.remove\('painel-desafios-feed-multiplo'\)/);
+  assert.match(fonte, /feed\.onscroll = null/);
 });
 
-test('formulário de registro fica compacto, fixo e com campos lado a lado', () => {
+test('registro multimodal fica compacto, fixo e com campos lado a lado', () => {
   const index = fs.readFileSync(path.join(repoRoot, 'Meu Giro', 'Index.html'), 'utf8');
   const styles = fs.readFileSync(path.join(repoRoot, 'Meu Giro', 'Styles.html'), 'utf8');
 
   assert.doesNotMatch(index, /<h2>Registrar atividades<\/h2>/);
-  assert.match(index, /Preencha só o dia e os km do pedal\./);
+  assert.match(index, /Informe o dia e a distância da sua atividade\./);
+  assert.match(index, /id="modalidade-atividade"/);
+  assert.match(index, /<option value="" disabled selected>Escolha a modalidade<\/option>/);
   assert.match(index, /class="registro-campos-grid"/);
   assert.match(index, /for="data-atividade"/);
   assert.match(index, /for="km-atividade"/);
