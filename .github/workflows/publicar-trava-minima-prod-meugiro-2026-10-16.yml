@@ -1,0 +1,90 @@
+name: Publicar somente trava mínima de Meu Giro PROD (corte controlado)
+on:
+  push:
+    branches:
+      - prep/trava-pre-corte-prod-meugiro-2026-10-16
+    paths:
+      - '.github/workflows/publicar-trava-minima-prod-meugiro-2026-10-16.yml'
+permissions:
+  contents: read
+concurrency:
+  group: dgmb-corte-prod-20261016-meugiro
+  cancel-in-progress: false
+jobs:
+  pausa-preparacao:
+    if: github.ref == 'refs/heads/prep/trava-pre-corte-prod-meugiro-2026-10-16' && contains(github.event.head_commit.message, '[ATIVAR_TRAVA_MINIMA_MEU_GIRO_PROD_20261016]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Checkout exato da branch mínima
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Conferir diff e identificadores de destino
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs=require('node:fs'),cp=require('node:child_process');
+          const files=cp.execFileSync('git',['diff','--name-only','1df3d6431838f9f7399dc6c9401fa4ca18f0b9d3...HEAD'],{encoding:'utf8'}).trim().split('\n').filter(Boolean).sort();
+          const expected=[".github/workflows/publicar-trava-minima-prod-meugiro-2026-10-16.yml","Meu Giro/CorteManutencaoService.gs","Meu Giro/RegistroService.gs"];
+          if(JSON.stringify(files)!==JSON.stringify(expected))throw Error('Arquivos além das travas mínimas: '+files.join(','));
+          const clasp=JSON.parse(fs.readFileSync('.clasp.json','utf8'));
+          if(clasp.scriptId!=='1N-10MQMYaq_91O75W_TFF837vPR6KfSDpJwVQJNS7776IwGo56NuppzG'||clasp.rootDir!=='Meu Giro')throw Error('O destino de preparação não corresponde ao checkpoint');
+          const code=fs.readFileSync('Meu Giro/RegistroService.gs','utf8');
+          const guard=fs.readFileSync('Meu Giro/CorteManutencaoService.gs','utf8');
+          if(!guard.includes('DGMB_CORTE_MANUTENCAO'))throw Error('Trava operacional ausente');
+          if((code.match(/if \(dgmbCorteGravacaoPausada_\(\)\)/g)||[]).length!==3)throw Error('Quantidade incorreta de APIs travadas');
+          new Function(code);new Function(guard);
+          console.log('Somente APIs existentes protegidas; sem mudança de regra de negócio.');
+          NODE
+          jq -e --arg id '1N-10MQMYaq_91O75W_TFF837vPR6KfSDpJwVQJNS7776IwGo56NuppzG' --arg root 'Meu Giro' '.scriptId==$id and .rootDir==$root' .clasp.json >/dev/null
+      - name: Preparar clasp
+        run: npm install --global @google/clasp@3.4.1
+      - name: Carregar credencial sem exibir
+        shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+      - name: Validar deployment PROD existente e versão esperada
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -n --arg id '1gCtXj8xlNLhQi6XSJhQF7c8bxgvVvMuq3-ZmZ4_BIGoubMUs09D8VKY2' --arg root 'Meu Giro' '{scriptId:$id,rootDir:$root}' > .clasp.json
+          clasp deployments | tee "$RUNNER_TEMP/deployments-before.txt"
+          grep -F 'AKfycbzgCdo-kgL9Hf-f43wPIrt_hFYlamgZD5AaIEM9l3f2q8oM7cgOHUnMEDctvztqTC6s3w @8 ' "$RUNNER_TEMP/deployments-before.txt" >/dev/null
+          echo "Versão pública de referência confirmada antes da escrita."
+      - name: Conferir inventário enviado pelo clasp
+        shell: bash
+        run: |
+          set -euo pipefail
+          clasp show-file-status | tee "$RUNNER_TEMP/files.txt"
+          node <<'NODE'
+          const fs=require('node:fs');
+          const t=fs.readFileSync(process.env.RUNNER_TEMP+'/files.txt','utf8').split('Untracked files:')[0];
+          const lines=t.split('\n').filter(x=>/\.(gs|html)$|appsscript\.json/.test(x));
+          if(lines.length!==27)throw Error('Arquivo GAS inesperado: '+lines.length+'; esperado 27');
+          if(/tests\/|\.test\.js|_BACKUP_|node_modules|StagingBootstrapService\.gs/.test(t))throw Error('Arquivo de teste ou staging dentro do pacote');
+          for(const req of ["RegistroService.gs","CorteManutencaoService.gs"]){if(!t.includes(req))throw Error('Ausente: '+req);}
+          console.log('Inventário validado:',lines.length,'arquivos do runtime.');
+          NODE
+      - name: Atualizar somente projeto e mesmo deployment público PROD
+        shell: bash
+        run: |
+          set -euo pipefail
+          clasp push --force
+          clasp update-deployment 'AKfycbzgCdo-kgL9Hf-f43wPIrt_hFYlamgZD5AaIEM9l3f2q8oM7cgOHUnMEDctvztqTC6s3w' --description 'DGMB 2026-10-16 - somente bloqueio temporario para corte controlado'
+          clasp deployments | tee "$RUNNER_TEMP/deployments-after.txt"
+          grep -F 'AKfycbzgCdo-kgL9Hf-f43wPIrt_hFYlamgZD5AaIEM9l3f2q8oM7cgOHUnMEDctvztqTC6s3w @' "$RUNNER_TEMP/deployments-after.txt" >/dev/null
+          if grep -F 'AKfycbzgCdo-kgL9Hf-f43wPIrt_hFYlamgZD5AaIEM9l3f2q8oM7cgOHUnMEDctvztqTC6s3w @8 ' "$RUNNER_TEMP/deployments-after.txt" >/dev/null; then
+            echo "::error::O deployment continuou na versão antiga."
+            exit 1
+          fi
+          echo "::notice::Trava mínima implantada somente no deployment público existente."
