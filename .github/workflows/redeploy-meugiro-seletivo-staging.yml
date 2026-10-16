@@ -4,7 +4,7 @@ on:
     branches:
       - test/staging-meugiro-pacote-seletivo-2026-10-16
     paths:
-      - '.github/workflows/redeploy-webapp-staging-privado.yml'
+      - '.github/workflows/redeploy-meugiro-seletivo-staging.yml'
 
 permissions:
   contents: read
