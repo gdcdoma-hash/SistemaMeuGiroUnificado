@@ -307,6 +307,215 @@
     padding-bottom: calc(84px + env(safe-area-inset-bottom));
   }
 
+  .medalha-virtual{
+    position:relative;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    flex:0 0 auto;
+  }
+
+  .medalha-virtual-fita{
+    position:absolute;
+    top:0;
+    display:flex;
+    gap:5px;
+    z-index:0;
+  }
+
+  .medalha-virtual-fita span{
+    display:block;
+    width:18px;
+    height:34px;
+    background:linear-gradient(180deg,#fb923c 0%,#f97316 100%);
+    clip-path:polygon(0 0,100% 0,100% 100%,50% 78%,0 100%);
+    box-shadow:0 3px 8px rgba(249,115,22,.2);
+  }
+
+  .medalha-virtual-disco{
+    position:relative;
+    z-index:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    border-radius:999px;
+    border:3px solid #f59e0b;
+    background:
+      radial-gradient(circle at 32% 28%,#fff7cc 0%,#fde68a 18%,#fbbf24 50%,#d97706 100%);
+    box-shadow:
+      inset 0 0 0 3px rgba(255,255,255,.45),
+      0 7px 18px rgba(146,64,14,.22);
+    color:#7c2d12;
+    text-align:center;
+  }
+
+  .medalha-virtual-card{
+    width:76px;
+    height:96px;
+    padding-top:20px;
+  }
+
+  .medalha-virtual-card .medalha-virtual-disco{
+    width:68px;
+    height:68px;
+  }
+
+  .medalha-virtual-grande{
+    width:132px;
+    height:158px;
+    padding-top:34px;
+  }
+
+  .medalha-virtual-grande .medalha-virtual-fita span{
+    width:30px;
+    height:55px;
+  }
+
+  .medalha-virtual-grande .medalha-virtual-disco{
+    width:118px;
+    height:118px;
+  }
+
+  .medalha-virtual-icone{
+    font-size:18px;
+    line-height:1;
+    margin-bottom:2px;
+  }
+
+  .medalha-virtual-disco strong{
+    font-size:12px;
+    line-height:1.05;
+    font-weight:950;
+    letter-spacing:-.03em;
+  }
+
+  .medalha-virtual-disco small{
+    margin-top:2px;
+    font-size:7px;
+    font-weight:900;
+    letter-spacing:.08em;
+  }
+
+  .medalha-virtual-grande .medalha-virtual-icone{
+    font-size:28px;
+  }
+
+  .medalha-virtual-grande .medalha-virtual-disco strong{
+    font-size:18px;
+  }
+
+  .medalha-virtual-grande .medalha-virtual-disco small{
+    font-size:9px;
+  }
+
+  .conquista-card-premio{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-bottom:14px;
+  }
+
+  .conquista-card-premio-texto{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:6px;
+  }
+
+  .conquista-desbloqueada-label{
+    display:inline-flex;
+    align-items:center;
+    min-height:24px;
+    padding:4px 9px;
+    border-radius:999px;
+    background:#ecfdf5;
+    color:#047857;
+    font-size:10px;
+    font-weight:900;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+  }
+
+  .conquista-nova-badge{
+    display:inline-flex;
+    align-items:center;
+    min-height:22px;
+    padding:3px 8px;
+    border-radius:999px;
+    background:#f97316;
+    color:#fff;
+    font-size:9px;
+    font-weight:900;
+    text-transform:uppercase;
+    box-shadow:0 6px 16px rgba(249,115,22,.28);
+  }
+
+  .conquista-card-nova{
+    border-color:rgba(249,115,22,.72);
+    box-shadow:0 16px 38px rgba(249,115,22,.2);
+  }
+
+  .conquista-card-nova::before{
+    box-shadow:0 0 0 5px rgba(249,115,22,.07), inset 0 0 0 1px rgba(249,115,22,.24);
+  }
+
+  .conquista-detalhe-medalha{
+    margin-bottom:18px;
+  }
+
+  .conquista-detalhe-premio{
+    display:flex;
+    align-items:center;
+    gap:18px;
+    padding:16px;
+    border:1px solid rgba(245,158,11,.28);
+    border-radius:18px;
+    background:
+      radial-gradient(circle at top left,rgba(251,191,36,.12),transparent 38%),
+      #fffaf0;
+  }
+
+  .conquista-detalhe-premio>div:last-child{
+    display:grid;
+    gap:5px;
+    min-width:0;
+  }
+
+  .conquista-detalhe-premio strong{
+    color:#111827;
+    font-size:21px;
+    line-height:1.2;
+  }
+
+  .conquista-detalhe-premio p{
+    margin:0;
+    color:#6b7280;
+    font-size:13px;
+    font-weight:700;
+  }
+
+  @media(max-width:520px){
+    .conquista-card-premio{
+      align-items:flex-start;
+    }
+    .conquista-detalhe-premio{
+      align-items:center;
+      gap:12px;
+      padding:13px;
+    }
+    .medalha-virtual-grande{
+      transform:scale(.82);
+      transform-origin:center;
+      width:112px;
+      margin-left:-8px;
+      margin-right:-8px;
+    }
+    .conquista-detalhe-premio strong{
+      font-size:18px;
+    }
+  }
+
   .conquistas-lista {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
@@ -3615,58 +3824,67 @@
     line-height: 1.3;
   }
 
-  .painel-feed-indicador {
+  .painel-feed-navegacao {
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 5px;
-    min-width: 32px;
-    min-height: 12px;
+    flex-wrap: nowrap;
+    gap: 8px;
   }
 
-  .painel-feed-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 999px;
-    background: #fed7aa;
-    transition: width 160ms ease, background-color 160ms ease;
+  .painel-feed-navegacao button {
+    border: 1px solid #fdba74;
+    border-radius: 10px;
+    padding: 9px 12px;
+    min-height: 40px;
+    background: #fff7ed;
+    color: #9a3412;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    white-space: nowrap;
   }
 
-  .painel-feed-dot.is-active {
-    width: 18px;
-    background: #f97316;
+  .painel-feed-navegacao button:focus-visible {
+    outline: 3px solid #2563eb;
+    outline-offset: 2px;
+  }
+
+  .painel-feed-navegacao button:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+  }
+
+  .painel-feed-indicador {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    min-width: 58px;
+    color: #111827;
+    font-weight: 800;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 
   .painel-desafios-feed {
     display: flex;
-    align-items: stretch;
-    gap: 14px;
+    justify-content: center;
     width: 100%;
-    overflow-x: auto;
+    overflow-x: hidden;
     overflow-y: hidden;
     padding: 0 8px 10px;
-    scroll-snap-type: x mandatory;
-    scroll-padding-inline: 8px;
-    overscroll-behavior-x: contain;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .painel-desafios-feed::-webkit-scrollbar {
-    display: none;
+    box-sizing: border-box;
   }
 
   .painel-desafios-feed > .painel-inicio-card {
-    flex: 0 0 100%;
+    flex: 0 1 720px;
     width: 100%;
     max-width: 720px;
+    min-width: 0;
     margin: 0;
-    scroll-snap-align: start;
-    scroll-snap-stop: always;
-  }
-
-  .painel-desafios-feed-multiplo > .painel-inicio-card {
-    flex-basis: min(90%, 700px);
+    box-sizing: border-box;
   }
 
   .painel-inicio-card-feed {
@@ -4051,15 +4269,29 @@
       margin-right: 4px;
     }
 
-    .painel-desafios-feed {
-      gap: 10px;
-      padding-left: 2px;
-      padding-right: 16px;
-      scroll-padding-inline: 2px;
+    .painel-feed-header {
+      align-items: flex-start;
+      flex-direction: column;
     }
 
-    .painel-desafios-feed-multiplo > .painel-inicio-card {
-      flex-basis: 92%;
+    .painel-feed-navegacao {
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    .painel-feed-navegacao button {
+      min-height: 42px;
+      padding: 8px 10px;
+    }
+
+    .painel-desafios-feed {
+      padding-left: 2px;
+      padding-right: 2px;
+    }
+
+    .painel-desafios-feed > .painel-inicio-card {
+      flex: 1 1 100%;
+      max-width: 100%;
     }
 
     .painel-progresso-donut-grid {
@@ -4122,7 +4354,20 @@
     background: #fff7ed;
   }
 
-  .painel-status-titulo {
+  .mg-status-modalidade-icon {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: -5px;
+  margin-right: 7px;
+  color: inherit;
+}
+.mg-status-modalidade-icon .mg-modalidade-icon {
+  width: 26px;
+  height: 21px;
+}
+.mg-status-modalidade-icon .mg-modalidade-icon-duo { width: 36px; }
+
+.painel-status-titulo {
     color: #111827;
     font-size: 17px;
     font-weight: 900;
@@ -4666,4 +4911,261 @@
     }
   }
 
+
+/* LAB — modalidade somente quando coexistem inscrições de esportes diferentes. */
+.registro-modalidade-box { display:flex; flex-direction:column; gap:6px; margin:0 0 12px; }
+.registro-modalidade-box[hidden] { display:none!important; }
+.registro-modalidade-box label { font-size:13px; font-weight:700; }
+.registro-modalidade-box select { min-height:42px; width:100%; padding:8px 10px;
+  border:1px solid #94a3b8; border-radius:9px; background:#fff; color:#0f172a;
+  font-size:15px; font-weight:700; }
+.registro-modalidade-box small { font-size:12px; line-height:1.35; color:#475569; }
+
+/* Meu Giro DEV/LAB — formulário compacto: Modalidade | Data | KM.
+   Com uma só modalidade, o campo oculto deixa 2 colunas equilibradas.
+   O botão e a lista de atividades ficam mais acima, sem scroll horizontal. */
+#screen-registrar .registro-campos-grid:has(> .registro-modalidade-box:not([hidden])) {
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1.13fr) minmax(0, .86fr);
+}
+#screen-registrar .registro-campos-grid {
+  align-items: end;
+  column-gap: 8px;
+}
+#screen-registrar .registro-campos-grid > .registro-modalidade-box {
+  min-width: 0;
+  margin: 0;
+  gap: 0;
+}
+#screen-registrar .registro-campos-grid .registro-campo label {
+  min-height: 16px;
+  margin: 0 0 5px;
+  font-size: 12px;
+  line-height: 1.2;
+}
+#screen-registrar .registro-campos-grid .registro-modalidade-box select,
+#screen-registrar .registro-campos-grid .registro-campo input {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  min-height: 44px;
+  font-size: 14px;
+}
+#screen-registrar .registro-campos-grid .registro-modalidade-box select {
+  padding: 7px 5px;
+  text-overflow: ellipsis;
+}
+#screen-registrar .registro-campos-grid .registro-campo input {
+  padding-inline: 7px;
+}
+#screen-registrar .field-helper-intro {
+  margin-bottom: 7px;
+  font-size: 13px;
+}
+#screen-registrar .registro-km-helper {
+  margin: 6px 0 7px;
+  font-size: 11px;
+  line-height: 1.3;
+}
+@media (max-width: 420px) {
+  #screen-registrar .registro-campos-grid:has(> .registro-modalidade-box:not([hidden])) {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1.1fr) minmax(0, .72fr);
+    column-gap: 5px;
+  }
+  #screen-registrar .registro-campos-grid .registro-campo label {
+    font-size: 11px;
+  }
+  #screen-registrar .registro-campos-grid .registro-modalidade-box select {
+    padding-inline: 3px;
+    font-size: 12px;
+  }
+  #screen-registrar .registro-campos-grid .registro-campo input {
+    padding-inline: 4px;
+    font-size: 13px;
+  }
+}
+
+/* DEV/LAB — alinhamento determinístico: os 3 campos usam a mesma
+   estrutura de 2 linhas (rótulo e controle), sem deslocamento do select. */
+#screen-registrar .registro-campos-grid {
+  align-items: start;
+}
+#screen-registrar .registro-campos-grid > .registro-campo,
+#screen-registrar .registro-campos-grid > .registro-modalidade-box {
+  display: grid;
+  grid-template-rows: 18px 44px;
+  align-content: start;
+  align-items: stretch;
+  row-gap: 4px;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+#screen-registrar .registro-campos-grid .registro-campo label {
+  display: block;
+  box-sizing: border-box;
+  height: 18px;
+  min-height: 18px;
+  line-height: 18px;
+  margin: 0;
+  padding: 0;
+  align-self: stretch;
+}
+#screen-registrar .registro-campos-grid .registro-modalidade-box select,
+#screen-registrar .registro-campos-grid .registro-campo input {
+  box-sizing: border-box;
+  height: 44px;
+  min-height: 44px;
+  max-height: 44px;
+  margin: 0;
+  align-self: stretch;
+}
+@media (max-width: 420px) {
+  /* Permite quebra de rótulo em telefone estreito sem entortar os campos. */
+  #screen-registrar .registro-campos-grid > .registro-campo,
+  #screen-registrar .registro-campos-grid > .registro-modalidade-box {
+    grid-template-rows: 28px 44px;
+  }
+  #screen-registrar .registro-campos-grid .registro-campo label {
+    height: 28px;
+    min-height: 28px;
+    line-height: 1.25;
+    display: flex;
+    align-items: end;
+  }
+}
+
+/* Meu Giro DEV: duas modalidades identificadas por ícone + texto + cor.
+   NUNCA usar apenas a cor como identificador; CSS restrito aos cartões
+   do participante e ao detalhe do desafio. */
+.mg-modalidade-ciclismo {
+  --mg-modalidade-cor: #c2410c;
+  --mg-modalidade-fundo: #fff7ed;
+  --mg-modalidade-borda: #fdba74;
+  --mg-modalidade-luz: #ffedd5;
+  --mg-modalidade-progresso: #ea580c;
+}
+.mg-modalidade-caminhada {
+  --mg-modalidade-cor: #0f766e;
+  --mg-modalidade-fundo: #f0fdfa;
+  --mg-modalidade-borda: #5eead4;
+  --mg-modalidade-luz: #ccfbf1;
+  --mg-modalidade-progresso: #0d9488;
+}
+/* Pictogramas da modalidade usam uma única cor herdada do texto. */
+.mg-modalidade-icon {
+  display: inline-block;
+  width: 25px;
+  height: 20px;
+  vertical-align: middle;
+  flex-shrink: 0;
+  color: inherit;
+}
+.mg-modalidade-icon-duo { width: 35px; }
+.mg-modalidade-tag > span[aria-hidden="true"] { display: inline-flex; align-items: center; }
+#painel-acao-registrar-icone .mg-modalidade-icon { width: 30px; height: 28px; }
+#painel-acao-registrar-icone .mg-modalidade-icon-duo { width: 40px; }
+.mg-modalidade-tag {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 7px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 6px 11px;
+  border: 1px solid var(--mg-modalidade-borda, #fdba74);
+  border-radius: 999px;
+  background: var(--mg-modalidade-fundo, #fff7ed);
+  color: var(--mg-modalidade-cor, #c2410c);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.35;
+  letter-spacing: 0.015em;
+}
+.painel-inicio-card .mg-modalidade-tag {
+  margin: 8px 0 2px;
+}
+.desafio-v2-card .mg-modalidade-tag {
+  margin: 0;
+}
+.desafio-v2-card.mg-modalidade-caminhada {
+  border-color: var(--mg-modalidade-borda);
+  background: radial-gradient(circle at top right, rgba(13,148,136,.13), transparent 42%),
+              linear-gradient(180deg, #fff 0%, #f0fdfa 100%);
+}
+.desafio-v2-card.mg-modalidade-caminhada::before {
+  color: var(--mg-modalidade-cor);
+  background: var(--mg-modalidade-luz);
+  box-shadow: inset 0 0 0 1px var(--mg-modalidade-borda);
+}
+.desafio-v2-card.mg-modalidade-caminhada:hover,
+.desafio-v2-card.mg-modalidade-caminhada:focus-visible {
+  border-color: var(--mg-modalidade-cor);
+  box-shadow: 0 14px 30px rgba(13,148,136,.13);
+}
+.desafio-v2-card.mg-modalidade-caminhada .desafio-v2-progress-track {
+  background: var(--mg-modalidade-luz);
+}
+.desafio-v2-card.mg-modalidade-caminhada .desafio-v2-progress-fill {
+  background: linear-gradient(90deg, #0f766e, #2dd4bf);
+}
+.desafio-v2-card.mg-modalidade-caminhada .desafio-v2-percentual {
+  color: var(--mg-modalidade-cor);
+}
+.desafio-v2-card.mg-modalidade-caminhada.desafio-v2-card-concluidos {
+  /* Prioridade ao estado concluído no fundo; a modalidade continua no selo */
+  background: radial-gradient(circle at top right, rgba(13,148,136,.08), transparent 40%),
+              linear-gradient(180deg, #fff 0%, #f0fdf4 100%);
+}
+.painel-inicio-card.mg-modalidade-caminhada {
+  border-color: var(--mg-modalidade-borda);
+  background: radial-gradient(circle at 92% 0%, rgba(13,148,136,.10), transparent 36%),
+              linear-gradient(145deg, #f0fdfa 0%, #fff 75%);
+  box-shadow: 0 20px 48px rgba(13,148,136,.11);
+}
+.painel-inicio-card.mg-modalidade-caminhada .painel-desafio-label {
+  color: var(--mg-modalidade-cor);
+}
+.painel-inicio-card.mg-modalidade-caminhada .painel-card-brand,
+.painel-inicio-card.mg-modalidade-caminhada .painel-desafio-detalhes .painel-desafio-restante {
+  border-color: var(--mg-modalidade-borda);
+  background: var(--mg-modalidade-fundo);
+  color: var(--mg-modalidade-cor);
+}
+.painel-inicio-card.mg-modalidade-caminhada .painel-desafio-restante strong,
+.painel-inicio-card.mg-modalidade-caminhada .painel-card-assinatura {
+  color: var(--mg-modalidade-cor);
+}
+.painel-inicio-card.mg-modalidade-caminhada .painel-desafio-detalhes p,
+.painel-inicio-card.mg-modalidade-caminhada .painel-metricas-emocionais p {
+  border-color: #ccfbf1;
+}
+.painel-inicio-card.mg-modalidade-caminhada .painel-progress-donut-track {
+  stroke: #ccfbf1;
+}
+.painel-inicio-card.mg-modalidade-caminhada .painel-progress-donut-bar {
+  stroke: var(--mg-modalidade-progresso);
+}
+.painel-inicio-card.mg-modalidade-ciclismo .painel-progress-donut-bar {
+  stroke: var(--mg-modalidade-progresso);
+}
+.desafio-detalhe-screen.mg-modalidade-caminhada .desafio-detalhe-topo,
+.desafio-detalhe-screen.mg-modalidade-caminhada .desafio-detalhe-card {
+  border-color: var(--mg-modalidade-borda);
+  background: linear-gradient(140deg,#f0fdfa,#fff 70%);
+}
+.desafio-detalhe-screen.mg-modalidade-caminhada .desafio-detalhe-progress-track {
+  background: var(--mg-modalidade-luz);
+}
+.desafio-detalhe-screen.mg-modalidade-caminhada .desafio-detalhe-progress-fill {
+  background: linear-gradient(90deg,#0f766e,#2dd4bf);
+}
+.desafio-detalhe-topo .mg-modalidade-tag {
+  margin: 8px 0 4px;
+}
+@media (max-width: 420px) {
+  .mg-modalidade-tag { font-size: 11px; padding: 5px 9px; }
+  .desafio-v2-card-conteudo { padding-right: 46px; }
+}
 </style>

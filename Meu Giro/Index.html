@@ -98,9 +98,13 @@
         <div id="painel-feed-header" class="painel-feed-header" hidden>
           <div>
             <p class="painel-feed-kicker">Seus desafios em andamento</p>
-            <p class="painel-feed-hint">Deslize para acompanhar cada desafio.</p>
+            <p class="painel-feed-hint">Escolha o desafio com as setas.</p>
           </div>
-          <div id="painel-feed-indicador" class="painel-feed-indicador" aria-live="polite"></div>
+          <div class="painel-feed-navegacao" role="group" aria-label="Navegar pelos desafios">
+            <button id="painel-feed-anterior" type="button" onclick="navegarFeedPainel_(-1)" aria-label="Desafio anterior">← Anterior</button>
+            <span id="painel-feed-indicador" class="painel-feed-indicador" aria-live="polite">1 de 1</span>
+            <button id="painel-feed-proximo" type="button" onclick="navegarFeedPainel_(1)" aria-label="Próximo desafio">Próximo →</button>
+          </div>
         </div>
         <div id="painel-desafios-feed" class="painel-desafios-feed">
       <div id="painel-share-card" class="card painel-inicio-card">
@@ -112,6 +116,9 @@
             <p class="painel-desafio-label">Desafio em foco</p>
             <span class="painel-card-brand">MEU GIRO</span>
           </div>
+          <span id="painel-modalidade" class="mg-modalidade-tag" aria-label="Modalidade: Ciclismo">
+            <span aria-hidden="true"><svg class="mg-modalidade-icon" viewBox="0 0 32 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="6" cy="18" r="4"/><circle cx="26" cy="18" r="4"/><path d="M6 18l6-8 6 8H6l6-8h7l7 8"/><circle cx="17" cy="4" r="2"/><path d="M16 7l-3 4 2 4M16 8l4 3 4-2"/></svg></span><span>Ciclismo</span>
+          </span>
           <h2 id="painel-desafio-nome">DESAFIO VOCÊ NA MEDALHA</h2>
           <p id="painel-card-atleta" class="painel-card-atleta">ATLETA</p>
           <div class="painel-desafio-detalhes" aria-label="Prazo do desafio em foco">
@@ -144,7 +151,7 @@
         <p id="progress-text" class="painel-progress-text">0 km de 0 km</p>
 
         <div id="painel-status-motivacional" class="painel-status-motivacional painel-status-neutro" aria-live="polite">
-          <p id="alerta-ritmo-titulo" class="painel-status-titulo">🚴 Hora de começar.</p>
+          <p id="alerta-ritmo-titulo" class="painel-status-titulo">Hora de começar.</p>
           <p id="alerta-ritmo-texto" class="painel-status-texto">Registre sua primeira atividade.</p>
         </div>
 
@@ -157,7 +164,7 @@
 
         <div class="painel-card-assinatura" aria-hidden="true">
           <span>DESAFIO GIRO</span>
-          <small>paixão por pedalar</small>
+          <small id="painel-card-lema">Paixão por pedalar</small>
         </div>
       </div>
         </div>
@@ -178,7 +185,7 @@
       <div id="desafio-selecionado-card" class="desafio-selecionado-container" hidden aria-live="polite"></div>
 
       <div class="painel-acoes-rapidas" aria-label="Ações rápidas">
-        <button type="button" class="painel-acao-card" onclick="navigateV2('register')"><span>🚴</span><strong>Registrar atividade</strong></button>
+        <button type="button" class="painel-acao-card" onclick="navigateV2('register')"><span id="painel-acao-registrar-icone" aria-hidden="true"><svg class="mg-modalidade-icon" viewBox="0 0 32 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="6" cy="18" r="4"/><circle cx="26" cy="18" r="4"/><path d="M6 18l6-8 6 8H6l6-8h7l7 8"/><circle cx="17" cy="4" r="2"/><path d="M16 7l-3 4 2 4M16 8l4 3 4-2"/></svg></span><strong>Registrar atividade</strong></button>
         <button type="button" class="painel-acao-card" onclick="navigateV2('challenges')"><span>🏆</span><strong>Desafios</strong></button>
         <button type="button" class="painel-acao-card" onclick="navigateV2('achievements')"><span>🥇</span><strong>Conquistas</strong></button>
         <button type="button" class="painel-acao-card" onclick="markRankingTrigger(this); carregarRanking('manual')"><span>📊</span><strong>Ranking</strong></button>
@@ -218,6 +225,7 @@
         <header class="card desafio-detalhe-topo">
           <div>
             <p class="desafio-detalhe-label">Detalhes do desafio</p>
+            <span id="desafio-detalhe-modalidade" class="mg-modalidade-tag" aria-label="Modalidade: Ciclismo"><span aria-hidden="true"><svg class="mg-modalidade-icon" viewBox="0 0 32 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="6" cy="18" r="4"/><circle cx="26" cy="18" r="4"/><path d="M6 18l6-8 6 8H6l6-8h7l7 8"/><circle cx="17" cy="4" r="2"/><path d="M16 7l-3 4 2 4M16 8l4 3 4-2"/></svg></span><span>Ciclismo</span></span>
             <h2 id="desafio-detalhe-titulo">Desafio</h2>
             <p class="desafio-detalhe-periodo">Período: <strong id="desafio-detalhe-periodo">-</strong></p>
           </div>
@@ -241,21 +249,29 @@
 
     <section id="screen-registrar" class="screen">
       <div id="registro-card" class="card card-registro-atividade">
-        <p class="field-helper field-helper-intro">Preencha só o dia e os km do pedal.</p>
+        <p class="field-helper field-helper-intro">Informe o dia e a distância da sua atividade.</p>
 
         <div class="registro-campos-grid">
+          <div id="registro-modalidade-box" class="registro-campo registro-modalidade-box" hidden>
+            <label for="modalidade-atividade">Modalidade</label>
+            <select id="modalidade-atividade" aria-label="Modalidade desta atividade" required>
+              <option value="" disabled selected>Escolha a modalidade</option>
+              <option value="CICLISMO">Ciclismo</option>
+              <option value="CAMINHADA_CORRIDA">Caminhada/Corrida</option>
+            </select>
+          </div>
           <div class="registro-campo">
             <label for="data-atividade">Data da atividade</label>
             <input id="data-atividade" type="date">
           </div>
 
           <div class="registro-campo">
-            <label for="km-atividade">KM pedalados</label>
+            <label for="km-atividade">KM realizados</label>
             <input id="km-atividade" type="text" inputmode="decimal" placeholder="Ex.: 25,5">
           </div>
         </div>
 
-        <p class="field-helper registro-km-helper">Use vírgula ou ponto.</p>
+        <p class="field-helper registro-km-helper">KM: vírgula ou ponto. Atividades anteriores ficam no histórico; metas seguem o prazo e a modalidade. Datas futuras não são permitidas.</p>
 
         <input id="atividade-id" type="hidden" value="">
         <input id="atividade-activity-id" type="hidden" value="">
@@ -280,7 +296,7 @@
     <section id="screen-conquistas" class="screen">
       <div class="card">
         <h2>Minhas conquistas</h2>
-        <p>Veja os desafios que você já concluiu.</p>
+        <p>Veja as medalhas virtuais que você conquistou ao concluir seus desafios.</p>
         <div id="conquistas-msg" class="msg status-msg" aria-live="polite"></div>
       </div>
       <section id="conquistas-concluidas" class="conquistas-secao" hidden>
@@ -302,6 +318,7 @@
         </header>
 
         <div class="card conquista-detalhe-card">
+          <div id="conquista-detalhe-medalha" class="conquista-detalhe-medalha"></div>
           <div id="conquista-detalhe-certificado" class="desafio-detalhe-certificado"></div>
           <div id="conquista-detalhe-lista" class="lista conquista-detalhe-lista"></div>
         </div>

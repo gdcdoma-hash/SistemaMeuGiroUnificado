@@ -60,7 +60,21 @@ window.addEventListener('message',function(ev){
   }
 });
 function logoutUser(){const s=loadServerSession();if(s&&s.token)google.script.run.withFailureHandler(function(){}).atletaEncerrarSessao(s.token);currentUser=null;currentPainel=null;window.__painelAtual=null;clearUserSession();clearServerSession();updateAuthUI();showScreen('inicio')}
-function iniciarHandoffAtleta_(handoff){handoff=String(handoff||'').trim();if(!handoff)return false;currentUser=null;currentPainel=null;clearUserSession();clearServerSession();applyEmbeddedMode();showScreen('inicio');google.script.run.withSuccessHandler(function(res){if(!res||res.ok!==true||!res.usuario||!res.usuario.id_dgmb){showScreen('login');return}currentUser={id_dgmb:String(res.usuario.id_dgmb),nome:'',cidade_uf:''};saveUserSession(currentUser);saveServerSession(res.session_token,res.expira_em);updateAuthUI();showScreen('painel');carregarPainel()}).atletaTrocarHandoffPorSessao(handoff);return true}
+function notificarHandoffConcluidoAosPais_(){
+  // Sem token/CPF/ID: sinaliza apenas que o iframe completou a abertura.
+  // O Portal LAB confirmará o estado no servidor antes de remover o aviso.
+  var msg={type:'DGMB_MEU_GIRO_HANDOFF_CONCLUIDO'};
+  var pais=[];
+  try{if(window.parent&&window.parent!==window)pais.push(window.parent)}catch(e){}
+  try{if(window.parent&&window.parent.parent)pais.push(window.parent.parent)}catch(e){}
+  try{if(window.top&&window.top!==window)pais.push(window.top)}catch(e){}
+  pais.forEach(function(janela,indice){
+    if(!janela||typeof janela.postMessage!=='function')return;
+    for(var i=0;i<indice;i++)if(pais[i]===janela)return;
+    try{janela.postMessage(msg,'*')}catch(e){}
+  });
+}
+function iniciarHandoffAtleta_(handoff){handoff=String(handoff||'').trim();if(!handoff)return false;currentUser=null;currentPainel=null;clearUserSession();clearServerSession();applyEmbeddedMode();showScreen('inicio');google.script.run.withSuccessHandler(function(res){if(!res||res.ok!==true||!res.usuario||!res.usuario.id_dgmb){showScreen('login');return}currentUser={id_dgmb:String(res.usuario.id_dgmb),nome:'',cidade_uf:''};saveUserSession(currentUser);saveServerSession(res.session_token,res.expira_em);updateAuthUI();showScreen('painel');carregarPainel();notificarHandoffConcluidoAosPais_()}).atletaTrocarHandoffPorSessao(handoff);return true}
 function processarLocalizacaoInicial_(loc){const p=loc&&loc.parameter?loc.parameter:{};PORTAL_LOCATION_PARAMS=p;PORTAL_EMBEDDED_MODE=PORTAL_EMBEDDED_MODE||String(p.embedded||'').trim()==='1';applyEmbeddedMode();const page=String(p.page||'').toLowerCase(),handoff=String(p.handoff||'').trim();if(page==='atleta'&&handoff){iniciarHandoffAtleta_(handoff);return}if(PORTAL_EMBEDDED_MODE){garantirMenuEmbedded();return}const saved=loadUserSession();if(saved&&saved.id_dgmb){currentUser=saved;updateAuthUI();showScreen('painel');carregarPainel()}else updateAuthUI()}
 function restoreUserSessionOnLoad(){
   ensureUnifiedAppStyles();

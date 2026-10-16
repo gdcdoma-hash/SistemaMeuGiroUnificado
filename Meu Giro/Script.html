@@ -195,10 +195,11 @@ function fecharModalMeuGiro(resolverPendente) {
   if (document.body) document.body.classList.remove('modal-meu-giro-aberto');
 }
 
-function mostrarErroAcaoAtividade() {
+function mostrarErroAcaoAtividade(erro) {
+  var dataFutura = erro && erro.code === 'DATA_FUTURA';
   return mostrarModalMeuGiro({
-    titulo: 'Não foi possível concluir a ação',
-    mensagem: 'Tente novamente em alguns instantes.',
+    titulo: dataFutura ? 'Data futura não permitida' : 'Não foi possível concluir a ação',
+    mensagem: erro && erro.msg ? String(erro.msg) : 'Tente novamente em alguns instantes.',
     tipo: 'erro',
     processando: false,
     origem: 'decisao',
@@ -408,6 +409,9 @@ function navigateV2(destino) {
     return;
   }
 
+  if (destinoNormalizado === 'register' && !activeEditKey) {
+    sincronizarModalidadeFormularioAtividade_('', true);
+  }
   if (destinoNormalizado === 'challenges') {
     renderDesafiosV2();
   } else if (destinoNormalizado === 'achievements') {
@@ -1504,6 +1508,8 @@ function renderRitmoAgora(p) {
   var titulo = '✅ Você está no ritmo.';
   var mensagem = 'Continue pedalando para manter sua evolução.';
   var statusClass = 'painel-status-bom';
+  var identidadeVisual = meuGiroIdentidadeModalidade_(getDesafioEmFocoAtual());
+  mensagem = identidadeVisual.incentivo;
 
   if (variant === 'alerta-ritmo-concluido') {
     titulo = '🏆 Desafio concluído!';
@@ -1514,13 +1520,24 @@ function renderRitmoAgora(p) {
     mensagem = 'Seu progresso está acima do ritmo esperado.';
     statusClass = 'painel-status-bom';
   } else if (variant === 'alerta-ritmo-atencao' || variant === 'alerta-ritmo-neutro') {
-    titulo = '🚴 Hora de reagir.';
+    titulo = 'Hora de reagir.';
     mensagem = 'Sua meta está ficando distante.';
     statusClass = 'painel-status-reagir';
   }
 
   setTextById('alerta-ritmo-titulo', titulo);
   setTextById('alerta-ritmo-texto', mensagem);
+  // A identidade.icone contém SVG, nunca texto. Inserir o pictograma como
+  // elemento visual apenas no aviso de reação, sem mostrar as tags na tela.
+  if (variant === 'alerta-ritmo-atencao' || variant === 'alerta-ritmo-neutro') {
+    var tituloAlerta = document.getElementById('alerta-ritmo-titulo');
+    if (tituloAlerta) {
+      tituloAlerta.insertAdjacentHTML(
+        'afterbegin',
+        '<span class="mg-status-modalidade-icon" aria-hidden="true">' + identidadeVisual.icone + '</span>'
+      );
+    }
+  }
 
   if (!alerta) return;
 
@@ -1640,11 +1657,13 @@ function setActivityFormLocked(disabled) {
   const cancelBtn = document.getElementById('btn-cancelar-edicao');
   const dataInput = document.getElementById('data-atividade');
   const kmInput = document.getElementById('km-atividade');
+  const modalidadeInput = document.getElementById('modalidade-atividade');
   const quickButtons = document.querySelectorAll('.quick-km-btn');
 
   if (cancelBtn) cancelBtn.disabled = !!disabled;
   if (dataInput) dataInput.disabled = !!disabled;
   if (kmInput) kmInput.disabled = !!disabled;
+  if (modalidadeInput) modalidadeInput.disabled = !!disabled;
 
   quickButtons.forEach(function(btn) {
     btn.disabled = !!disabled;
@@ -2286,6 +2305,50 @@ function renderPainel(p) {
   sincronizarPainelComDesafioEmFoco();
 }
 
+/**
+ * Identidade apenas visual: sempre determinada pela modalidade da inscrição,
+ * nunca pelo nome da medalha ou pelo período. Legado permanece Ciclismo.
+ */
+// Ícones vetoriais em uma única cor (currentColor), sem emojis do sistema.
+function meuGiroIconeModalidade_(modalidade) {
+  if (modalidade === 'CAMINHADA_CORRIDA') {
+    return '<svg class="mg-modalidade-icon mg-modalidade-icon-duo" viewBox="0 0 42 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' +
+      '<circle cx="9" cy="4" r="2"/><path d="M9 7l-1.5 6-4.5 5M7.5 13l4.5 3 1.5 5M9 9l5 2M9 9l-4 3"/>' +
+      '<circle cx="29" cy="4" r="2"/><path d="M28 7l-3 6 7 2 5-2M25 13l-5 6M32 15l2 6M28 9l5 1 4-3"/>' +
+      '</svg>';
+  }
+  return '<svg class="mg-modalidade-icon" viewBox="0 0 32 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' +
+    '<circle cx="6" cy="18" r="4"/><circle cx="26" cy="18" r="4"/>' +
+    '<path d="M6 18l6-8 6 8H6l6-8h7l7 8"/><circle cx="17" cy="4" r="2"/>' +
+    '<path d="M16 7l-3 4 2 4M16 8l4 3 4-2"/>' +
+    '</svg>';
+}
+function meuGiroIdentidadeModalidade_(desafio) {
+  var bruto = String((desafio && (desafio.modalidade_esportiva || desafio.modalidade)) || 'CICLISMO')
+    .trim().toUpperCase();
+  if (bruto === 'CAMINHADA_CORRIDA') {
+    return {
+      classe: 'mg-modalidade-caminhada',
+      nome: 'Caminhada/Corrida',
+      icone: meuGiroIconeModalidade_('CAMINHADA_CORRIDA'),
+      lema: 'Cada Passo, Uma Conquista.',
+      incentivo: 'Continue em movimento para manter sua evolução.'
+    };
+  }
+  return {
+    classe: 'mg-modalidade-ciclismo',
+    nome: 'Ciclismo',
+    icone: meuGiroIconeModalidade_('CICLISMO'),
+    lema: 'Paixão por pedalar',
+    incentivo: 'Continue pedalando para manter sua evolução.'
+  };
+}
+function aplicarIdentidadeModalidadeElemento_(elemento, identidade) {
+  if (!elemento || !identidade) return;
+  elemento.classList.remove('mg-modalidade-caminhada', 'mg-modalidade-ciclismo');
+  elemento.classList.add(identidade.classe);
+}
+
 function renderDesafiosV2() {
   var mensagem = document.getElementById('desafios-v2-msg');
   var secoes = {
@@ -2333,6 +2396,66 @@ function syncConquistasBloqueioVisual_() {
 
 function liberarConquistaActionLock_() {
   setConquistaActionLock_(false);
+}
+
+function getConquistaUsuarioStorageId_() {
+  var u = currentUser || {};
+  return String(u.id_dgmb || u.idDgmb || u.cpf || 'anonimo').trim() || 'anonimo';
+}
+
+function getConquistaVistaStorageKey_(desafio) {
+  var chave = String(getDesafioKey(desafio || {}) || '').trim();
+  if (!chave) return '';
+  return 'meuGiro.conquistaVista.' + getConquistaUsuarioStorageId_() + '.' + chave;
+}
+
+function isConquistaNova_(desafio) {
+  var chave = getConquistaVistaStorageKey_(desafio);
+  if (!chave) return false;
+  try {
+    return localStorage.getItem(chave) !== '1';
+  } catch (e) {
+    return false;
+  }
+}
+
+function marcarConquistaVista_(desafio) {
+  var chave = getConquistaVistaStorageKey_(desafio);
+  if (!chave) return;
+  try {
+    localStorage.setItem(chave, '1');
+  } catch (e) {}
+}
+
+function getConquistaMetaRotulo_(desafio) {
+  var meta = Math.max(0, toFiniteNumber(desafio && desafio.meta_km, 0));
+  if (!meta) return 'META';
+  return formatNumber(meta) + ' KM';
+}
+
+function buildMedalhaVirtualHtml_(desafio, grande) {
+  var titulo = getDesafioTitulo(desafio || {});
+  var meta = getConquistaMetaRotulo_(desafio);
+  return '<div class="medalha-virtual ' + (grande ? 'medalha-virtual-grande' : 'medalha-virtual-card') + '" aria-label="Medalha virtual conquistada: ' + escapeHtml(titulo) + '">' +
+    '<div class="medalha-virtual-fita"><span></span><span></span></div>' +
+    '<div class="medalha-virtual-disco">' +
+      '<span class="medalha-virtual-icone" aria-hidden="true">★</span>' +
+      '<strong>' + escapeHtml(meta) + '</strong>' +
+      '<small>MEU GIRO</small>' +
+    '</div>' +
+  '</div>';
+}
+
+function renderMedalhaVirtualConquistaDetalhe_(desafio) {
+  var box = document.getElementById('conquista-detalhe-medalha');
+  if (!box) return;
+  box.innerHTML =
+    '<div class="conquista-detalhe-premio">' +
+      buildMedalhaVirtualHtml_(desafio, true) +
+      '<div><span class="conquista-desbloqueada-label">Conquista desbloqueada</span>' +
+      '<strong>' + escapeHtml(getDesafioTitulo(desafio || {})) + '</strong>' +
+      '<p>' + escapeHtml(getDesafioPeriodoCardLabel_(desafio || {})) + '</p></div>' +
+    '</div>';
 }
 
 function renderConquistasV2() {
@@ -2438,11 +2561,19 @@ function buildConquistaCard_(desafio) {
   var certificadoDisponivel = isDesafioElegivelCertificado_(desafio);
   var chave = getDesafioKey(desafio);
 
-  card.className = 'conquista-card conquista-concluida-card';
+  var conquistaNova = isConquistaNova_(desafio);
+  card.className = 'conquista-card conquista-concluida-card' + (conquistaNova ? ' conquista-card-nova' : '');
   card.tabIndex = 0;
   card.setAttribute('role', 'button');
   card.setAttribute('aria-label', 'Ver atividades de ' + getDesafioTitulo(desafio));
   card.innerHTML =
+    '<div class="conquista-card-premio">' +
+      buildMedalhaVirtualHtml_(desafio, false) +
+      '<div class="conquista-card-premio-texto">' +
+        '<span class="conquista-desbloqueada-label">Conquista desbloqueada</span>' +
+        (conquistaNova ? '<span class="conquista-nova-badge">Nova conquista</span>' : '') +
+      '</div>' +
+    '</div>' +
     '<div class="conquista-card-conteudo">' +
       '<strong class="conquista-card-titulo">' + escapeHtml(getDesafioTitulo(desafio)) + '</strong>' +
       '<div class="conquista-card-metricas">' +
@@ -2456,12 +2587,20 @@ function buildConquistaCard_(desafio) {
       : '');
   card.addEventListener('click', function(event) {
     if (event.target && event.target.closest && event.target.closest('button, a')) return;
+    marcarConquistaVista_(desafio);
+    card.classList.remove('conquista-card-nova');
+    var badgeNova = card.querySelector('.conquista-nova-badge');
+    if (badgeNova) badgeNova.remove();
     abrirDetalheConquistaV2_(chave);
   });
   card.addEventListener('keydown', function(event) {
     if (event.target && event.target.closest && event.target.closest('button, a')) return;
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
+      marcarConquistaVista_(desafio);
+      card.classList.remove('conquista-card-nova');
+      var badgeNova = card.querySelector('.conquista-nova-badge');
+      if (badgeNova) badgeNova.remove();
       abrirDetalheConquistaV2_(chave);
     }
   });
@@ -2646,13 +2785,16 @@ function buildDesafioCardV2_(desafio, grupo) {
   var percentual = calcularPercentualDesafio_(meta, realizado);
   var chave = getDesafioKey(desafio);
   var prazoCard = getDesafioPrazoCardInfo_(desafio);
+  var modalidadeVisual = meuGiroIdentidadeModalidade_(desafio);
 
-  card.className = 'desafio-v2-card desafio-v2-card-' + grupo;
+  card.className = 'desafio-v2-card desafio-v2-card-' + grupo + ' ' + modalidadeVisual.classe;
   card.tabIndex = 0;
   card.setAttribute('role', 'button');
   card.setAttribute('aria-label', 'Abrir detalhes de ' + getDesafioTitulo(desafio));
   card.innerHTML =
     '<div class="desafio-v2-card-conteudo">' +
+      '<span class="mg-modalidade-tag"><span aria-hidden="true">' + modalidadeVisual.icone +
+      '</span><span>' + escapeHtml(modalidadeVisual.nome) + '</span></span>' +
       '<strong class="desafio-v2-card-titulo">' + escapeHtml(getDesafioTitulo(desafio)) + '</strong>' +
       '<div class="desafio-v2-metricas">' +
         '<p><span>Meta</span><strong>' + formatNumber(meta) + ' km</strong></p>' +
@@ -2699,6 +2841,13 @@ function renderDetalheDesafioV2_(desafio) {
   var realizado = toFiniteNumber(desafio.distancia_realizada, 0);
   var falta = Math.max(0, meta - realizado);
   var percentual = calcularPercentualDesafio_(meta, realizado);
+  var identidade = meuGiroIdentidadeModalidade_(desafio);
+  aplicarIdentidadeModalidadeElemento_(document.getElementById('screen-desafio-detalhe'), identidade);
+  var badge = document.getElementById('desafio-detalhe-modalidade');
+  if (badge) {
+    badge.innerHTML = '<span aria-hidden="true">' + identidade.icone + '</span><span>' + escapeHtml(identidade.nome) + '</span>';
+    badge.setAttribute('aria-label', 'Modalidade: ' + identidade.nome);
+  }
   setTextById('desafio-detalhe-titulo', getDesafioTitulo(desafio));
   setTextById('desafio-detalhe-periodo', getDesafioPeriodoCardLabel_(desafio));
   setTextById('desafio-detalhe-meta', formatNumber(meta) + ' km');
@@ -2755,6 +2904,8 @@ function abrirDetalheConquistaV2_(chave) {
     }
     setTextById('conquista-detalhe-titulo', getDesafioTitulo(desafio));
     setTextById('conquista-detalhe-periodo', getDesafioMesExtensoAnoLabel_(desafio));
+    marcarConquistaVista_(desafio);
+    renderMedalhaVirtualConquistaDetalhe_(desafio);
     renderCertificadoConquistaDetalhe_(desafio);
     renderConquistaDetalheAtividadesV2_(desafio);
     showScreen('conquista-detalhe');
@@ -3035,10 +3186,20 @@ function filtrarAtividadesPorPeriodoDesafio(atividades, desafio) {
     };
   }
 
+  // Histórico contextual: uma atividade de caminhada não pode aparecer
+  // na relação de um desafio de Ciclismo (e vice-versa).
+  // Itens legados sem modalidade são tratados como Ciclismo.
+  var modalidadeDesafio = String(
+    desafio && (desafio.modalidade_esportiva || desafio.modalidade) || 'CICLISMO'
+  ).trim().toUpperCase();
   return {
     items: lista.filter(function(item) {
-      var data = String(item && item.data || '').trim();
-      return !!data && data >= inicio && data <= fim;
+      var data = String(item && (item.data || item.data_atividade) || '').trim();
+      var modalidadeAtividade = String(
+        item && (item.modalidade_esportiva || item.modalidade) || 'CICLISMO'
+      ).trim().toUpperCase();
+      return !!data && data >= inicio && data <= fim &&
+        modalidadeAtividade === modalidadeDesafio;
     }),
     erro_periodo: false,
     mensagem: ''
@@ -3504,7 +3665,8 @@ async function compartilharCardPainel() {
   }
 }
 
-function obterStatusMotivacionalFeed_(contexto) {
+function obterStatusMotivacionalFeed_(contexto, desafio) {
+  var identidadeVisual = meuGiroIdentidadeModalidade_(desafio);
   var statusText = normalizeRitmoText(contexto && contexto.ritmo_status, '');
   var variant = painelMetaConcluida_(contexto) ? 'alerta-ritmo-concluido' : getRitmoAgoraVariant(statusText);
 
@@ -3527,7 +3689,8 @@ function obterStatusMotivacionalFeed_(contexto) {
   if (variant === 'alerta-ritmo-atencao' || variant === 'alerta-ritmo-neutro') {
     return {
       classe: 'painel-status-reagir',
-      titulo: '🚴 Hora de reagir.',
+      titulo: 'Hora de reagir.',
+      icone: identidadeVisual.icone,
       mensagem: 'Sua meta está ficando distante.'
     };
   }
@@ -3535,7 +3698,7 @@ function obterStatusMotivacionalFeed_(contexto) {
   return {
     classe: 'painel-status-bom',
     titulo: '✅ Você está no ritmo.',
-    mensagem: 'Continue pedalando para manter sua evolução.'
+    mensagem: identidadeVisual.incentivo
   };
 }
 
@@ -3545,7 +3708,8 @@ function criarCardFeedDesafioPainel_(painel, desafio) {
   var percentual = Math.max(0, Math.min(100, toFiniteNumber(contexto.percentual, 0)));
   var circunferencia = 301.593;
   var dashOffset = circunferencia * (1 - percentual / 100);
-  var status = obterStatusMotivacionalFeed_(contexto);
+  var status = obterStatusMotivacionalFeed_(contexto, desafio);
+  var identidadeVisual = meuGiroIdentidadeModalidade_(desafio);
   var inicio = formatarDataDesafioPainel_(contexto.periodo_inicio) || '-';
   var fim = formatarDataDesafioPainel_(contexto.periodo_fim) || '-';
   var prazo = obterPrazoDesafioPainel_(desafio, contexto);
@@ -3553,7 +3717,7 @@ function criarCardFeedDesafioPainel_(painel, desafio) {
   var atleta = String((painel && painel.nome) || '').trim().toUpperCase() || 'ATLETA';
   var chave = getDesafioKey(desafio);
 
-  card.className = 'card painel-inicio-card painel-inicio-card-feed';
+  card.className = 'card painel-inicio-card painel-inicio-card-feed ' + identidadeVisual.classe;
   card.tabIndex = 0;
   card.setAttribute('role', 'button');
   card.setAttribute('aria-label', 'Ver ' + getDesafioTitulo(desafio) + ' como desafio em foco');
@@ -3564,6 +3728,8 @@ function criarCardFeedDesafioPainel_(painel, desafio) {
         '<p class="painel-desafio-label">Desafio em andamento</p>' +
         '<span class="painel-card-brand">MEU GIRO</span>' +
       '</div>' +
+      '<span class="mg-modalidade-tag"><span aria-hidden="true">' + identidadeVisual.icone +
+        '</span><span>' + escapeHtml(identidadeVisual.nome) + '</span></span>' +
       '<h2>' + escapeHtml(getDesafioTitulo(desafio)) + '</h2>' +
       '<p class="painel-card-atleta">' + escapeHtml(atleta) + '</p>' +
       '<div class="painel-desafio-detalhes" aria-label="Prazo do desafio">' +
@@ -3592,12 +3758,14 @@ function criarCardFeedDesafioPainel_(painel, desafio) {
     '</div>' +
     '<p class="painel-progress-text">' + escapeHtml(formatNumber(contexto.realizado)) + ' km de ' + escapeHtml(formatNumber(contexto.meta)) + ' km</p>' +
     '<div class="painel-status-motivacional ' + status.classe + '">' +
-      '<p class="painel-status-titulo">' + escapeHtml(status.titulo) + '</p>' +
+      '<p class="painel-status-titulo">' +
+        (status.icone ? '<span class="mg-status-modalidade-icon" aria-hidden="true">' + status.icone + '</span>' : '') +
+        escapeHtml(status.titulo) + '</p>' +
       '<p class="painel-status-texto">' + escapeHtml(status.mensagem) + '</p>' +
     '</div>' +
     '<div class="painel-card-assinatura" aria-hidden="true">' +
       '<span>DESAFIO GIRO</span>' +
-      '<small>paixão por pedalar</small>' +
+      '<small>' + escapeHtml(identidadeVisual.lema) + '</small>' +
     '</div>';
 
   function ativar() {
@@ -3616,65 +3784,45 @@ function criarCardFeedDesafioPainel_(painel, desafio) {
 }
 
 function atualizarIndicadorFeedPainel_() {
-  var feed = document.getElementById('painel-desafios-feed');
+  var ativos = Array.isArray(desafiosAtivosCarouselItems) ? desafiosAtivosCarouselItems : [];
+  var atual = getDesafioKey(getDesafioEmFocoAtual());
+  var indice = ativos.findIndex(function(item) { return getDesafioKey(item) === atual; });
+  if (indice < 0) indice = 0;
+  var total = ativos.length;
   var indicador = document.getElementById('painel-feed-indicador');
-  if (!feed || !indicador) return;
-
-  var cards = Array.prototype.slice.call(feed.querySelectorAll('.painel-inicio-card'));
-  if (cards.length <= 1) {
-    indicador.innerHTML = '';
-    return;
-  }
-
-  var centro = feed.scrollLeft + feed.clientWidth / 2;
-  var melhor = 0;
-  var menorDistancia = Infinity;
-  cards.forEach(function(card, index) {
-    var meio = card.offsetLeft + card.offsetWidth / 2;
-    var distancia = Math.abs(meio - centro);
-    if (distancia < menorDistancia) {
-      menorDistancia = distancia;
-      melhor = index;
-    }
-  });
-
-  indicador.innerHTML = cards.map(function(_, index) {
-    return '<span class="painel-feed-dot' + (index === melhor ? ' is-active' : '') + '" aria-hidden="true"></span>';
-  }).join('');
+  var anterior = document.getElementById('painel-feed-anterior');
+  var proximo = document.getElementById('painel-feed-proximo');
+  if (indicador) indicador.textContent = total ? (indice + 1) + ' de ' + total : '0 de 0';
+  if (anterior) anterior.disabled = total <= 1 || indice === 0;
+  if (proximo) proximo.disabled = total <= 1 || indice >= total - 1;
 }
-
+function navegarFeedPainel_(delta) {
+  var ativos = Array.isArray(desafiosAtivosCarouselItems) ? desafiosAtivosCarouselItems : [];
+  if (ativos.length <= 1) return;
+  var atual = getDesafioKey(getDesafioEmFocoAtual());
+  var indice = ativos.findIndex(function(item) { return getDesafioKey(item) === atual; });
+  if (indice < 0) indice = 0;
+  var seguinte = Math.max(0, Math.min(ativos.length - 1, indice + Number(delta || 0)));
+  if (seguinte === indice) return;
+  aplicarDesafioEmFoco(getDesafioKey(ativos[seguinte]), {silent:true});
+}
 function renderFeedDesafiosPainel_(painel, desafioAtual) {
   var feed = document.getElementById('painel-desafios-feed');
   var header = document.getElementById('painel-feed-header');
   var principal = document.getElementById('painel-share-card');
   if (!feed || !principal) return;
 
+  // Mostrar somente o cartão em foco: elimina o pedaço do próximo cartão
+  // e evita esconder a terceira inscrição fora da área visível.
   Array.prototype.slice.call(feed.querySelectorAll('.painel-inicio-card-feed')).forEach(function(card) {
     card.remove();
   });
-
-  var ativos = Array.isArray(desafiosAtivosCarouselItems) ? desafiosAtivosCarouselItems.slice() : [];
-  var chaveAtual = getDesafioKey(desafioAtual);
-  var adicionais = ativos.filter(function(item) {
-    return getDesafioKey(item) !== chaveAtual;
-  });
-
-  adicionais.forEach(function(item) {
-    feed.appendChild(criarCardFeedDesafioPainel_(painel, item));
-  });
-
-  var totalCards = 1 + adicionais.length;
-  if (header) header.hidden = totalCards <= 1;
-
-  feed.classList.toggle('painel-desafios-feed-multiplo', totalCards > 1);
-  feed.onscroll = totalCards > 1 ? function() {
-    window.requestAnimationFrame(atualizarIndicadorFeedPainel_);
-  } : null;
-
-  window.requestAnimationFrame(function() {
-    feed.scrollLeft = 0;
-    atualizarIndicadorFeedPainel_();
-  });
+  var quantidade = Array.isArray(desafiosAtivosCarouselItems) ? desafiosAtivosCarouselItems.length : 0;
+  if (header) header.hidden = quantidade <= 1;
+  feed.classList.remove('painel-desafios-feed-multiplo');
+  feed.onscroll = null;
+  feed.scrollLeft = 0;
+  atualizarIndicadorFeedPainel_();
 }
 
 function sincronizarPainelComDesafioEmFoco() {
@@ -3686,6 +3834,16 @@ function sincronizarPainelComDesafioEmFoco() {
   }
 
   var contexto = montarPainelContextual(painel, desafioAtual);
+  var identidadeVisual = meuGiroIdentidadeModalidade_(desafioAtual);
+  aplicarIdentidadeModalidadeElemento_(document.getElementById('painel-share-card'), identidadeVisual);
+  var badgeModalidade = document.getElementById('painel-modalidade');
+  if (badgeModalidade) {
+    badgeModalidade.innerHTML = '<span aria-hidden="true">' + identidadeVisual.icone + '</span><span>' + escapeHtml(identidadeVisual.nome) + '</span>';
+    badgeModalidade.setAttribute('aria-label', 'Modalidade: ' + identidadeVisual.nome);
+  }
+  setTextById('painel-card-lema', identidadeVisual.lema);
+  var iconeRegistrar = document.getElementById('painel-acao-registrar-icone');
+  if (iconeRegistrar) iconeRegistrar.innerHTML = identidadeVisual.icone;
   debugPeriodoDesafioFrontend_('sincronizarPainelComDesafioEmFoco', getPeriodoDesafioVisual_(desafioAtual, contexto), contexto.periodo_desafio, desafioAtual || {});
   atualizarContextoVisualRanking(desafioAtual);
 
@@ -3771,6 +3929,19 @@ function renderDesafiosPainel(painel) {
       });
     }
   }
+
+  // A tela Início e a tela Desafios devem enxergar a mesma inscrição.
+  // Incluir também as inscrições classificadas como em andamento na
+  // listagem unificada, mesmo quando não vierem em desafios_ativos.
+  // A elegibilidade estrita para foco continua impedindo status finais.
+  var chavesAtuaisInicio = mapearChavesDesafiosBase_(desafiosAtivos);
+  obterTodosDesafiosPainelV2_(painel).forEach(function(item) {
+    var chave = getDesafioBaseKey_(item);
+    if (!chave || chavesAtuaisInicio[chave]) return;
+    if (classificarDesafioV2_(item).grupo !== 'andamento' || !isDesafioAtivo_(item)) return;
+    desafiosAtivos.push(item);
+    chavesAtuaisInicio[chave] = true;
+  });
 
   if (desafiosAtivos.length && desafiosHistorico.length) {
     var ativosMap = mapearChavesDesafiosBase_(desafiosAtivos);
@@ -4344,7 +4515,9 @@ function isDesafioElegivelCertificado_(desafio) {
   if (!desafio) return false;
   var statusApuracao = String(desafio.status_apuracao || '').trim().toUpperCase();
   var statusUsuarioDesafio = String(desafio.status_usuario_desafio || '').trim().toUpperCase();
-  return statusApuracao === 'CONCLUIDO' &&
+  var meta = toFiniteNumber(desafio.meta_km, 0);
+  var realizado = toFiniteNumber(desafio.distancia_realizada, 0);
+  return meta > 0 && realizado >= meta &&
     statusUsuarioDesafio === 'CONCLUIDO';
 }
 
@@ -4359,8 +4532,10 @@ function getMensagemCertificado_(desafio) {
   if (statusApuracao === 'EXPIRADO' && statusUsuarioDesafio === 'NAO_CONCLUIDO') {
     return { texto: 'Desafio encerrado sem conclusão da meta.', variante: '' };
   }
-  if (statusApuracao !== 'CONCLUIDO') {
-    return { texto: 'Conclua sua meta para liberar seu certificado.', variante: '' };
+  var meta = toFiniteNumber(item.meta_km, 0);
+  var realizado = toFiniteNumber(item.distancia_realizada, 0);
+  if (!(meta > 0 && realizado >= meta)) {
+    return { texto: 'O certificado exige 100% da meta e conclusão confirmada pelo administrador.', variante: '' };
   }
   if (statusUsuarioDesafio !== 'CONCLUIDO') {
     return { texto: 'Meta atingida. Aguardando validação da organização.', variante: 'loading' };
@@ -4676,11 +4851,89 @@ function selecionarMesAtividades(key) {
   renderAtividades(currentPainel && currentPainel.atividades || []);
 }
 
+var meuGiroContextoModalidadeFormulario_ = '';
+function meuGiroModalidadeVisual_(valor) {
+  return valor === 'CAMINHADA_CORRIDA' ? 'Caminhada/Corrida' : 'Ciclismo';
+}
+function meuGiroModalidadesDoPainel_() {
+  var painel = currentPainel || {};
+  var desafios = (painel.desafios_ativos && painel.desafios_ativos.length)
+    ? painel.desafios_ativos : (painel.desafios || []);
+  var encontrados = {};
+  desafios.forEach(function(d) {
+    var v = String((d && (d.modalidade_esportiva || d.modalidade)) || 'CICLISMO').trim().toUpperCase();
+    if (v === 'CAMINHADA_CORRIDA' || v === 'CICLISMO') encontrados[v] = true;
+  });
+  var lista = Object.keys(encontrados);
+  return lista.length ? lista : ['CICLISMO'];
+}
+function sincronizarModalidadeFormularioAtividade_(modalidadePreferida, novaEscolha) {
+  var seletor = document.getElementById('modalidade-atividade');
+  var box = document.getElementById('registro-modalidade-box');
+  meuGiroConfigurarLimiteDataRegistro_();
+  if (!seletor || !box) return 'CICLISMO';
+  var opcoes = meuGiroModalidadesDoPainel_();
+  var maisDeUma = opcoes.length > 1;
+  var preferida = String(modalidadePreferida || '').trim().toUpperCase();
+  var atual = String(seletor.value || '').trim().toUpperCase();
+  // Com duas modalidades não herdar automaticamente o desafio em foco.
+  // Na edição, a chamada explícita traz o esporte do registro original.
+  var contextoAtual = String((currentPainel && currentPainel.id_dgmb) || '')+'|'+opcoes.join('|');
+  var mesmoContexto = contextoAtual === meuGiroContextoModalidadeFormulario_;
+  var escolhido = !maisDeUma ? opcoes[0] :
+    (novaEscolha ? '' :
+      (opcoes.indexOf(preferida) >= 0 ? preferida :
+        ((mesmoContexto || !!activeEditKey) && opcoes.indexOf(atual) >= 0 ? atual : '')));
+  meuGiroContextoModalidadeFormulario_ = contextoAtual;
+  seletor.value = escolhido;
+  seletor.required = maisDeUma;
+  box.hidden = !maisDeUma;
+  return escolhido;
+}
+function meuGiroModalidadeFormularioAtividade_() {
+  var seletor = document.getElementById('modalidade-atividade');
+  var valor = String(seletor && seletor.value || '').trim().toUpperCase();
+  if (meuGiroModalidadesDoPainel_().length > 1) {
+    return valor === 'CICLISMO' || valor === 'CAMINHADA_CORRIDA' ? valor : '';
+  }
+  return valor || 'CICLISMO';
+}
+
+function meuGiroAvisoValidacaoRegistro_(titulo, mensagem, campoId) {
+  // Mensagens que impedem o registro precisam do popup já padronizado no Meu Giro.
+  // Não manter aviso duplicado e difícil de perceber dentro do formulário.
+  setRegistroMsg('');
+  return mostrarModalMeuGiro({
+    titulo: titulo || 'Confira sua atividade',
+    mensagem: String(mensagem || 'Confira os dados e tente novamente.'),
+    tipo: 'alerta',
+    origem: 'decisao',
+    processando: false,
+    botoes: [{texto: 'Entendi', valor: true, destaque: true}]
+  }).then(function() {
+    if (!campoId) return;
+    var campo = document.getElementById(campoId);
+    if (campo && typeof campo.focus === 'function') campo.focus();
+  });
+}
+
+function meuGiroValidarModalidadeRegistro_() {
+  if (meuGiroModalidadeFormularioAtividade_()) return true;
+  releaseRegistroSubmitGuard();
+  meuGiroAvisoValidacaoRegistro_(
+    'Escolha a modalidade',
+    'Selecione Ciclismo ou Caminhada/Corrida antes de registrar sua atividade.',
+    'modalidade-atividade'
+  );
+  return false;
+}
+
 function renderAtividades(lista) {
   const box = document.getElementById('atividades-lista');
   const mesesBox = document.getElementById('atividades-meses');
   const resumo = document.getElementById('atividades-mes-resumo');
   if (!box) return;
+  sincronizarModalidadeFormularioAtividade_();
 
   clearRecentActivityHighlight();
   box.innerHTML = '';
@@ -4720,7 +4973,14 @@ function renderAtividades(lista) {
   }, 0);
 
   if (resumo) {
-    resumo.innerHTML = '<span>Total do mês: <strong id="total-pedalado">' + formatNumber(totalMes) + '</strong> km</span>';
+    var modos = {CICLISMO:0,CAMINHADA_CORRIDA:0};
+    listaFiltrada.forEach(function(item) {
+      var modo = item && item.modalidade_esportiva === 'CAMINHADA_CORRIDA' ? 'CAMINHADA_CORRIDA' : 'CICLISMO';
+      modos[modo] += toFiniteNumber(item && item.km, 0);
+    });
+    resumo.innerHTML = '<span>Ciclismo: <strong>' + formatNumber(modos.CICLISMO) +
+      '</strong> km · Caminhada/Corrida: <strong>' +
+      formatNumber(modos.CAMINHADA_CORRIDA) + '</strong> km</span>';
   }
 
   if (!listaFiltrada.length) {
@@ -4739,7 +4999,8 @@ function renderAtividades(lista) {
 
     const info = document.createElement('div');
     info.className = 'atividade-info';
-    info.innerText = 'Dia ' + getActivityDayLabel_(item) + ' — ' + formatNumber(item.km) + ' km';
+    info.innerText = 'Dia ' + getActivityDayLabel_(item) + ' — ' + formatNumber(item.km) +
+      ' km · ' + meuGiroModalidadeVisual_(item.modalidade_esportiva);
     div.appendChild(info);
 
     const actions = document.createElement('div');
@@ -4870,6 +5131,22 @@ function toFiniteNumber(value, fallback) {
   return Number.isFinite(n) ? n : Number(fallback || 0);
 }
 
+function meuGiroHojeBrasilISOCliente_() {
+  var partes = new Intl.DateTimeFormat('en-US', {
+    timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'
+  }).formatToParts(new Date());
+  var valores={};
+  partes.forEach(function(p) { valores[p.type]=p.value; });
+  return valores.year+'-'+valores.month+'-'+valores.day;
+}
+function meuGiroConfigurarLimiteDataRegistro_() {
+  var campo=document.getElementById('data-atividade');
+  if(campo)campo.max=meuGiroHojeBrasilISOCliente_();
+}
+function meuGiroAvisoDataFutura_() {
+  return 'Data futura não permitida. Registre uma atividade realizada hoje ou em uma data anterior.';
+}
+
 function isValidActivityDate(value) {
   const parsed = parseIsoDateLocal(value);
   if (!parsed) return false;
@@ -4949,6 +5226,7 @@ async function salvarAtividade(forcarDuplicidade) {
     return;
   }
 
+  if (!meuGiroValidarModalidadeRegistro_()) return;
   if (activityMutationInProgress || btn.disabled) {
     setRegistroPressedState(false);
     setRegistroMsg('Aguarde, concluindo a ação atual...', 'loading');
@@ -4957,19 +5235,25 @@ async function salvarAtividade(forcarDuplicidade) {
 
   if (!data || !km) {
     releaseRegistroSubmitGuard();
-    setRegistroMsg('Informe a data e os km.', 'error');
+    meuGiroAvisoValidacaoRegistro_('Informe os dados da atividade', 'Preencha a data e os quilômetros realizados.', !data ? 'data-atividade' : 'km-atividade');
     return;
   }
 
   if (!isValidActivityDate(data)) {
     releaseRegistroSubmitGuard();
-    setRegistroMsg('Informe uma data válida.', 'error');
+    meuGiroAvisoValidacaoRegistro_('Confira a data', 'Informe uma data válida para sua atividade.', 'data-atividade');
     return;
   }
 
   if (parseValidActivityKm(km) === null) {
     releaseRegistroSubmitGuard();
-    setRegistroMsg('Informe um KM válido maior que zero.', 'error');
+    meuGiroAvisoValidacaoRegistro_('Confira a distância', 'Informe uma distância maior que zero.', 'km-atividade');
+    return;
+  }
+
+  if (data > meuGiroHojeBrasilISOCliente_()) {
+    releaseRegistroSubmitGuard();
+    meuGiroAvisoValidacaoRegistro_('Data futura não permitida', meuGiroAvisoDataFutura_(), 'data-atividade');
     return;
   }
 
@@ -5001,7 +5285,7 @@ async function salvarAtividade(forcarDuplicidade) {
       google.script.run
         .withSuccessHandler(resolve)
         .withFailureHandler(reject)
-        .registrarAtividade(idDgmb, data, km, !!forcarDuplicidade);
+        .registrarAtividade(idDgmb, data, km, !!forcarDuplicidade, meuGiroModalidadeFormularioAtividade_());
     });
 
     if (!res || !res.ok) {
@@ -5017,8 +5301,8 @@ async function salvarAtividade(forcarDuplicidade) {
         return;
       }
 
-      setRegistroMsg(getGoogleScriptErrorMessage(res, 'Não foi possível registrar a atividade.'), 'error');
-      await mostrarErroAcaoAtividade();
+      setRegistroMsg('');
+      await mostrarErroAcaoAtividade(res);
       return;
     }
 
@@ -5054,7 +5338,7 @@ async function salvarAtividade(forcarDuplicidade) {
   } catch (err) {
     nextMessage = 'error';
     const errMsg = getGoogleScriptErrorMessage(err, 'Não foi possível registrar a atividade.');
-    setRegistroMsg(errMsg, 'error');
+    setRegistroMsg('');
     console.error(err);
     await mostrarErroAcaoAtividade();
   } finally {
@@ -5103,6 +5387,7 @@ async function salvarEdicaoAtividade(forcarDuplicidade) {
     return;
   }
 
+  if (!meuGiroValidarModalidadeRegistro_()) return;
   if (activityMutationInProgress || pendingEditSaveKey === editKey || btn.disabled) {
     setRegistroPressedState(false);
     setRegistroMsg('Salvando edição...', 'loading');
@@ -5111,19 +5396,25 @@ async function salvarEdicaoAtividade(forcarDuplicidade) {
 
   if (!data || !km) {
     releaseRegistroSubmitGuard();
-    setRegistroMsg('Informe a data e os km.', 'error');
+    meuGiroAvisoValidacaoRegistro_('Informe os dados da atividade', 'Preencha a data e os quilômetros realizados.', !data ? 'data-atividade' : 'km-atividade');
     return;
   }
 
   if (!isValidActivityDate(data)) {
     releaseRegistroSubmitGuard();
-    setRegistroMsg('Informe uma data válida.', 'error');
+    meuGiroAvisoValidacaoRegistro_('Confira a data', 'Informe uma data válida para sua atividade.', 'data-atividade');
     return;
   }
 
   if (parseValidActivityKm(km) === null) {
     releaseRegistroSubmitGuard();
-    setRegistroMsg('Informe um KM válido maior que zero.', 'error');
+    meuGiroAvisoValidacaoRegistro_('Confira a distância', 'Informe uma distância maior que zero.', 'km-atividade');
+    return;
+  }
+
+  if (data > meuGiroHojeBrasilISOCliente_()) {
+    releaseRegistroSubmitGuard();
+    meuGiroAvisoValidacaoRegistro_('Data futura não permitida', meuGiroAvisoDataFutura_(), 'data-atividade');
     return;
   }
 
@@ -5162,6 +5453,7 @@ async function salvarEdicaoAtividade(forcarDuplicidade) {
           chave_edicao: chaveEdicao,
           data_atividade: data,
           km: km,
+          modalidade_esportiva: meuGiroModalidadeFormularioAtividade_(),
           force: !!forcarDuplicidade
         });
     });
@@ -5178,8 +5470,8 @@ async function salvarEdicaoAtividade(forcarDuplicidade) {
         }
         return;
       }
-      setRegistroMsg(getGoogleScriptErrorMessage(res, 'Não foi possível salvar a edição.'), 'error');
-      await mostrarErroAcaoAtividade();
+      setRegistroMsg('');
+      await mostrarErroAcaoAtividade(res);
       return;
     }
 
@@ -5216,7 +5508,7 @@ async function salvarEdicaoAtividade(forcarDuplicidade) {
   } catch (err) {
     nextMessage = 'error';
     const errMsg = getGoogleScriptErrorMessage(err, 'Não foi possível salvar a edição.');
-    setRegistroMsg(errMsg, 'error');
+    setRegistroMsg('');
     console.error(err);
     await mostrarErroAcaoAtividade();
   } finally {
@@ -5266,6 +5558,7 @@ function iniciarEdicaoAtividadeUI(item) {
 
   const kmInput = document.getElementById('km-atividade');
   if (kmInput) kmInput.value = formatNumber(item.km);
+  sincronizarModalidadeFormularioAtividade_(item.modalidade_esportiva || 'CICLISMO');
 
   const cancelBtn = document.getElementById('btn-cancelar-edicao');
   if (cancelBtn) cancelBtn.style.display = '';
@@ -6178,6 +6471,7 @@ function cancelarEdicaoAtividadeUI() {
 
   const kmInput = document.getElementById('km-atividade');
   if (kmInput) kmInput.value = '';
+  sincronizarModalidadeFormularioAtividade_('', true);
 
   const cancelBtn = document.getElementById('btn-cancelar-edicao');
   if (cancelBtn) cancelBtn.style.display = 'none';
