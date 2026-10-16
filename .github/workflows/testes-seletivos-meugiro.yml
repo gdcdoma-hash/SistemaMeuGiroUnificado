@@ -53,8 +53,10 @@ jobs:
           const fs = require('node:fs');
           const ler = (p) => {
             const txt = fs.readFileSync(p, 'utf8');
-            const metric = (k) => Number(txt.match(new RegExp('^# ' + k + ' (\\d+)# Sem clasp, segredos Google, Google Sheets ou deployment.
-, 'm'))?.[1] ?? -1);
+            const metric = (k) => {
+              const linha = txt.split('\n').find(x => x.startsWith('# ' + k + ' '));
+              return Number(linha?.trim().split(' ').pop() ?? -1);
+            };
             const failures = [...txt.matchAll(/^not ok \d+ - (.*)$/gm)].map(m => m[1].trim()).sort();
             return {tests:metric('tests'),pass:metric('pass'),fail:metric('fail'),failures};
           };
