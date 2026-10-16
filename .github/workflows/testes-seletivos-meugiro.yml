@@ -37,11 +37,46 @@ jobs:
             'Meu Giro/appsscript.json' \
             '.clasp.json'
           echo "Protecao: arquivos legados e configuracoes inalterados"
-      - name: Executar testes legados e de modalidades
+      - name: Comparar testes legados contra base PROD anterior
         shell: bash
         run: |
           set -euo pipefail
-          node --test tests/*.test.js
+          BASE=1df3d6431838f9f7399dc6c9401fa4ca18f0b9d3
+          WORKBASE="${RUNNER_TEMP}/meugiro-base"
+          git worktree add --detach "${WORKBASE}" "${BASE}"
+          (cd "${WORKBASE}" && node --test tests/*.test.js > "${RUNNER_TEMP}/base.tap" 2>&1) || true
+          mapfile -t OLD_FILES < <(git ls-tree -r --name-only "${BASE}" tests/ | grep '[.]test[.]js
+# Este workflow nao instala clasp, nao usa secrets, nao acessa planilhas
+# e NAO sincroniza nenhum projeto Apps Script.
+)
+          node --test "${OLD_FILES[@]}" > "${RUNNER_TEMP}/seleto-legado.tap" 2>&1 || true
+          grep '^not ok ' "${RUNNER_TEMP}/base.tap" | sed -E 's/^not ok [0-9]+ - //' | sort > "${RUNNER_TEMP}/falhas-base.txt" || true
+          grep '^not ok ' "${RUNNER_TEMP}/seleto-legado.tap" | sed -E 's/^not ok [0-9]+ - //' | sort > "${RUNNER_TEMP}/falhas-seleto.txt" || true
+          echo "==== Base PROD anterior ===="
+          grep '^# \\(tests\\|pass\\|fail\\) ' "${RUNNER_TEMP}/base.tap" | tail -n 3 || true
+          echo "==== Pacote seletivo nos MESMOS testes legados ===="
+          grep '^# \\(tests\\|pass\\|fail\\) ' "${RUNNER_TEMP}/seleto-legado.tap" | tail -n 3 || true
+          echo "==== Falhas novas nos testes legados ===="
+          comm -13 "${RUNNER_TEMP}/falhas-base.txt" "${RUNNER_TEMP}/falhas-seleto.txt" || true
+          echo "==== Falhas que ja estavam na base ===="
+          comm -12 "${RUNNER_TEMP}/falhas-base.txt" "${RUNNER_TEMP}/falhas-seleto.txt" || true
+
+      - name: Executar somente 11 novos testes de modalidades
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=1df3d6431838f9f7399dc6c9401fa4ca18f0b9d3
+          mapfile -t ADDED < <(git diff --name-only --diff-filter=A "${BASE}" HEAD -- tests/ | grep '[.]test[.]js
+# Este workflow nao instala clasp, nao usa secrets, nao acessa planilhas
+# e NAO sincroniza nenhum projeto Apps Script.
+)
+          printf 'Testes adicionados: %s\\n' "${#ADDED[@]}"
+          node --test "${ADDED[@]}" > "${RUNNER_TEMP}/modalidades.tap" 2>&1 || {
+            grep '^not ok ' "${RUNNER_TEMP}/modalidades.tap" || true
+            grep '^# \\(tests\\|pass\\|fail\\) ' "${RUNNER_TEMP}/modalidades.tap" | tail -n 3 || true
+            exit 1
+          }
+          grep '^# \\(tests\\|pass\\|fail\\) ' "${RUNNER_TEMP}/modalidades.tap" | tail -n 3 || true
 
 # Este workflow nao instala clasp, nao usa secrets, nao acessa planilhas
 # e NAO sincroniza nenhum projeto Apps Script.
