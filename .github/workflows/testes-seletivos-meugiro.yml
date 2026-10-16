@@ -1,0 +1,47 @@
+name: Testes seletivos Meu Giro — SEM DEPLOY
+on:
+  push:
+    branches:
+      - prep/corte-seletivo-meugiro-modalidades-2026-10-16
+    paths:
+      - 'Meu Giro/**'
+      - 'tests/**'
+      - '.github/workflows/testes-seletivos-meugiro.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regressao-local:
+    name: Regressao Node.js sem Google/Clasp
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Baixar branch de revisao com historico completo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Preparar Node.js sem credenciais
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Assegurar integridade de Ranking certificados e configuracoes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code 1df3d6431838f9f7399dc6c9401fa4ca18f0b9d3 HEAD -- \
+            'Meu Giro/RankingService.gs' \
+            'Meu Giro/CertificadoService.gs' \
+            'Meu Giro/EnvironmentConfig.gs' \
+            'Meu Giro/appsscript.json' \
+            '.clasp.json'
+          echo "Protecao: arquivos legados e configuracoes inalterados"
+      - name: Executar testes legados e de modalidades
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test tests/*.test.js
+
+# Este workflow nao instala clasp, nao usa secrets, nao acessa planilhas
+# e NAO sincroniza nenhum projeto Apps Script.
