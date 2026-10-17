@@ -159,9 +159,26 @@
   }
 
   .menu-authenticated {
-    grid-template-columns: minmax(0, 120px);
+    grid-template-columns: repeat(4, minmax(0, 112px));
     justify-content: end;
     margin-top: 10px;
+  }
+
+  /* A barra autenticada usa fundo escuro pela navegação integrada. */
+  .topbar .brand,
+  .topbar .topbar-user-name {
+    color: #ffffff;
+  }
+
+  .topbar .topbar-user-name::before,
+  .topbar .topbar-user-name::after {
+    color: #94a3b8;
+  }
+
+  @media (max-width: 600px) {
+    .menu-authenticated {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
   }
 
   .menu-btn {
@@ -2556,6 +2573,24 @@
     display: grid;
     gap: 16px;
     padding-right: 50px;
+  }
+
+  .desafio-v2-prazo-badge {
+    display: inline-flex;
+    width: fit-content;
+    max-width: 100%;
+    padding: 5px 10px;
+    border: 1px solid #fcd34d;
+    border-radius: 999px;
+    background: #fffbeb;
+    color: #92400e;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  .desafio-v2-prazo-badge[hidden] {
+    display: none !important;
   }
 
   .desafio-v2-card-titulo {

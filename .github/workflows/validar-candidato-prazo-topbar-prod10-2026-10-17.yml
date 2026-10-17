@@ -1,0 +1,48 @@
+name: Validar candidato Meu Giro PROD10 - prazo e topbar (SEM DEPLOY)
+on:
+  push:
+    branches:
+      - release/meugiro-prod10-prazo-topbar-candidato-2026-10-17
+permissions:
+  contents: read
+jobs:
+  teste:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Garantir delta estritamente seletivo sobre o ultimo codigo auditado de PROD
+        shell: bash
+        run: |
+          node <<'NODE'
+          const cp=require('node:child_process'),fs=require('node:fs'),a=require('node:assert/strict');
+          const parent='ac30ffb11aa431b06a553bdaa551e39cc465f89b';
+          const baseline='3c2bb257ad034bb80174472e723242d642d697ee';
+          const expected=['Meu Giro/Index.html','Meu Giro/Script.html','Meu Giro/Styles.html','tests/prazo_encerrado_prod10_candidato.test.js','.github/workflows/validar-candidato-prazo-topbar-prod10-2026-10-17.yml'].sort();
+          const changed=cp.execFileSync('git',['diff','--name-only',parent+'..HEAD'],{encoding:'utf8'}).trim().split('\n').filter(Boolean).sort();
+          a.deepEqual(changed,expected,'Outros arquivos alterados no pacote candidato');
+          for(const p of ['Meu Giro/PainelService.gs','Meu Giro/RegistroService.gs','Meu Giro/CertificadoService.gs','Meu Giro/AuthSession.html','Meu Giro/CorteManutencaoService.gs','Meu Giro/appsscript.json']){
+            const old=cp.execFileSync('git',['show',baseline+':'+p],{encoding:'utf8'});
+            a.equal(fs.readFileSync(p,'utf8'),old,'Arquivo critico divergente: '+p);
+          }
+          for(const [p,sha] of [['Meu Giro/Index.html','e631c75ae9e79385a1d602467665848336ab8718'],['Meu Giro/Script.html','3177aa1bd1e7dace8847c235243ad87682eae93c'],['Meu Giro/Styles.html','5113844f244cd616e735aa0c17a5be3ec561b719']]){
+            const result=cp.execFileSync('git',['hash-object',p],{encoding:'utf8'}).trim();
+            a.equal(result,sha,'Fora dos commits homologados DEV: '+p);
+          }
+          const css=fs.readFileSync('Meu Giro/Styles.html','utf8');
+          const html=fs.readFileSync('Meu Giro/Index.html','utf8');
+          const auth=fs.readFileSync('Meu Giro/AuthSession.html','utf8');
+          a.match(css,/\.menu-authenticated\s*\{\s*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*112px\)\)/);
+          a.match(css,/@media\s*\(max-width:\s*600px\)\s*\{\s*\.menu-authenticated\s*\{\s*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);
+          a.match(css,/\.topbar \.brand,\s*\.topbar \.topbar-user-name\s*\{\s*color:\s*#ffffff/);
+          a.match(html,/id="menu-autenticado-top" class="menu menu-top-icons menu-authenticated"/);
+          a.match(auth,/\.topbar\{background:#0f172a!important/);
+          console.log('ESCOPO_PROD10=PASS: tres arquivos de interface; backend, registros, certificados e autenticação preservados');
+          NODE
+      - name: Testar datas, KM e status visual (15 cenarios)
+        run: node tests/prazo_encerrado_prod10_candidato.test.js
