@@ -2783,6 +2783,22 @@ function getDesafioPrazoCardInfo_(desafio) {
   };
 }
 
+// Calendário oficial de Brasília para toda a indicação visual de prazo.
+// Não consulta planilhas nem altera registro, conclusão ou histórico.
+function dataAtualBrasiliaIso_() {
+  try {
+    var partes = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(new Date());
+    var valores = {};
+    partes.forEach(function(p) { valores[p.type] = p.value; });
+    var data = valores.year + '-' + valores.month + '-' + valores.day;
+    return /^\d{4}-\d{2}-\d{2}$/.test(data) ? data : '';
+  } catch (e) {
+    return '';
+  }
+}
+
 // Indicação exclusivamente visual: não altera status, apuração, certificados ou elegibilidade de registro.
 // O último dia é inclusivo, conforme a data oficial em America/Sao_Paulo.
 function prazoIndividualEncerradoVisual_(desafio, referenciaIso) {
@@ -2802,19 +2818,7 @@ function prazoIndividualEncerradoVisual_(desafio, referenciaIso) {
     : br ? br[3] + '-' + br[2] + '-' + br[1] : '';
   if (!ultimoDia) return false;
 
-  var hoje = String(referenciaIso || '').trim();
-  if (!hoje) {
-    try {
-      var partes = new Intl.DateTimeFormat('en-US', {
-        timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit'
-      }).formatToParts(new Date());
-      var valores = {};
-      partes.forEach(function(p) { valores[p.type] = p.value; });
-      hoje = valores.year + '-' + valores.month + '-' + valores.day;
-    } catch (e) {
-      return false;
-    }
-  }
+  var hoje = String(referenciaIso || '').trim() || dataAtualBrasiliaIso_();
   return /^\d{4}-\d{2}-\d{2}$/.test(hoje) && hoje > ultimoDia;
 }
 
@@ -3542,13 +3546,13 @@ function obterPrazoDesafioPainel_(desafio, contexto) {
 
 function obterTempoRestanteDesafioPainel_(fim) {
   var dataFim = parseIsoDateLocal(String(fim || '').trim());
-  if (!dataFim) return '-';
+  var dataHoje = parseIsoDateLocal(dataAtualBrasiliaIso_());
+  if (!dataFim || !dataHoje) return '-';
 
-  var hoje = new Date();
-  hoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
-
-  var msDia = 24 * 60 * 60 * 1000;
-  var dias = Math.ceil((dataFim.getTime() - hoje.getTime()) / msDia);
+  // Usar dias civis UTC evita horário/fuso do aparelho e mudanças de verão.
+  var fimUtc = Date.UTC(dataFim.getFullYear(), dataFim.getMonth(), dataFim.getDate());
+  var hojeUtc = Date.UTC(dataHoje.getFullYear(), dataHoje.getMonth(), dataHoje.getDate());
+  var dias = Math.round((fimUtc - hojeUtc) / (24 * 60 * 60 * 1000));
 
   if (dias < 0) return 'Encerrado';
   if (dias === 0) return 'Último dia';
