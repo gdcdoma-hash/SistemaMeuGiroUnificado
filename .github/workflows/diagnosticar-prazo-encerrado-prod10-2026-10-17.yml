@@ -1,0 +1,36 @@
+name: Diagnosticar prazo encerrado Meu Giro PROD10 - sem deploy
+on:
+  push:
+    branches:
+      - audit/prazo-dias-encerrado-prod10-2026-10-17
+    paths:
+      - 'tests/diagnostico_visual_prazo_encerrado_prod10_2026_10_17.test.js'
+      - '.github/workflows/diagnosticar-prazo-encerrado-prod10-2026-10-17.yml'
+permissions:
+  contents: read
+jobs:
+  diagnostico:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Comprovar diff apenas em arquivos de auditoria
+        shell: bash
+        run: |
+          node <<'NODE'
+          const a=require('node:assert/strict'),cp=require('node:child_process');
+          const base='3c2bb257ad034bb80174472e723242d642d697ee';
+          const changed=cp.execFileSync('git',['diff','--name-only',base+'...HEAD'],{encoding:'utf8'}).trim().split('\n').filter(Boolean).sort();
+          a.deepEqual(changed,[
+            'tests/diagnostico_visual_prazo_encerrado_prod10_2026_10_17.test.js',
+            '.github/workflows/diagnosticar-prazo-encerrado-prod10-2026-10-17.yml'
+          ].sort());
+          console.log('RUNTIME_MEU_GIRO_PROD10=inalterado; sem autenticação nem acesso à planilha');
+          NODE
+      - name: Executar diagnóstico temporal com código publicado
+        run: node tests/diagnostico_visual_prazo_encerrado_prod10_2026_10_17.test.js
