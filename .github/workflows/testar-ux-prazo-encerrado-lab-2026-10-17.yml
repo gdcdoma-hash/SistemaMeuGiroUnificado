@@ -1,0 +1,41 @@
+name: Testar UX prazo encerrado Meu Giro LAB candidato - SEM DEPLOY
+on:
+  push:
+    branches:
+      - lab/ux-prazo-encerrado-dev-2026-10-17
+    paths:
+      - 'Meu Giro/Script.html'
+      - 'Meu Giro/Index.html'
+      - 'Meu Giro/Styles.html'
+      - 'tests/ux_prazo_dias_encerrado_apenas_visual_2026_10_17.test.js'
+      - '.github/workflows/testar-ux-prazo-encerrado-lab-2026-10-17.yml'
+permissions:
+  contents: read
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Confirmar diff unicamente visual, sem backend e sem deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const cp=require('node:child_process'),a=require('node:assert/strict');
+          const base='9485ba88a4426a69190925c185653a13d3bc8be9';
+          const changed=cp.execFileSync('git',['diff','--name-only',base+'...HEAD'],{encoding:'utf8'}).trim().split('\n').filter(Boolean).sort();
+          a.deepEqual(changed,[
+            'Meu Giro/Script.html','Meu Giro/Index.html','Meu Giro/Styles.html',
+            'tests/ux_prazo_dias_encerrado_apenas_visual_2026_10_17.test.js',
+            '.github/workflows/testar-ux-prazo-encerrado-lab-2026-10-17.yml'
+          ].sort(),'Arquivos fora do escopo visual detectados');
+          console.log('ESCOPO_LAB_UX=OK: 3 arquivos de interface, zero GAS backend, zero deployment');
+          NODE
+      - name: Reproduzir data de Brasília e renderização do prazo encerrado
+        run: node tests/ux_prazo_dias_encerrado_apenas_visual_2026_10_17.test.js

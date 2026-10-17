@@ -2373,6 +2373,12 @@ function renderDesafiosV2() {
   var totalClassificado = grupos.andamento.length + grupos.concluidos.length;
   mensagem.innerText = totalClassificado ? '' : 'Você ainda não possui desafios disponíveis.';
   mensagem.className = 'msg status-msg desafios-v2-msg' + (totalClassificado ? '' : ' is-visible msg-inline');
+  var cabecalhoAndamento = document.getElementById('desafios-v2-andamento-title');
+  if (cabecalhoAndamento) {
+    cabecalhoAndamento.textContent = grupos.andamento.some(function(item) {
+      return prazoIndividualEncerradoVisual_(item.desafio);
+    }) ? 'Em acompanhamento' : 'Em andamento';
+  }
 
   renderGrupoDesafiosV2_(secoes.andamento, grupos.andamento, 'andamento');
   renderGrupoDesafiosV2_(secoes.concluidos, grupos.concluidos, 'concluidos');
@@ -2777,6 +2783,45 @@ function getDesafioPrazoCardInfo_(desafio) {
   };
 }
 
+// Calendário oficial de Brasília para toda a indicação visual de prazo.
+// Não consulta planilhas nem altera registro, conclusão ou histórico.
+function dataAtualBrasiliaIso_() {
+  try {
+    var partes = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(new Date());
+    var valores = {};
+    partes.forEach(function(p) { valores[p.type] = p.value; });
+    var data = valores.year + '-' + valores.month + '-' + valores.day;
+    return /^\d{4}-\d{2}-\d{2}$/.test(data) ? data : '';
+  } catch (e) {
+    return '';
+  }
+}
+
+// Indicação exclusivamente visual: não altera status, apuração, certificados ou elegibilidade de registro.
+// O último dia é inclusivo, conforme a data oficial em America/Sao_Paulo.
+function prazoIndividualEncerradoVisual_(desafio, referenciaIso) {
+  var item = desafio || {};
+  var tipo = String(item.tipo_meta || '').trim().toUpperCase();
+  var prazoDias = Number(item.prazo_dias) || 0;
+  if (tipo !== 'PRAZO_DIAS' && prazoDias <= 0) return false;
+  if (isStatusFinalFoco_(item.status_usuario_desafio) ||
+      isStatusFinalFoco_(item.status_apuracao) ||
+      isStatusFinalFoco_(item.status_desafio) ||
+      isStatusFinalFoco_(item.status_lista_desafios)) return false;
+
+  var fim = String(item.periodo_fim || '').trim();
+  var iso = fim.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|[T\s])/);
+  var br = fim.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:$|\s)/);
+  var ultimoDia = iso ? iso[1] + '-' + iso[2] + '-' + iso[3]
+    : br ? br[3] + '-' + br[2] + '-' + br[1] : '';
+  if (!ultimoDia) return false;
+
+  var hoje = String(referenciaIso || '').trim() || dataAtualBrasiliaIso_();
+  return /^\d{4}-\d{2}-\d{2}$/.test(hoje) && hoje > ultimoDia;
+}
+
 function buildDesafioCardV2_(desafio, grupo) {
   debugPeriodoDesafioFrontend_('buildDesafioCardV2_', getPeriodoDesafioVisual_(desafio), getPeriodoDesafioVisual_(desafio), desafio);
   var card = document.createElement('article');
@@ -2785,6 +2830,7 @@ function buildDesafioCardV2_(desafio, grupo) {
   var percentual = calcularPercentualDesafio_(meta, realizado);
   var chave = getDesafioKey(desafio);
   var prazoCard = getDesafioPrazoCardInfo_(desafio);
+  var prazoEncerrado = grupo === 'andamento' && prazoIndividualEncerradoVisual_(desafio);
   var modalidadeVisual = meuGiroIdentidadeModalidade_(desafio);
 
   card.className = 'desafio-v2-card desafio-v2-card-' + grupo + ' ' + modalidadeVisual.classe;
@@ -2795,6 +2841,7 @@ function buildDesafioCardV2_(desafio, grupo) {
     '<div class="desafio-v2-card-conteudo">' +
       '<span class="mg-modalidade-tag"><span aria-hidden="true">' + modalidadeVisual.icone +
       '</span><span>' + escapeHtml(modalidadeVisual.nome) + '</span></span>' +
+      (prazoEncerrado ? '<span class="desafio-v2-prazo-badge">Prazo encerrado</span>' : '') +
       '<strong class="desafio-v2-card-titulo">' + escapeHtml(getDesafioTitulo(desafio)) + '</strong>' +
       '<div class="desafio-v2-metricas">' +
         '<p><span>Meta</span><strong>' + formatNumber(meta) + ' km</strong></p>' +
@@ -2850,6 +2897,8 @@ function renderDetalheDesafioV2_(desafio) {
   }
   setTextById('desafio-detalhe-titulo', getDesafioTitulo(desafio));
   setTextById('desafio-detalhe-periodo', getDesafioPeriodoCardLabel_(desafio));
+  var avisoPrazoDetalhe = document.getElementById('desafio-detalhe-prazo-status');
+  if (avisoPrazoDetalhe) avisoPrazoDetalhe.hidden = !prazoIndividualEncerradoVisual_(desafio);
   setTextById('desafio-detalhe-meta', formatNumber(meta) + ' km');
   setTextById('desafio-detalhe-realizado', formatNumber(realizado) + ' km');
   setTextById('desafio-detalhe-falta', formatNumber(falta) + ' km');
@@ -3497,13 +3546,13 @@ function obterPrazoDesafioPainel_(desafio, contexto) {
 
 function obterTempoRestanteDesafioPainel_(fim) {
   var dataFim = parseIsoDateLocal(String(fim || '').trim());
-  if (!dataFim) return '-';
+  var dataHoje = parseIsoDateLocal(dataAtualBrasiliaIso_());
+  if (!dataFim || !dataHoje) return '-';
 
-  var hoje = new Date();
-  hoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
-
-  var msDia = 24 * 60 * 60 * 1000;
-  var dias = Math.ceil((dataFim.getTime() - hoje.getTime()) / msDia);
+  // Usar dias civis UTC evita horário/fuso do aparelho e mudanças de verão.
+  var fimUtc = Date.UTC(dataFim.getFullYear(), dataFim.getMonth(), dataFim.getDate());
+  var hojeUtc = Date.UTC(dataHoje.getFullYear(), dataHoje.getMonth(), dataHoje.getDate());
+  var dias = Math.round((fimUtc - hojeUtc) / (24 * 60 * 60 * 1000));
 
   if (dias < 0) return 'Encerrado';
   if (dias === 0) return 'Último dia';
@@ -3714,6 +3763,7 @@ function criarCardFeedDesafioPainel_(painel, desafio) {
   var fim = formatarDataDesafioPainel_(contexto.periodo_fim) || '-';
   var prazo = obterPrazoDesafioPainel_(desafio, contexto);
   var restanteTempo = obterTempoRestanteDesafioPainel_(contexto.periodo_fim);
+  var prazoEncerrado = prazoIndividualEncerradoVisual_(desafio);
   var atleta = String((painel && painel.nome) || '').trim().toUpperCase() || 'ATLETA';
   var chave = getDesafioKey(desafio);
 
@@ -3725,7 +3775,7 @@ function criarCardFeedDesafioPainel_(painel, desafio) {
   card.innerHTML =
     '<div class="painel-desafio-topo">' +
       '<div class="painel-card-kicker-row">' +
-        '<p class="painel-desafio-label">Desafio em andamento</p>' +
+        '<p class="painel-desafio-label">' + (prazoEncerrado ? 'Prazo encerrado' : 'Desafio em andamento') + '</p>' +
         '<span class="painel-card-brand">MEU GIRO</span>' +
       '</div>' +
       '<span class="mg-modalidade-tag"><span aria-hidden="true">' + identidadeVisual.icone +
@@ -3819,6 +3869,12 @@ function renderFeedDesafiosPainel_(painel, desafioAtual) {
   });
   var quantidade = Array.isArray(desafiosAtivosCarouselItems) ? desafiosAtivosCarouselItems.length : 0;
   if (header) header.hidden = quantidade <= 1;
+  var rotuloFeed = document.getElementById('painel-feed-kicker');
+  if (rotuloFeed) {
+    rotuloFeed.textContent = (desafiosAtivosCarouselItems || []).some(function(item) {
+      return prazoIndividualEncerradoVisual_(item);
+    }) ? 'Seus desafios em acompanhamento' : 'Seus desafios em andamento';
+  }
   feed.classList.remove('painel-desafios-feed-multiplo');
   feed.onscroll = null;
   feed.scrollLeft = 0;
@@ -3848,6 +3904,8 @@ function sincronizarPainelComDesafioEmFoco() {
   atualizarContextoVisualRanking(desafioAtual);
 
   setTextById('painel-card-atleta', String(painel.nome || '').trim().toUpperCase() || 'ATLETA');
+  var avisoPrazoPainel = document.getElementById('painel-prazo-status');
+  if (avisoPrazoPainel) avisoPrazoPainel.hidden = !prazoIndividualEncerradoVisual_(desafioAtual);
   var btnCompartilharCard = document.getElementById('btn-compartilhar-card');
   if (btnCompartilharCard) btnCompartilharCard.disabled = !desafioAtual;
 
