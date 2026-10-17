@@ -159,9 +159,26 @@
   }
 
   .menu-authenticated {
-    grid-template-columns: minmax(0, 120px);
+    grid-template-columns: repeat(4, minmax(0, 112px));
     justify-content: end;
     margin-top: 10px;
+  }
+
+  /* A barra autenticada usa fundo escuro pela navegação integrada. */
+  .topbar .brand,
+  .topbar .topbar-user-name {
+    color: #ffffff;
+  }
+
+  .topbar .topbar-user-name::before,
+  .topbar .topbar-user-name::after {
+    color: #94a3b8;
+  }
+
+  @media (max-width: 600px) {
+    .menu-authenticated {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
   }
 
   .menu-btn {
