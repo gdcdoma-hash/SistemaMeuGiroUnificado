@@ -110,7 +110,7 @@ ok('desafio encerrado mantém grupo e acesso, sem mudar status em dados',()=>{
  const original=JSON.stringify(baseItem);
  after.ctx.renderDesafiosV2();
  assert.equal(after.ids['desafios-v2-andamento-title'].textContent,'Em acompanhamento');
- assert.deepEqual(after.captures.groups.andamento,['FICTICIA_45']);
+ assert.equal(Array.from(after.captures.groups.andamento).join(','),'FICTICIA_45');
  assert.equal(JSON.stringify(baseItem),original);
 });
 ok('grupo volta ao título normal quando só há desafio no prazo',()=>{
