@@ -23,7 +23,7 @@ jobs:
           const cp=require('node:child_process'),fs=require('node:fs'),a=require('node:assert/strict');
           const parent='ac30ffb11aa431b06a553bdaa551e39cc465f89b';
           const baseline='3c2bb257ad034bb80174472e723242d642d697ee';
-          const expected=['Meu Giro/Index.html','Meu Giro/Script.html','Meu Giro/Styles.html','tests/prazo_encerrado_prod10_candidato.test.js','.github/workflows/validar-candidato-prazo-topbar-prod10-2026-10-17.yml'].sort();
+          const expected=['Meu Giro/Index.html','Meu Giro/Script.html','Meu Giro/Styles.html','tests/prazo_encerrado_prod10_candidato.test.js','.github/workflows/validar-candidato-prazo-topbar-prod10-2026-10-17.yml','.github/workflows/publicar-ui-prazo-topbar-meugiro-prod10-2026-10-17.yml'].sort();
           const changed=cp.execFileSync('git',['diff','--name-only',parent+'..HEAD'],{encoding:'utf8'}).trim().split('\n').filter(Boolean).sort();
           a.deepEqual(changed,expected,'Outros arquivos alterados no pacote candidato');
           for(const p of ['Meu Giro/PainelService.gs','Meu Giro/RegistroService.gs','Meu Giro/CertificadoService.gs','Meu Giro/AuthSession.html','Meu Giro/CorteManutencaoService.gs','Meu Giro/appsscript.json']){
