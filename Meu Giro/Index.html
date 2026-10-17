@@ -97,7 +97,7 @@
       <div id="painel-feed-wrap" class="painel-feed-wrap">
         <div id="painel-feed-header" class="painel-feed-header" hidden>
           <div>
-            <p class="painel-feed-kicker">Seus desafios em andamento</p>
+            <p id="painel-feed-kicker" class="painel-feed-kicker">Seus desafios em andamento</p>
             <p class="painel-feed-hint">Escolha o desafio com as setas.</p>
           </div>
           <div class="painel-feed-navegacao" role="group" aria-label="Navegar pelos desafios">
@@ -120,6 +120,7 @@
             <span aria-hidden="true"><svg class="mg-modalidade-icon" viewBox="0 0 32 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="6" cy="18" r="4"/><circle cx="26" cy="18" r="4"/><path d="M6 18l6-8 6 8H6l6-8h7l7 8"/><circle cx="17" cy="4" r="2"/><path d="M16 7l-3 4 2 4M16 8l4 3 4-2"/></svg></span><span>Ciclismo</span>
           </span>
           <h2 id="painel-desafio-nome">DESAFIO VOCÊ NA MEDALHA</h2>
+          <span id="painel-prazo-status" class="desafio-v2-prazo-badge" hidden>Prazo encerrado</span>
           <p id="painel-card-atleta" class="painel-card-atleta">ATLETA</p>
           <div class="painel-desafio-detalhes" aria-label="Prazo do desafio em foco">
             <p><span>Início</span><strong id="painel-desafio-inicio">-</strong></p>
@@ -228,6 +229,7 @@
             <span id="desafio-detalhe-modalidade" class="mg-modalidade-tag" aria-label="Modalidade: Ciclismo"><span aria-hidden="true"><svg class="mg-modalidade-icon" viewBox="0 0 32 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="6" cy="18" r="4"/><circle cx="26" cy="18" r="4"/><path d="M6 18l6-8 6 8H6l6-8h7l7 8"/><circle cx="17" cy="4" r="2"/><path d="M16 7l-3 4 2 4M16 8l4 3 4-2"/></svg></span><span>Ciclismo</span></span>
             <h2 id="desafio-detalhe-titulo">Desafio</h2>
             <p class="desafio-detalhe-periodo">Período: <strong id="desafio-detalhe-periodo">-</strong></p>
+            <span id="desafio-detalhe-prazo-status" class="desafio-v2-prazo-badge" hidden>Prazo encerrado</span>
           </div>
           <button class="btn-secondary desafio-detalhe-voltar" type="button" onclick="voltarDesafiosV2()" aria-label="Voltar para Desafios">← Voltar</button>
         </header>
