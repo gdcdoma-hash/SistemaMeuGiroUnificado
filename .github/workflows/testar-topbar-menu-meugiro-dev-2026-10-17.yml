@@ -1,0 +1,31 @@
+name: Validar menu autenticado Meu Giro DEV - sem deploy
+on:
+  push:
+    branches:
+      - lab/topbar-compacta-meugiro-2026-10-17
+    paths:
+      - 'Meu Giro/Styles.html'
+      - 'tests/topbar_menu_autenticado_dev_2026_10_17.test.js'
+      - '.github/workflows/testar-topbar-menu-meugiro-dev-2026-10-17.yml'
+permissions:
+  contents: read
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Conferir alteração CSS exclusiva
+        run: |
+          node <<'NODE'
+          const cp=require('node:child_process'),a=require('node:assert/strict');
+          const changed=cp.execFileSync('git',['diff','--name-only','85fa45af3bc7a2c0ca072215de9d52c011a0eb77...HEAD'],{encoding:'utf8'}).trim().split('\n').filter(Boolean).sort();
+          a.deepEqual(changed,['Meu Giro/Styles.html','tests/topbar_menu_autenticado_dev_2026_10_17.test.js','.github/workflows/testar-topbar-menu-meugiro-dev-2026-10-17.yml'].sort());
+          NODE
+      - name: Testar layout e preservar regras
+        run: node tests/topbar_menu_autenticado_dev_2026_10_17.test.js
