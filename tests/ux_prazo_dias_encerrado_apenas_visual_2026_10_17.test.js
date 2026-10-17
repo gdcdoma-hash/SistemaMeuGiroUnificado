@@ -22,7 +22,9 @@ function codeBetween(start,end){
  return script.slice(a,b);
 }
 const chunks=[
- codeBetween('prazoIndividualEncerradoVisual_','buildDesafioCardV2_'),
+ codeBetween('dataAtualBrasiliaIso_','buildDesafioCardV2_'),
+ codeBetween('parseIsoDateLocal','calcularRitmoDesafio'),
+ codeBetween('obterTempoRestanteDesafioPainel_','atualizarResumoPrazoDesafioPainel_'),
  codeBetween('classificarDesafioV2_','renderGrupoDesafiosV2_'),
  codeBetween('isStatusFinalFoco_','isDesafioHistoricoElegivel_'),
  codeBetween('renderDesafiosV2','isConquistaActionLocked_'),
@@ -76,13 +78,21 @@ const before=load('2026-10-16T02:59:59Z'); // 15/10, 23:59:59 em Brasília
 const after=load('2026-10-16T03:00:01Z'); // 16/10, 00:00:01 em Brasília
 ok('15/10 inclusivo em America/Sao_Paulo, independentemente do dispositivo',()=>{
  assert.equal(before.ctx.prazoIndividualEncerradoVisual_(baseItem),false);
+ assert.equal(before.ctx.obterTempoRestanteDesafioPainel_(baseItem.periodo_fim),'Último dia');
 });
 ok('16/10 após meia-noite de Brasília indica encerramento',()=>{
  assert.equal(after.ctx.prazoIndividualEncerradoVisual_(baseItem),true);
+ assert.equal(after.ctx.obterTempoRestanteDesafioPainel_(baseItem.periodo_fim),'Encerrado');
 });
 ok('relógio explícito não afeta o desafio, permite teste sem gravar',()=>{
  assert.equal(after.ctx.prazoIndividualEncerradoVisual_(baseItem,'2026-10-15'),false);
  assert.equal(after.ctx.prazoIndividualEncerradoVisual_(baseItem,'2026-10-16'),true);
+});
+ok('contador visual preserva 1 dia restante antes de 15/10',()=>{
+ const diaAnterior=load('2026-10-15T03:00:01Z');
+ assert.equal(diaAnterior.ctx.obterTempoRestanteDesafioPainel_(baseItem.periodo_fim),'Último dia');
+ const vespera=load('2026-10-14T03:00:01Z');
+ assert.equal(vespera.ctx.obterTempoRestanteDesafioPainel_(baseItem.periodo_fim),'1 dia');
 });
 ok('datas brasileiras DD/MM/AAAA respeitadas',()=>{
  const d={...baseItem,periodo_fim:'15/10/2026'};
