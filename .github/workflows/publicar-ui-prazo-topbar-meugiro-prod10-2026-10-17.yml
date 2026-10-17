@@ -1,0 +1,102 @@
+name: Publicar Meu Giro PROD - prazo e topbar seletivos 2026-10-17
+on:
+  push:
+    branches:
+      - release/meugiro-prod10-prazo-topbar-candidato-2026-10-17
+    paths:
+      - '.github/workflows/publicar-ui-prazo-topbar-meugiro-prod10-2026-10-17.yml'
+permissions:
+  contents: read
+concurrency:
+  group: dgmb-meugiro-prod-publicacao-controlada-20261017
+  cancel-in-progress: false
+jobs:
+  publicar:
+    if: github.ref == 'refs/heads/release/meugiro-prod10-prazo-topbar-candidato-2026-10-17' && contains(github.event.head_commit.message, '[PUBLICAR_UI_MEU_GIRO_PROD10_20261017]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validar candidato e proteger infraestrutura e dados
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const cp=require('node:child_process'),fs=require('node:fs'),a=require('node:assert/strict');
+          const published='3c2bb257ad034bb80174472e723242d642d697ee';
+          const candidate='5496043d14eedf6294dca4725494266805ced197';
+          const parent=cp.execFileSync('git',['rev-parse','HEAD^'],{encoding:'utf8'}).trim();
+          a.equal(parent,candidate,'Origem inesperada: impedido publicar');
+          const differences=cp.execFileSync('git',['diff','--name-only',published+'..HEAD'],{encoding:'utf8'}).trim().split('\n').filter(Boolean);
+          const runtime=differences.filter(p=>p.startsWith('Meu Giro/'));
+          a.deepEqual(runtime.sort(),['Meu Giro/Index.html','Meu Giro/Script.html','Meu Giro/Styles.html'],'Somente tres arquivos da UI podem mudar');
+          for(const p of ['Meu Giro/PainelService.gs','Meu Giro/RegistroService.gs','Meu Giro/CertificadoService.gs','Meu Giro/AuthSession.html','Meu Giro/CorteManutencaoService.gs','Meu Giro/appsscript.json','Meu Giro/Code.gs','Meu Giro/EnvironmentConfig.gs']){
+            a.equal(fs.readFileSync(p,'utf8'),cp.execFileSync('git',['show',published+':'+p],{encoding:'utf8'}),'PROD backend divergente: '+p);
+          }
+          const sha={ 'Meu Giro/Index.html':'e631c75ae9e79385a1d602467665848336ab8718', 'Meu Giro/Script.html':'3177aa1bd1e7dace8847c235243ad87682eae93c', 'Meu Giro/Styles.html':'5113844f244cd616e735aa0c17a5be3ec561b719'};
+          for(const [path,expected] of Object.entries(sha))a.equal(cp.execFileSync('git',['hash-object',path],{encoding:'utf8'}).trim(),expected,'Divergencia de frontend: '+path);
+          a.equal(JSON.parse(fs.readFileSync('.clasp.json','utf8')).scriptId,'1N-10MQMYaq_91O75W_TFF837vPR6KfSDpJwVQJNS7776IwGo56NuppzG','Origem deve ser projeto DEV, antes de trocar para o PROD');
+          a.equal(JSON.parse(fs.readFileSync('.clasp.json','utf8')).rootDir,'Meu Giro');
+          const m=JSON.parse(fs.readFileSync('Meu Giro/appsscript.json','utf8'));
+          a.equal(m.webapp.access,'ANYONE_ANONYMOUS');
+          a.equal(m.webapp.executeAs,'USER_DEPLOYING');
+          a.match(fs.readFileSync('Meu Giro/CorteManutencaoService.gs','utf8'),/DGMB_CORTE_MANUTENCAO/);
+          a.match(fs.readFileSync('Meu Giro/RegistroService.gs','utf8'),/dgmbCorteGravacaoPausada_\(\)/);
+          a.ok(!fs.existsSync('Meu Giro/StagingBootstrapService.gs'));
+          console.log('PREPUBLICACAO=OK: frontend seletivo, trava e dados preservados');
+          NODE
+          node tests/prazo_encerrado_prod10_candidato.test.js
+          node --check < 'Meu Giro/RegistroService.gs'
+          node --check < 'Meu Giro/CorteManutencaoService.gs'
+      - name: Preparar clasp autenticado
+        shell: bash
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC_JSON"
+          npm install --global @google/clasp@3.4.1
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+      - name: Fixar destino PROD e conferir deployment anterior
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -n --arg id '1gCtXj8xlNLhQi6XSJhQF7c8bxgvVvMuq3-ZmZ4_BIGoubMUs09D8VKY2' --arg root 'Meu Giro' '{scriptId:$id,rootDir:$root}' > .clasp.json
+          clasp deployments | tee "$RUNNER_TEMP/deployments-before.txt"
+          grep -Fq -- 'AKfycbzgCdo-kgL9Hf-f43wPIrt_hFYlamgZD5AaIEM9l3f2q8oM7cgOHUnMEDctvztqTC6s3w @10 ' "$RUNNER_TEMP/deployments-before.txt"
+          node <<'NODE'
+          const s=require('node:fs').readFileSync(process.env.RUNNER_TEMP+'/deployments-before.txt','utf8');
+          const id='AKfycbzgCdo-kgL9Hf-f43wPIrt_hFYlamgZD5AaIEM9l3f2q8oM7cgOHUnMEDctvztqTC6s3w';
+          const hits=s.split('\n').filter(x=>x.includes(id));
+          if(hits.length!==1||!hits[0].includes(' @10 '))throw Error('Publicacao abortada: versao PROD divergente');
+          console.log('DEPLOY_PROD_ATUAL=@10, seguro continuar.');
+          NODE
+      - name: Conferir inventario de arquivos GAS
+        shell: bash
+        run: |
+          set -euo pipefail
+          clasp show-file-status | tee "$RUNNER_TEMP/status.txt"
+          node <<'NODE'
+          const fs=require('node:fs');
+          const tracked=fs.readFileSync(process.env.RUNNER_TEMP+'/status.txt','utf8').split('Untracked files:')[0];
+          const lines=tracked.split('\n').filter(x=>/\.(gs|html)$|appsscript\.json/.test(x));
+          if(lines.length!==28)throw Error('Inventario GAS inesperado: '+lines.length);
+          if(/tests\/|\.test\.js|\.git\/|StagingBootstrapService\.gs|_BACKUP_/.test(tracked))throw Error('Arquivo fora de escopo');
+          if(!tracked.includes('CorteManutencaoService.gs'))throw Error('Trava nao sera preservada');
+          console.log('GAS_INVENTARIO=28 OK');
+          NODE
+      - name: Atualizar mesmo deployment publico do Meu Giro
+        shell: bash
+        run: |
+          set -euo pipefail
+          clasp push --force
+          clasp update-deployment 'AKfycbzgCdo-kgL9Hf-f43wPIrt_hFYlamgZD5AaIEM9l3f2q8oM7cgOHUnMEDctvztqTC6s3w' --description 'Meu Giro 2026-10-17: UI prazo encerrado e topbar (somente 3 arquivos)'
+          clasp deployments | tee "$RUNNER_TEMP/deployments-after.txt"
+          grep -Fq -- 'AKfycbzgCdo-kgL9Hf-f43wPIrt_hFYlamgZD5AaIEM9l3f2q8oM7cgOHUnMEDctvztqTC6s3w @11 ' "$RUNNER_TEMP/deployments-after.txt"
+          echo 'PUBLICACAO_MEU_GIRO_PROD=@11 CONFIRMADA, URL inalterada, rollback disponivel @10'
