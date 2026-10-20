@@ -74,7 +74,27 @@ function notificarHandoffConcluidoAosPais_(){
     try{janela.postMessage(msg,'*')}catch(e){}
   });
 }
-function iniciarHandoffAtleta_(handoff){handoff=String(handoff||'').trim();if(!handoff)return false;currentUser=null;currentPainel=null;clearUserSession();clearServerSession();applyEmbeddedMode();showScreen('inicio');google.script.run.withSuccessHandler(function(res){if(!res||res.ok!==true||!res.usuario||!res.usuario.id_dgmb){showScreen('login');return}currentUser={id_dgmb:String(res.usuario.id_dgmb),nome:'',cidade_uf:''};saveUserSession(currentUser);saveServerSession(res.session_token,res.expira_em);updateAuthUI();showScreen('painel');carregarPainel();notificarHandoffConcluidoAosPais_()}).atletaTrocarHandoffPorSessao(handoff);return true}
+function iniciarHandoffAtleta_(handoff){
+  handoff=String(handoff||'').trim();if(!handoff)return false;
+  currentUser=null;currentPainel=null;clearUserSession();clearServerSession();applyEmbeddedMode();showScreen('inicio');
+  var encerrado=false;
+  function falhar(texto){
+    if(encerrado)return;encerrado=true;clearTimeout(limite);
+    showScreen('login');
+    var aviso=document.getElementById('login-msg');
+    if(aviso)aviso.textContent=texto||'Não foi possível abrir sua sessão. Volte ao Portal Giro e tente novamente.';
+  }
+  var limite=setTimeout(function(){falhar('O Meu Giro demorou mais que o esperado. Volte ao Portal Giro e tente novamente.');},45000);
+  google.script.run.withSuccessHandler(function(res){
+    if(encerrado)return;
+    if(!res||res.ok!==true||!res.usuario||!res.usuario.id_dgmb){falhar(res&&res.msg);return;}
+    encerrado=true;clearTimeout(limite);
+    currentUser={id_dgmb:String(res.usuario.id_dgmb),nome:'',cidade_uf:''};
+    saveUserSession(currentUser);saveServerSession(res.session_token,res.expira_em);updateAuthUI();
+    showScreen('painel');carregarPainel();notificarHandoffConcluidoAosPais_();
+  }).withFailureHandler(function(){falhar();}).atletaTrocarHandoffPorSessao(handoff);
+  return true;
+}
 function processarLocalizacaoInicial_(loc){const p=loc&&loc.parameter?loc.parameter:{};PORTAL_LOCATION_PARAMS=p;PORTAL_EMBEDDED_MODE=PORTAL_EMBEDDED_MODE||String(p.embedded||'').trim()==='1';applyEmbeddedMode();const page=String(p.page||'').toLowerCase(),handoff=String(p.handoff||'').trim();if(page==='atleta'&&handoff){iniciarHandoffAtleta_(handoff);return}if(PORTAL_EMBEDDED_MODE){garantirMenuEmbedded();return}const saved=loadUserSession();if(saved&&saved.id_dgmb){currentUser=saved;updateAuthUI();showScreen('painel');carregarPainel()}else updateAuthUI()}
 function restoreUserSessionOnLoad(){
   ensureUnifiedAppStyles();
