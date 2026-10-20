@@ -55,7 +55,7 @@ function atletaTrocarHandoffPorSessao(handoffToken) {
       if (!idDgmb) return { ok: false, code: 'HANDOFF_SEM_ID', msg: 'Identidade ausente.' }; break;
     }
     if (linha < 0) return { ok: false, code: 'HANDOFF_INVALIDO', msg: 'Acesso integrado inválido.' };
-    var sessionToken = Utilities.getUuid() + '-' + Utilities.getUuid(); var sessionExpira = agora + ATLETA_SESSION_TTL_MS_; var sessionSh = atletaSessionSheet_(); atletaSessionLimparAntigas_(sessionSh, agora);
+    var sessionToken = Utilities.getUuid() + '-' + Utilities.getUuid(); var sessionExpira = agora + ATLETA_SESSION_TTL_MS_; var sessionSh = atletaSessionSheet_(); // Limpeza de historico fora do caminho de login.
     sessionSh.appendRow([sessionToken,idDgmb,new Date(agora),new Date(sessionExpira),'ATIVA','PORTAL_ATLETA',token]); handoffSh.getRange(linha, 6).setValue('CONSUMIDO');
     var pessoa = atletaSessionBuscarPessoaPorId_(idDgmb) || {id_dgmb:idDgmb,nome:'',cidade_uf:''};
     return { ok:true, session_token:sessionToken, expira_em:sessionExpira, usuario:{id_dgmb:idDgmb,nome:pessoa.nome||'',cidade_uf:pessoa.cidade_uf||''} };
