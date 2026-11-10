@@ -743,7 +743,7 @@ function certificadoBuscarContextoDesafio_(payload) {
     id_dgmb: rowId,
     id_desafio: rowDesafio,
     id_item_estoque: rowItem,
-    modalidade_esportiva: idxModalidade > -1 ? normalizeText_(row[idxModalidade]) : certificadoResolverModalidadeCatalogo_(rowDesafio),
+    modalidade_esportiva: (idxModalidade > -1 ? normalizeText_(row[idxModalidade]) : '') || certificadoResolverModalidadeCatalogo_(rowDesafio),
     status_apuracao: statusApuracao,
     meta_atingida: metaAtingida,
     status_usuario_desafio: statusUsuarioDesafio,
