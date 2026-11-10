@@ -192,9 +192,42 @@ function generationSandbox(options = {}) {
 const IMAGE = fs.readFileSync(path.join(ROOT, 'Meu Giro/CertificadoImagemService.gs'), 'utf8');
 const TEMPLATE_IMAGEM_DEPRECATED = ['TEMPLATE', 'CERTIFICADO', 'IMAGEM', 'SLIDES', 'ID'].join('_') + '_';
 assert.equal(IMAGE.includes(TEMPLATE_IMAGEM_DEPRECATED), false);
-assert.match(IMAGE, /certificadoResolverTemplateSlides_\(\s*\(ctx \|\| \{\}\)\.id_desafio,\s*\(ctx \|\| \{\}\)\.id_item_estoque\s*\)/);
+assert.match(IMAGE, /certificadoResolverTemplateSlides_\(\s*\(ctx \|\| \{\}\)\.id_desafio,\s*\(ctx \|\| \{\}\)\.id_item_estoque,\s*certificadoModalidadeDoContexto_\(ctx\)\s*\)/);
 for (const placeholder of ['{{NOME}}', '{{DESAFIO}}', '{{META}}', '{{KM_REALIZADO}}', '{{STATUS}}', '{{PERIODO}}']) {
   assert.match(IMAGE, new RegExp(placeholder.replace(/[{}]/g, '\\$&')));
 }
 
-console.log('OK: 18 cenários e vínculos de imagem de template de certificado validados.');
+// 19. Modalidade caminhada/corrida não herda template de ciclismo nem fallback global.
+{
+  const headers = [...HEADERS_SEM_DESCRICAO, 'MODALIDADE_ESPORTIVA'];
+  const ctx = load([headers, ['167', '', 'template-bike', true, 'CICLISMO']]);
+  ctx.meuGiroModalidadeCanonica_ = v => String(v || '').trim().toUpperCase();
+  const result = ctx.certificadoResolverTemplateSlides_('167', '', 'CAMINHADA_CORRIDA');
+  assert.equal(result.bloqueado, true);
+  assert.equal(result.templateId, '');
+}
+
+// 20. Template de Caminhada/Corrida válido é selecionado por modalidade.
+{
+  const headers = [...HEADERS_SEM_DESCRICAO, 'MODALIDADE_ESPORTIVA'];
+  const ctx = load([headers,
+    ['167', '', 'template-caminhada', true, 'CAMINHADA_CORRIDA'],
+    ['167', '', 'template-bike', true, 'CICLISMO']
+  ]);
+  ctx.meuGiroModalidadeCanonica_ = v => String(v || '').trim().toUpperCase();
+  const result = ctx.certificadoResolverTemplateSlides_('167', '', 'CAMINHADA_CORRIDA');
+  assert.equal(result.bloqueado, undefined);
+  assert.equal(result.templateId, 'template-caminhada');
+}
+
+// 21. Cabeçalho legado sem modalidade jamais habilita template para caminhada/corrida.
+{
+  const ctx = load([HEADERS_SEM_DESCRICAO, ['167', '', 'template-legado', true]]);
+  ctx.meuGiroModalidadeCanonica_ = v => String(v || '').trim().toUpperCase();
+  assert.equal(ctx.certificadoResolverTemplateSlides_('167', '', 'CAMINHADA_CORRIDA').bloqueado, true);
+}
+
+// 22. Ciclismo permanece compatível com a configuração anterior.
+assert.equal(resolve([HEADERS_SEM_DESCRICAO, ['166', '', 'template-bike', true]], '166', '').templateId, 'template-bike');
+
+console.log('OK: 22 cenários e vínculos de imagem de template de certificado validados.');
