@@ -184,10 +184,17 @@ function gerarCertificadoDesafio_(contexto) {
   };
 }
 
+function certificadoNormalizarModalidade_(valor) {
+  var texto = String(valor || 'CICLISMO').trim().toUpperCase().replace(/[\s\/-]+/g, '_');
+  if (typeof meuGiroModalidadeCanonica_ === 'function') return meuGiroModalidadeCanonica_(texto);
+  return (texto === 'CAMINHADA_CORRIDA' || texto === 'CAMINHADA' || texto === 'CORRIDA')
+    ? 'CAMINHADA_CORRIDA' : 'CICLISMO';
+}
+
 function certificadoModalidadeDoContexto_(ctx) {
   var v = String((ctx || {}).modalidade_esportiva || '').trim();
   if (!v) return 'CICLISMO'; // Desafios legados anteriores à classificação.
-  return meuGiroModalidadeCanonica_(v);
+  return certificadoNormalizarModalidade_(v);
 }
 
 function certificadoResolverTemplateSlides_(idDesafio, idItemEstoque, modalidadeEsportiva) {
@@ -195,7 +202,7 @@ function certificadoResolverTemplateSlides_(idDesafio, idItemEstoque, modalidade
   var padrao = function(reason) {
     return { templateId: templatePadrao, source: 'PADRAO', fallback: true, reason: reason };
   };
-  var modalidade = meuGiroModalidadeCanonica_(modalidadeEsportiva || 'CICLISMO');
+  var modalidade = certificadoNormalizarModalidade_(modalidadeEsportiva || 'CICLISMO');
   var exigeModeloEspecifico = modalidade === 'CAMINHADA_CORRIDA';
   var bloquear = function(reason) { return { templateId:'', source:'SEM_MODELO', fallback:false, bloqueado:true, exigeModeloEspecifico:true, reason:reason }; };
   var desafio = String(idDesafio == null ? '' : idDesafio).trim();
@@ -221,7 +228,7 @@ function certificadoResolverTemplateSlides_(idDesafio, idItemEstoque, modalidade
       if (!certificadoTemplateAtivo_(row[layout.ativo])) continue;
       if (layout.modalidade > -1 && String(row[layout.modalidade] || '').trim()) {
         var modalidadeModelo;
-        try { modalidadeModelo = meuGiroModalidadeCanonica_(row[layout.modalidade]); } catch (_) { continue; }
+        try { modalidadeModelo = certificadoNormalizarModalidade_(row[layout.modalidade]); } catch (_) { continue; }
         if (modalidadeModelo !== modalidade) continue;
       } else if (exigeModeloEspecifico) {
         // Uma configuração antiga sem modalidade não deve emitir tema de ciclismo para corredores.
