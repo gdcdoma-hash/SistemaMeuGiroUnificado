@@ -19,7 +19,7 @@ function gerarCertificadoImagem_(contexto) {
       reused: true,
       imageUrl: urlPublicaExistente,
       downloadImageUrl: montarUrlDownloadImagemCertificado_(arquivoExistente.getId()),
-      whatsAppUrl: montarLinkWhatsAppCertificado_(dadosVisuais.nome_participante, urlPublicaExistente)
+      whatsAppUrl: montarLinkWhatsAppCertificado_(dadosVisuais.nome_participante, urlPublicaExistente, certificadoModalidadeDoContexto_(ctx))
     };
   }
 
@@ -33,6 +33,7 @@ function gerarCertificadoImagem_(contexto) {
   }
 
   var resolucao = certificadoResolverTemplateImagem_(ctx, templatePadraoId);
+  if (resolucao.bloqueado) return { ok:false, code:'CERTIFICADO_TEMPLATE_MODALIDADE_AUSENTE', msg:'Modelo da modalidade ainda não configurado.' };
   var resultado = gerarCertificadoImagemComTemplate_(ctx, dadosVisuais, pastaDestino, nomeArquivo, resolucao.templateId);
   if ((!resultado || resultado.ok !== true) && resolucao.permiteFallbackPadrao) {
     return gerarCertificadoImagemComTemplate_(ctx, dadosVisuais, pastaDestino, nomeArquivo, templatePadraoId);
@@ -48,12 +49,14 @@ function certificadoResolverTemplateImagem_(ctx, templatePadraoId) {
 
   var resolucao = certificadoResolverTemplateSlides_(
     (ctx || {}).id_desafio,
-    (ctx || {}).id_item_estoque
+    (ctx || {}).id_item_estoque,
+    certificadoModalidadeDoContexto_(ctx)
   );
   var templateResolvido = String(resolucao.templateId || templatePadraoId || '').trim();
   return {
     templateId: templateResolvido,
-    permiteFallbackPadrao: resolucao.source !== 'PADRAO' && templateResolvido !== String(templatePadraoId || '').trim(),
+    bloqueado: !!resolucao.bloqueado,
+    permiteFallbackPadrao: !resolucao.exigeModeloEspecifico && resolucao.source !== 'PADRAO' && templateResolvido !== String(templatePadraoId || '').trim(),
     source: resolucao.source
   };
 }
@@ -127,7 +130,7 @@ function gerarCertificadoImagemComTemplate_(ctx, dadosVisuais, pastaDestino, nom
     reused: false,
     imageUrl: imageUrl,
     downloadImageUrl: montarUrlDownloadImagemCertificado_(arquivoImagem.getId()),
-    whatsAppUrl: montarLinkWhatsAppCertificado_(dadosVisuais.nome_participante, imageUrl)
+    whatsAppUrl: montarLinkWhatsAppCertificado_(dadosVisuais.nome_participante, imageUrl, certificadoModalidadeDoContexto_(ctx))
   };
 }
 
@@ -158,12 +161,13 @@ function salvarImagemCertificadoNoDrive_(blob, nomeArquivo, pasta) {
   return pasta.createFile(blob.setName(nome));
 }
 
-function montarLinkWhatsAppCertificado_(nomePessoa, url) {
+function montarLinkWhatsAppCertificado_(nomePessoa, url, modalidadeEsportiva) {
   var link = String(url || '').trim();
   if (!link) return '';
   var nome = String(nomePessoa || '').trim();
   var saudacao = nome ? ('Olá! Eu sou ' + nome + '.') : 'Olá!';
-  var mensagem = '🚴‍♂️ Conquistei meu certificado de conclusão!\nConfira aqui:\n' + link + '\n\n' + saudacao;
+  var icone = String(modalidadeEsportiva || '').toUpperCase() === 'CAMINHADA_CORRIDA' ? '🏃' : '🚴';
+  var mensagem = icone + ' Conquistei meu certificado de conclusão!\nConfira aqui:\n' + link + '\n\n' + saudacao;
   return 'https://wa.me/?text=' + encodeURIComponent(mensagem);
 }
 

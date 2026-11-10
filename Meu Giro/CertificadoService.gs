@@ -150,7 +150,8 @@ function gerarCertificadoDesafio_(contexto) {
     };
   }
 
-  var resolucao = certificadoResolverTemplateSlides_(ctx.id_desafio, ctx.id_item_estoque);
+  var resolucao = certificadoResolverTemplateSlides_(ctx.id_desafio, ctx.id_item_estoque, certificadoModalidadeDoContexto_(ctx));
+  if (resolucao.bloqueado) return { ok: false, code: 'CERTIFICADO_TEMPLATE_MODALIDADE_AUSENTE', msg: 'Ainda não há um modelo de certificado aprovado para esta modalidade.' };
   var templateResolvidoId = resolucao.templateId || templatePadraoId;
   var geracao = certificadoGerarPdfComTemplate_(
     templateResolvidoId,
@@ -159,7 +160,7 @@ function gerarCertificadoDesafio_(contexto) {
     ctx,
     dadosVisuais
   );
-  if (!geracao.ok && resolucao.source !== 'PADRAO') {
+  if (!geracao.ok && resolucao.source !== 'PADRAO' && !resolucao.exigeModeloEspecifico) {
     templateResolvidoId = templatePadraoId;
     geracao = certificadoGerarPdfComTemplate_(templatePadraoId, nomeArquivo, pastaDestino, ctx, dadosVisuais);
   }
@@ -183,32 +184,56 @@ function gerarCertificadoDesafio_(contexto) {
   };
 }
 
-function certificadoResolverTemplateSlides_(idDesafio, idItemEstoque) {
+function certificadoNormalizarModalidade_(valor) {
+  var texto = String(valor || 'CICLISMO').trim().toUpperCase().replace(/[\s\/-]+/g, '_');
+  if (typeof meuGiroModalidadeCanonica_ === 'function') return meuGiroModalidadeCanonica_(texto);
+  return (texto === 'CAMINHADA_CORRIDA' || texto === 'CAMINHADA' || texto === 'CORRIDA')
+    ? 'CAMINHADA_CORRIDA' : 'CICLISMO';
+}
+
+function certificadoModalidadeDoContexto_(ctx) {
+  var v = String((ctx || {}).modalidade_esportiva || '').trim();
+  if (!v) return 'CICLISMO'; // Desafios legados anteriores à classificação.
+  return certificadoNormalizarModalidade_(v);
+}
+
+function certificadoResolverTemplateSlides_(idDesafio, idItemEstoque, modalidadeEsportiva) {
   var templatePadrao = String(dgmbMeuGiroCertificadoTemplateId_() || '').trim();
   var padrao = function(reason) {
     return { templateId: templatePadrao, source: 'PADRAO', fallback: true, reason: reason };
   };
+  var modalidade = certificadoNormalizarModalidade_(modalidadeEsportiva || 'CICLISMO');
+  var exigeModeloEspecifico = modalidade === 'CAMINHADA_CORRIDA';
+  var bloquear = function(reason) { return { templateId:'', source:'SEM_MODELO', fallback:false, bloqueado:true, exigeModeloEspecifico:true, reason:reason }; };
   var desafio = String(idDesafio == null ? '' : idDesafio).trim();
   var item = String(idItemEstoque == null ? '' : idItemEstoque).trim();
-  if (!desafio) return padrao('ID_DESAFIO_VAZIO');
+  if (!desafio) return exigeModeloEspecifico ? bloquear('ID_DESAFIO_VAZIO') : padrao('ID_DESAFIO_VAZIO');
 
   try {
     var nomeAba = (typeof SHEETS !== 'undefined' && SHEETS.CONFIG_CERTIFICADO_TEMPLATE)
       ? SHEETS.CONFIG_CERTIFICADO_TEMPLATE
       : 'CONFIG_CERTIFICADO_TEMPLATE';
     var sh = getSpreadsheet_().getSheetByName(nomeAba);
-    if (!sh) return padrao('ABA_AUSENTE');
+    if (!sh) return exigeModeloEspecifico ? bloquear('ABA_AUSENTE') : padrao('ABA_AUSENTE');
     var values = sh.getDataRange().getValues();
-    if (!values || !values.length) return padrao('ABA_VAZIA');
+    if (!values || !values.length) return exigeModeloEspecifico ? bloquear('ABA_VAZIA') : padrao('ABA_VAZIA');
 
     var layout = certificadoTemplateObterLayout_(values[0] || []);
-    if (!layout) return padrao('CABECALHO_INCOMPLETO');
+    if (!layout) return exigeModeloEspecifico ? bloquear('CABECALHO_INCOMPLETO') : padrao('CABECALHO_INCOMPLETO');
 
     var especificas = [];
     var gerais = [];
     for (var i = 1; i < values.length; i++) {
       var row = values[i] || [];
       if (!certificadoTemplateAtivo_(row[layout.ativo])) continue;
+      if (layout.modalidade > -1 && String(row[layout.modalidade] || '').trim()) {
+        var modalidadeModelo;
+        try { modalidadeModelo = certificadoNormalizarModalidade_(row[layout.modalidade]); } catch (_) { continue; }
+        if (modalidadeModelo !== modalidade) continue;
+      } else if (exigeModeloEspecifico) {
+        // Uma configuração antiga sem modalidade não deve emitir tema de ciclismo para corredores.
+        continue;
+      }
       if (String(row[layout.idDesafio] == null ? '' : row[layout.idDesafio]).trim() !== desafio) continue;
       var templateId = String(row[layout.templateId] == null ? '' : row[layout.templateId]).trim();
       if (!templateId) continue;
@@ -217,17 +242,17 @@ function certificadoResolverTemplateSlides_(idDesafio, idItemEstoque) {
       if (!rowItem) gerais.push(templateId);
     }
 
-    if (item && especificas.length > 1) return padrao('DUPLICIDADE_ATIVA_ITEM');
+    if (item && especificas.length > 1) return exigeModeloEspecifico ? bloquear('DUPLICIDADE_ATIVA_ITEM') : padrao('DUPLICIDADE_ATIVA_ITEM');
     if (item && especificas.length === 1) {
       return { templateId: especificas[0], source: 'ITEM', fallback: false, reason: 'CONFIG_ITEM' };
     }
-    if (gerais.length > 1) return padrao('DUPLICIDADE_ATIVA_DESAFIO');
+    if (gerais.length > 1) return exigeModeloEspecifico ? bloquear('DUPLICIDADE_ATIVA_DESAFIO') : padrao('DUPLICIDADE_ATIVA_DESAFIO');
     if (gerais.length === 1) {
       return { templateId: gerais[0], source: 'DESAFIO', fallback: false, reason: 'CONFIG_DESAFIO' };
     }
-    return padrao('CONFIGURACAO_NAO_ENCONTRADA');
+    return exigeModeloEspecifico ? bloquear('CONFIGURACAO_NAO_ENCONTRADA') : padrao('CONFIGURACAO_NAO_ENCONTRADA');
   } catch (e) {
-    return padrao('ERRO_LEITURA_CONFIGURACAO');
+    return exigeModeloEspecifico ? bloquear('ERRO_LEITURA_CONFIGURACAO') : padrao('ERRO_LEITURA_CONFIGURACAO');
   }
 }
 
@@ -250,7 +275,8 @@ function certificadoTemplateObterLayout_(headers) {
     idDesafio: indices.ID_DESAFIO,
     idItemEstoque: indices.ID_ITEM_ESTOQUE,
     templateId: indices.ID_SLIDE_TEMPLATE,
-    ativo: indices.ATIVO
+    ativo: indices.ATIVO,
+    modalidade: Object.prototype.hasOwnProperty.call(indices, 'MODALIDADE_ESPORTIVA') ? indices.MODALIDADE_ESPORTIVA : -1
   };
 }
 
@@ -599,6 +625,21 @@ function extrairDriveFileIdCertificado_(urlOuId) {
   return byIdMatch ? byIdMatch[0] : '';
 }
 
+function certificadoResolverModalidadeCatalogo_(idDesafio) {
+  var id = String(idDesafio || '').trim();
+  if (!id) return 'CICLISMO';
+  try {
+    var sh = getSpreadsheet_().getSheetByName(SHEETS.LISTA_DESAFIOS || 'ListaDesafios');
+    if (!sh) return 'CICLISMO';
+    var rows = sh.getDataRange().getValues(), header = (rows[0] || []).map(function(v) { return String(v || '').trim().toUpperCase(); });
+    var idCol = header.indexOf('ID_DESAFIO_LISTA'), modCol = header.indexOf('MODALIDADE_ESPORTIVA');
+    if (idCol < 0 || modCol < 0) return 'CICLISMO';
+    for (var k = 1; k < rows.length; k++) if (String(rows[k][idCol] || '').trim() === id)
+      return meuGiroModalidadeCanonica_(rows[k][modCol]);
+  } catch (e) {}
+  return 'CICLISMO';
+}
+
 function certificadoBuscarContextoDesafio_(payload) {
   var params = payload || {};
   var idInscricao = normalizeText_(params.id_inscricao || params.idInscricao);
@@ -624,6 +665,7 @@ function certificadoBuscarContextoDesafio_(payload) {
 
   var map = buildHeaderMap_(values[0]);
   var idxId = getRequiredColumnIndex_(map, ['id_dgmb'], sheetName);
+  var idxModalidade = getOptionalColumnIndex_(map, ['modalidade_esportiva', 'modalidade esportiva', 'modalidade']);
   var idxIdInscricao = getOptionalColumnIndex_(map, ['id_inscricao', 'id inscrição', 'id inscricao']);
   var idxIdDesafio = getIdDesafioColumnIndex_(map);
   var idxIdItem = getOptionalColumnIndex_(map, ['id_item_estoque', 'id item estoque']);
@@ -708,6 +750,7 @@ function certificadoBuscarContextoDesafio_(payload) {
     id_dgmb: rowId,
     id_desafio: rowDesafio,
     id_item_estoque: rowItem,
+    modalidade_esportiva: (idxModalidade > -1 ? normalizeText_(row[idxModalidade]) : '') || certificadoResolverModalidadeCatalogo_(rowDesafio),
     status_apuracao: statusApuracao,
     meta_atingida: metaAtingida,
     status_usuario_desafio: statusUsuarioDesafio,
